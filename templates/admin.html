@@ -241,4 +241,42 @@ href="{{ url_for('admin_kullanicilar') }}"
 
 </div>
 
+<br>
+
+<div class="card">
+
+<h2>
+🤖 {{ ziya.ad if ziya else "Robot Ziya" }}
+</h2>
+
+<p style="font-size:0.85em; color:var(--muted);">
+Normalde her Perşembe 23:59'da (TR) kendiliğinden tahmin yapar. Bu düğme Perşembe'yi
+beklemeden bir sonraki Perşembe 23:59'a kadarki tüm maçlara hemen tahmin girdirir.
+Zaten tahmin girdiği maçlara dokunmaz, yani birden fazla basmak sorun olmaz.
+</p>
+
+{% if ziya %}
+<p>
+Yaklaşan maçlardan tahmin girdiği: <strong>{{ ziya.tahminli_mac }}</strong>
+· Son çalışma: <strong>{{ ziya.son_calisma }}</strong>
+· Sıradaki otomatik tahmin: <strong>{{ ziya.sonraki }}</strong>
+</p>
+{% endif %}
+
+<form
+method="POST"
+action="{{ url_for('admin_ziya_tahminlesin') }}"
+style="display:inline;"
+>
+<button
+type="submit"
+class="btn"
+style="background:#2B4A7A;"
+>
+🤖 Ziya Şimdi Tahminlesin
+</button>
+</form>
+
+</div>
+
 {% endblock %}

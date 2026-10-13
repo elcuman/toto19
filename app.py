@@ -2606,8 +2606,47 @@ def admin():
         total_groups=grup_sayisi,
         total_matches=mac_sayisi,
         total_predictions=tahmin_sayisi,
-        upcoming_matches=upcoming_matches
+        upcoming_matches=upcoming_matches,
+        ziya=_ziya_admin_ozeti(),
     )
+
+
+def _ziya_admin_ozeti():
+    """Admin kartı için: Robot Ziya'nın yaklaşan maçlardaki tahmin durumu."""
+    try:
+        simdi = utc_now_naive()
+        yz = yz_kullanici_getir(olustur=False)
+        bekleyen = 0
+        if yz:
+            bekleyen = (db.session.query(db.func.count(db.distinct(Tahmin.mac_id)))
+                        .join(Mac, Tahmin.mac_id == Mac.id)
+                        .filter(Tahmin.kullanici_id == yz.id, Mac.baslangic > simdi).scalar() or 0)
+        son = _senkron_zamani_oku("yz")
+        return {
+            "ad": YZ_KULLANICI_ADI,
+            "tahminli_mac": bekleyen,
+            "son_calisma": to_turkiye_saati(son).strftime("%d.%m.%Y %H:%M") if son else "Henüz çalışmadı",
+            "sonraki": (yz_son_tahmin_ani(simdi) + timedelta(days=7, hours=3)).strftime("%d.%m.%Y %H:%M"),
+        }
+    except Exception:
+        db.session.rollback()
+        return None
+
+
+@app.route("/admin/ziya-tahminlesin", methods=["POST"])
+@admin_required
+def admin_ziya_tahminlesin():
+    """Robot Ziya'yı Perşembe'yi beklemeden şimdi çalıştırır (bu haftanın maçları)."""
+    sonuc = _yz_guvenli_calistir(zorla=True)
+    if sonuc.get("success") is False:
+        flash(f"{YZ_KULLANICI_ADI} tahmin yapamadı: {sonuc.get('error')}", "danger")
+    elif sonuc.get("yeni_tahmin"):
+        flash(f"{YZ_KULLANICI_ADI} tahminlerini girdi: {sonuc['yeni_tahmin']} yeni tahmin"
+              f" ({sonuc.get('gruba_eklendi', 0)} gruba yeni katıldı).", "success")
+    else:
+        flash(f"{YZ_KULLANICI_ADI} için yeni tahmin yok: önümüzdeki maçların hepsine zaten tahmin girmiş"
+              f" ya da fikstürde yaklaşan maç yok.", "warning")
+    return redirect(url_for("admin"))
 
 
 @app.route("/admin/puanlari-sifirla", methods=["POST"])
