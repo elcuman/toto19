@@ -3558,7 +3558,7 @@ def yz_son_tahmin_ani(simdi):
     return aday - timedelta(hours=3)
 
 
-def yz_tahminleri_uret(simdi=None):
+def yz_tahminleri_uret(simdi=None, zorla=False):
     """
     Robot Ziya haftada bir, Perşembe 23:59'da (TR) tahmin yapar: o andan bir
     sonraki Perşembe 23:59'a kadar oynanacak tüm maçlara. Cron 10 dakikada bir
@@ -3573,7 +3573,10 @@ def yz_tahminleri_uret(simdi=None):
 
     hedef = yz_son_tahmin_ani(simdi)
     son = _senkron_zamani_oku("yz")
-    sira_geldi = son is None or son < hedef
+    sira_geldi = zorla or son is None or son < hedef
+    # İlk çalıştırmada ya da elle tetiklenince Perşembe'yi beklemeden bu haftanın
+    # tüm maçlarını (bir sonraki Perşembe 23:59'a kadar) kapsa
+    bitis = hedef + timedelta(days=14 if (zorla or son is None) else 7)
     sonuc = {"gruba_eklendi": eklenen_grup, "yeni_tahmin": 0, "kopyalanan": 0,
              "sonraki_tahmin_tr": (hedef + timedelta(days=7, hours=3)).strftime("%d.%m.%Y %H:%M")}
     if not grup_idleri:
@@ -3585,7 +3588,7 @@ def yz_tahminleri_uret(simdi=None):
             Mac.lig_id.in_(gosterilecek_lig_id_listesi()),
             Mac.baslangic.isnot(None),
             Mac.baslangic > simdi,
-            Mac.baslangic <= hedef + timedelta(days=7),
+            Mac.baslangic <= bitis,
             ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
             super_lig_takim_filtresi(),
         ).all()
@@ -3631,9 +3634,9 @@ def yz_tahminleri_uret(simdi=None):
     return sonuc
 
 
-def _yz_guvenli_calistir():
+def _yz_guvenli_calistir(zorla=False):
     try:
-        return yz_tahminleri_uret()
+        return yz_tahminleri_uret(zorla=zorla)
     except Exception as e:
         db.session.rollback()
         return {"success": False, "error": str(e)}
@@ -3692,6 +3695,10 @@ def cron_sync():
     gelen_secret = request.headers.get("X-Cron-Secret") or request.args.get("secret") or ""
     if gelen_secret != beklenen_secret:
         abort(403)
+
+    if request.args.get("ziya") == "1":
+        # Robot Ziya'yı Perşembe'yi beklemeden şimdi çalıştır (bu haftanın maçları)
+        return jsonify({"tur": "robot ziya", "yapay_zeka": _yz_guvenli_calistir(zorla=True)}), 200
 
     if request.args.get("tam") == "1":
         try:
