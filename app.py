@@ -3457,7 +3457,8 @@ def _yz_adi_rezerve_mi(ad):
     sade = (ad or "").replace("İ", "i").replace("I", "ı").lower()
     sade = "".join(h for h in sade if h.isalnum()).replace("ı", "i").replace("\u0307", "")
     return sade in {"robotziya", "ziyarobot", "yapayzeka", "yapayzekâ"}
-YZ_TAHMIN_PENCERESI_GUN = 7       # bu kadar gün içindeki maçlara tahmin girer
+YZ_TAHMIN_GUNU = 3                # Perşembe (Pazartesi=0)
+YZ_TAHMIN_SAATI = (23, 59)        # Türkiye saati
 YZ_GECMIS_GUN = 400               # modelin baktığı geçmiş
 YZ_ONSEL_MAC = 4                  # az maçı olan takımı lig ortalamasına çeker
 YZ_MAX_GOL = 6
@@ -3547,44 +3548,87 @@ def yz_skor_tahmini(mac, istatistik):
     return en_iyi
 
 
-def yz_tahminleri_uret():
-    """Önümüzdeki günlerdeki maçlara, YZ'nin tahmini olmayan her grup için tahmin girer."""
-    simdi = utc_now_naive()
+def yz_son_tahmin_ani(simdi):
+    """simdi'den önceki en son 'Perşembe 23:59 (Türkiye saati)' anını UTC olarak verir."""
+    tr = simdi + timedelta(hours=3)
+    gun_farki = (tr.weekday() - YZ_TAHMIN_GUNU) % 7
+    aday = (tr - timedelta(days=gun_farki)).replace(hour=YZ_TAHMIN_SAATI[0], minute=YZ_TAHMIN_SAATI[1], second=0, microsecond=0)
+    if aday > tr:
+        aday -= timedelta(days=7)
+    return aday - timedelta(hours=3)
+
+
+def yz_tahminleri_uret(simdi=None):
+    """
+    Robot Ziya haftada bir, Perşembe 23:59'da (TR) tahmin yapar: o andan bir
+    sonraki Perşembe 23:59'a kadar oynanacak tüm maçlara. Cron 10 dakikada bir
+    çağırır; Perşembe 23:59 geçtikten sonraki ilk çağrıda tahminler girilir.
+    Hafta içinde kurulan yeni gruplara, Ziya'nın o hafta verdiği tahminler kopyalanır.
+    """
+    simdi = simdi or utc_now_naive()
     yz = yz_kullanici_getir()
     eklenen_grup = yz_gruplara_ekle(yz)
     grup_idleri = [gid for (gid,) in db.session.query(GrupUyeligi.grup_id).filter_by(kullanici_id=yz.id).all()]
+    db.session.commit()
 
-    maclar = Mac.query.filter(
-        Mac.lig_id.in_(gosterilecek_lig_id_listesi()),
-        Mac.baslangic.isnot(None),
-        Mac.baslangic > simdi,
-        Mac.baslangic <= simdi + timedelta(days=YZ_TAHMIN_PENCERESI_GUN),
-        ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
-        super_lig_takim_filtresi(),
-    ).all()
-    if not maclar or not grup_idleri:
+    hedef = yz_son_tahmin_ani(simdi)
+    son = _senkron_zamani_oku("yz")
+    sira_geldi = son is None or son < hedef
+    sonuc = {"gruba_eklendi": eklenen_grup, "yeni_tahmin": 0, "kopyalanan": 0,
+             "sonraki_tahmin_tr": (hedef + timedelta(days=7, hours=3)).strftime("%d.%m.%Y %H:%M")}
+    if not grup_idleri:
+        return sonuc
+
+    # 1) Haftalık tahmin zamanı geldiyse yeni tahminleri üret
+    if sira_geldi:
+        maclar = Mac.query.filter(
+            Mac.lig_id.in_(gosterilecek_lig_id_listesi()),
+            Mac.baslangic.isnot(None),
+            Mac.baslangic > simdi,
+            Mac.baslangic <= hedef + timedelta(days=7),
+            ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
+            super_lig_takim_filtresi(),
+        ).all()
+        var_olan = set()
+        if maclar:
+            var_olan = set(
+                db.session.query(Tahmin.grup_id, Tahmin.mac_id)
+                .filter(Tahmin.kullanici_id == yz.id, Tahmin.mac_id.in_([m.id for m in maclar]))
+                .all()
+            )
+        istatistikler = {}
+        for mac in maclar:
+            eksik = [gid for gid in grup_idleri if (gid, mac.id) not in var_olan]
+            if not eksik:
+                continue
+            if mac.lig_id not in istatistikler:
+                istatistikler[mac.lig_id] = _yz_lig_istatistigi(mac.lig_id, simdi)
+            ev, dep = yz_skor_tahmini(mac, istatistikler[mac.lig_id])
+            for gid in eksik:
+                db.session.add(Tahmin(grup_id=gid, mac_id=mac.id, kullanici_id=yz.id, ev_skor=ev, deplasman_skor=dep))
+                sonuc["yeni_tahmin"] += 1
         db.session.commit()
-        return {"gruba_eklendi": eklenen_grup, "yeni_tahmin": 0}
+        _senkron_zamani_yaz("yz")
+        return sonuc
 
-    var_olan = set(
-        db.session.query(Tahmin.grup_id, Tahmin.mac_id)
-        .filter(Tahmin.kullanici_id == yz.id, Tahmin.mac_id.in_([m.id for m in maclar]))
+    # 2) Ara günlerde: Ziya'nın bu hafta verdiği tahminleri, eksik kalan (yeni) gruplara kopyala
+    mevcut = (
+        db.session.query(Tahmin.grup_id, Tahmin.mac_id, Tahmin.ev_skor, Tahmin.deplasman_skor)
+        .join(Mac, Tahmin.mac_id == Mac.id)
+        .filter(Tahmin.kullanici_id == yz.id, Mac.baslangic > simdi)
         .all()
     )
-    istatistikler = {}
-    yeni = 0
-    for mac in maclar:
-        eksik = [gid for gid in grup_idleri if (gid, mac.id) not in var_olan]
-        if not eksik:
-            continue
-        if mac.lig_id not in istatistikler:
-            istatistikler[mac.lig_id] = _yz_lig_istatistigi(mac.lig_id, simdi)
-        ev, dep = yz_skor_tahmini(mac, istatistikler[mac.lig_id])
-        for gid in eksik:
-            db.session.add(Tahmin(grup_id=gid, mac_id=mac.id, kullanici_id=yz.id, ev_skor=ev, deplasman_skor=dep))
-            yeni += 1
+    skorlar, sahip = {}, set()
+    for gid, mid, ev, dep in mevcut:
+        skorlar.setdefault(mid, (ev, dep))
+        sahip.add((gid, mid))
+    for mid, (ev, dep) in skorlar.items():
+        for gid in grup_idleri:
+            if (gid, mid) not in sahip:
+                db.session.add(Tahmin(grup_id=gid, mac_id=mid, kullanici_id=yz.id, ev_skor=ev, deplasman_skor=dep))
+                sonuc["kopyalanan"] += 1
     db.session.commit()
-    return {"gruba_eklendi": eklenen_grup, "yeni_tahmin": yeni}
+    return sonuc
 
 
 def _yz_guvenli_calistir():
