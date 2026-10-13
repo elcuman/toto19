@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Puan durumu · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>Puan durumu</h1>
+    <p class="alt">Liglerin güncel takım sıralaması. Maç sonuçları geldikçe güncellenir.</p>
+  </div>
+</div>
+
+{% if sekmeler %}
+<div class="segment" role="tablist" aria-label="Lig seç">
+  {% for s in sekmeler %}
+  <button type="button" role="tab" class="lig-sekme" data-sekme="{{ s.kod }}" aria-selected="{{ 'true' if s.kod == secili else 'false' }}">
+    <span class="uzun">{{ s.ad }}</span><span class="kisa">{{ {"Şampiyonlar Ligi":"Şampiyonlar","Uluslar Ligi":"Uluslar"}.get(s.ad, s.ad) }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+{% for s in sekmeler %}
+<section class="panel lig-panel" data-panel="{{ s.kod }}" role="tabpanel" {% if s.kod != secili %}hidden{% endif %}>
+  {% if s.hata %}
+    <div class="bos"><strong>{{ s.hata }}</strong></div>
+  {% elif not s.satirlar %}
+    <div class="bos"><strong>Henüz oynanmış maç yok.</strong>İlk maçlar bitince tablo burada oluşur.</div>
+  {% else %}
+    {% if s.not %}<p class="sessiz kucuk" style="margin-top:-4px">{{ s.not }}</p>{% endif %}
+    <div class="tablo-kap">
+    <table class="puan-tablosu">
+      <thead>
+        <tr>
+          <th scope="col" class="s">#</th>
+          <th scope="col">Takım</th>
+          <th scope="col" class="n" title="Oynanan">O</th>
+          <th scope="col" class="n gizle-dar" title="Galibiyet">G</th>
+          <th scope="col" class="n gizle-dar" title="Beraberlik">B</th>
+          <th scope="col" class="n gizle-dar" title="Mağlubiyet">M</th>
+          <th scope="col" class="n" title="Averaj">AV</th>
+          <th scope="col" class="n p">P</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% set b = s.bolgeler or {} %}
+      {% for t in s.satirlar %}
+        <tr class="{% if b.yesil and t.sira in b.yesil %}bolge-yesil{% elif b.sari and t.sira in b.sari %}bolge-sari{% elif b.kirmizi and t.sira in b.kirmizi %}bolge-kirmizi{% endif %}">
+          <td class="s">{{ t.sira }}</td>
+          <td>
+            <div class="takim-hucre">
+              {% set yedek = takim_logo_url(t.takim) %}
+              {% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ t.logo or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}
+              <span>{{ t.takim }}</span>
+            </div>
+            {% if t.form %}
+            <div class="form" aria-label="Son maçlar">
+              {% for f in t.form %}<span class="f-{{ f }}" title="{{ {'G':'Galibiyet','B':'Beraberlik','M':'Mağlubiyet'}[f] }}">{{ f }}</span>{% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td class="n">{{ t.o }}</td>
+          <td class="n gizle-dar">{{ t.g }}</td>
+          <td class="n gizle-dar">{{ t.b }}</td>
+          <td class="n gizle-dar">{{ t.m }}</td>
+          <td class="n">{{ '+' if t.av > 0 else '' }}{{ t.av }}</td>
+          <td class="n p">{{ t.p }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+  <div class="bos"><strong>Gösterilecek lig yok.</strong></div>
+{% endif %}
+
+<style>
+.segment .kisa{display:none}
+@media (max-width:480px){ .segment .uzun{display:none} .segment .kisa{display:inline} }
+.tablo-kap{overflow-x:auto; margin:0 -8px}
+.puan-tablosu{min-width:300px}
+.puan-tablosu th, .puan-tablosu td{padding:9px 6px}
+.puan-tablosu .s{width:30px; font:700 18px/1 var(--baslik); color:var(--gri-acik); text-align:center; border-left:3px solid transparent}
+.puan-tablosu th.s{font:600 13px/1 var(--yazi)}
+.puan-tablosu .n{text-align:center; font-variant-numeric:tabular-nums; width:34px}
+.puan-tablosu td.p{font:700 20px/1 var(--baslik)}
+.puan-tablosu .bolge-yesil td.s{border-left-color:var(--cim); color:var(--cim-koyu)}
+.puan-tablosu .bolge-sari td.s{border-left-color:var(--sari); color:#8A6A00}
+.puan-tablosu .bolge-kirmizi td.s{border-left-color:var(--kirmizi); color:var(--kirmizi)}
+.takim-hucre{display:flex; align-items:center; gap:8px; font-weight:600; min-width:0}
+.takim-hucre .logo{width:22px; height:22px}
+.form{display:flex; gap:3px; margin:5px 0 0 30px}
+.form span{width:16px; height:16px; border-radius:4px; font:700 10px/16px var(--yazi); text-align:center; color:#fff}
+.form .f-G{background:var(--cim)} .form .f-B{background:var(--gri-acik)} .form .f-M{background:var(--kirmizi)}
+@media (max-width:420px){ .gizle-dar{display:none} .form{margin-left:30px} }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var b = document.querySelectorAll('.lig-sekme'), p = document.querySelectorAll('.lig-panel');
+  function sec(k){
+    b.forEach(function(x){ x.setAttribute('aria-selected', x.dataset.sekme === k ? 'true' : 'false'); });
+    p.forEach(function(x){ x.hidden = x.dataset.panel !== k; });
+    try { history.replaceState(null, '', '?lig=' + k); } catch(e) {}
+  }
+  b.forEach(function(x){ x.addEventListener('click', function(){ sec(x.dataset.sekme); }); });
+})();
+</script>
+{% endblock %}

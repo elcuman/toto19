@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Giriş · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="giris-alani">
+  <div class="giris-bas">
+    <h1>Tahmin Ligi</h1>
+    <p class="alt sessiz">Maç başlamadan skoru tahmin et, arkadaşlarınla puan yarışına gir.</p>
+  </div>
+
+  <section class="panel">
+    <h2>Giriş yap</h2>
+    <form method="POST">
+      <label for="kullanici_adi">Kullanıcı adı</label>
+      <input id="kullanici_adi" name="kullanici_adi" required autocomplete="username" autocapitalize="none">
+      <label for="sifre">Şifre</label>
+      <input id="sifre" type="password" name="sifre" required autocomplete="current-password">
+      <button type="submit" class="btn btn-blok">Giriş yap</button>
+    </form>
+  </section>
+
+  <p class="giris-alt">Hesabın yok mu? <a href="{{ url_for('kayit', next=request.args.get('next')) if request.args.get('next') else url_for('kayit') }}">Kayıt ol</a></p>
+</div>
+{% include "_giris_stil.html" %}
+{% endblock %}

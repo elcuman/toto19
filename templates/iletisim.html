@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}İletişim · Tahmin Ligi{% endblock %}
+{% block head %}
+<meta name="description" content="Tahmin Ligi ile iletişim: soru, öneri, hata bildirimi ve hesap silme talepleri.">
+{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>İletişim</h1>
+    <p class="alt">Soru, öneri, hata bildirimi veya hesap silme talebi için bize ulaşabilirsin.</p>
+  </div>
+</div>
+
+<article class="metin">
+
+<section class="panel">
+  <h2>Bize yaz</h2>
+  {% if iletisim_eposta %}
+    <p>E-posta: <a href="mailto:{{ iletisim_eposta }}"><strong>{{ iletisim_eposta }}</strong></a></p>
+    <p class="sessiz kucuk" style="margin:0">Genelde birkaç gün içinde dönüş yapıyoruz.</p>
+  {% else %}
+    <p style="margin:0">Grubunu kuran kişiye ya da site yöneticisine doğrudan ulaşabilirsin. İletişim adresi yakında burada yer alacak.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Yazarken işimize yarar</h2>
+  <ul>
+    <li>Kullanıcı adın (şifreni asla yazma, kimse senden şifreni istemez).</li>
+    <li>Sorun bir maçla ilgiliyse maçın adı ve tarihi.</li>
+    <li>Hesap silme talebiyse "hesabımı sil" demen yeterli.</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Sık sorulanlar</h2>
+  <p><strong>Maç sonucu yanlış ya da gelmedi.</strong> Sonuçlar maç bittikten kısa süre sonra otomatik güncellenir. Birkaç saat geçtiyse bize yaz, elle düzeltiriz.</p>
+  <p><strong>Şifremi unuttum.</strong> E-posta istemediğimiz için otomatik sıfırlama yok. Bize kullanıcı adınla yaz, yardımcı olalım.</p>
+  <p style="margin:0"><strong>Para ile oynanıyor mu?</strong> Hayır. Tahmin Ligi ücretsizdir; bahis veya para ödülü yoktur. Ayrıntılar <a href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır</a> sayfasında.</p>
+</section>
+
+</article>
+
+<style>
+.metin p, .metin li{max-width:68ch}
+.metin ul{padding-left:20px; margin:0 0 .75em}
+.metin li{margin-bottom:6px}
+</style>
+{% endblock %}

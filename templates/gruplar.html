@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Gruplar · Tahmin Ligi{% endblock %}
+
+{% block content %}
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Gruplar</h1>
+    <p class="alt">Arkadaşlarınla yarıştığın tahmin grupları.</p>
+  </div>
+</div>
+
+{% if gruplar %}
+  <ul class="grup-kartlari">
+    {% for g in gruplar %}
+    <li>
+      <a href="{{ url_for('grup', grup_id=g.id) }}" class="grup-karti">
+        <div class="grup-karti-ust">
+          <h2>{{ g.ad }}</h2>
+          <span class="git" aria-hidden="true">›</span>
+        </div>
+        {% if g.aciklama %}<p class="grup-kurali"><span class="kart-isaret sari" aria-hidden="true"></span>{{ g.aciklama }}</p>{% endif %}
+        <p class="sessiz kucuk" style="margin:0">Davet kodu <strong class="kod">{{ g.davet_kodu }}</strong>{% if g.sezon %}, {{ g.sezon }} sezonu{% endif %}</p>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="bos" style="margin-bottom:16px">
+    <strong>Henüz bir grupta değilsin.</strong>
+    Aşağıdan yeni bir grup kur ya da arkadaşının verdiği davet koduyla katıl.
+  </div>
+{% endif %}
+
+<div class="iki-sutun">
+  <details class="panel acilir" {% if not gruplar %}open{% endif %}>
+    <summary><h2>Gruba katıl</h2><span class="sessiz kucuk">Davet kodun varsa</span></summary>
+    <form action="{{ url_for('grup_katil') }}" method="POST">
+      <label for="davet_kodu">Davet kodu</label>
+      <input id="davet_kodu" name="davet_kodu" required autocomplete="off" autocapitalize="characters" placeholder="Örn. SI370Y2G" class="kod-girdi">
+      <button type="submit" class="btn btn-blok">Gruba katıl</button>
+    </form>
+  </details>
+
+  <details class="panel acilir">
+    <summary><h2>Yeni grup kur</h2><span class="sessiz kucuk">Arkadaşlarını sen davet et</span></summary>
+    <form action="{{ url_for('grup_olustur') }}" method="POST">
+      <label for="ad">Grup adı</label>
+      <input id="ad" name="ad" required maxlength="80" placeholder="Örn. Ofis Ligi">
+      <label for="aciklama">Grup kuralı <span class="sessiz">(isteğe bağlı)</span></label>
+      <textarea id="aciklama" name="aciklama" rows="3" placeholder="Örn. Haftanın sonuncusu kahveleri ısmarlar"></textarea>
+      <p class="ipucu">Grubun tüm üyeleri bu kuralı grup sayfasında görür.</p>
+      <button type="submit" class="btn btn-blok">Grubu kur</button>
+    </form>
+  </details>
+</div>
+
+<style>
+.grup-kartlari{list-style:none; margin:0 0 16px; padding:0; display:grid; gap:10px}
+.grup-karti{display:block; padding:16px 18px; background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); color:var(--murekkep); text-decoration:none}
+.grup-karti:hover{border-color:var(--cim); color:var(--murekkep)}
+.grup-karti-ust{display:flex; justify-content:space-between; align-items:center; gap:12px}
+.grup-karti h2{margin:0; font-size:24px}
+.grup-karti .git{font-size:28px; line-height:1; color:var(--cim)}
+.grup-kurali{display:flex; gap:8px; align-items:baseline; margin:6px 0 8px; color:var(--gri); font-size:15px}
+.kod{font-family:var(--baslik); font-size:16px; letter-spacing:1px; color:var(--murekkep)}
+.kod-girdi{font:600 20px/1.2 var(--baslik); letter-spacing:2px; text-transform:uppercase}
+.iki-sutun{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start}
+.iki-sutun .panel{margin:0}
+@media (max-width:640px){ .iki-sutun{grid-template-columns:1fr} }
+.acilir summary{list-style:none; cursor:pointer; display:flex; flex-direction:column; gap:2px}
+.acilir summary::-webkit-details-marker{display:none}
+.acilir summary h2{margin:0; display:flex; justify-content:space-between; align-items:center}
+.acilir summary h2::after{content:"+"; font-size:26px; color:var(--cim); font-weight:600}
+.acilir[open] summary h2::after{content:"–"}
+.acilir[open] summary{margin-bottom:14px}
+</style>
+
+{% endblock %}

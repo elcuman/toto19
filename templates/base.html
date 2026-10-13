@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>{% block title %}{{ title or "Tahmin Ligi" }}{% endblock %}</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Google AdSense (Auto Ads): giriş/kayıt, sohbet ve admin sayfalarında YÜKLENMEZ (içeriksiz ve kullanıcı içerikli sayfalar) -->
+{% set _ep = request.endpoint or "" %}
+{% if not (_ep in ('giris', 'kayit', 'cikis', 'sohbetler', 'grup_sohbet', 'tahmin') or _ep.startswith('admin') or _ep == 'static') %}
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3716423648799781" crossorigin="anonymous"></script>
+{% endif %}
+
+<style>
+/* ============================================================
+   TAHMİN LİGİ — tasarım sistemi
+   Çim yeşili ana renk; sarı kart = lider, kırmızı kart = kapalı/sonuncu.
+   Skor ve sayılar forma numarası gibi: Barlow Condensed.
+   ============================================================ */
+:root{
+  --zemin:#F4F6F5;
+  --kart:#FFFFFF;
+  --murekkep:#14201A;
+  --gri:#5E6B64;
+  --gri-acik:#93A099;
+  --cizgi:#E1E6E3;
+  --cizgi-koyu:#CBD3CE;
+  --cim:#0E7A4C;
+  --cim-koyu:#0A603B;
+  --cim-acik:#E5F2EB;
+  --sari:#F3C623;
+  --sari-acik:#FDF4D3;
+  --kirmizi:#D64538;
+  --kirmizi-acik:#FBE7E4;
+
+  --yazi:"Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --baslik:"Barlow Condensed", "Barlow", system-ui, sans-serif;
+
+  --r-buyuk:16px;
+  --r:12px;
+  --r-kucuk:8px;
+  --tabbar-h:64px;
+
+  /* eski şablonlar (admin) için takma adlar */
+  --muted:var(--gri); --navy:var(--murekkep); --navy-2:#24342C; --gold:#B38C00; --gold-light:#F3C623;
+  --border:var(--cizgi); --bg:var(--zemin); --card:var(--kart); --text:var(--murekkep);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:var(--yazi);
+  font-size:16px;
+  line-height:1.5;
+  background:var(--zemin);
+  color:var(--murekkep);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--cim)}
+a:hover{color:var(--cim-koyu)}
+img{max-width:100%}
+:focus-visible{outline:3px solid rgba(14,122,76,.45); outline-offset:2px; border-radius:6px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important; animation:none!important}}
+
+h1,h2,h3{font-family:var(--baslik); font-weight:700; line-height:1.1; margin:0 0 .4em; letter-spacing:.2px}
+h1{font-size:34px}
+h2{font-size:22px}
+h3{font-size:18px}
+p{margin:0 0 .75em}
+
+/* ---------- Üst çubuk ---------- */
+.appbar{
+  position:sticky; top:0; z-index:20;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:saturate(1.4) blur(10px);
+  border-bottom:1px solid var(--cizgi);
+}
+.appbar-ic{
+  max-width:760px; margin:0 auto; padding:0 16px;
+  height:56px; display:flex; align-items:center; justify-content:space-between; gap:16px;
+}
+.marka{
+  display:flex; align-items:center; gap:10px;
+  font-family:var(--baslik); font-weight:700; font-size:22px;
+  color:var(--murekkep); text-decoration:none; letter-spacing:.3px;
+}
+.marka:hover{color:var(--murekkep)}
+.marka-isaret{
+  width:26px; height:26px; border-radius:50%;
+  background:var(--cim); position:relative; flex:none;
+}
+.marka-isaret::before{ /* orta çizgi + orta yuvarlak: yukarıdan saha */
+  content:""; position:absolute; inset:5px; border:2px solid #fff; border-radius:50%;
+}
+.marka-isaret::after{
+  content:""; position:absolute; left:50%; top:3px; bottom:3px; width:2px; margin-left:-1px; background:#fff;
+}
+.ustmenu{display:flex; gap:4px}
+.ustmenu a{
+  color:var(--gri); text-decoration:none; font-weight:600; font-size:15px;
+  padding:8px 12px; border-radius:var(--r-kucuk);
+}
+.ustmenu a:hover{color:var(--murekkep); background:var(--zemin)}
+.ustmenu a[aria-current="page"]{color:var(--cim); background:var(--cim-acik)}
+
+/* ---------- Alt sekme çubuğu (mobil) ---------- */
+.tabbar{display:none}
+@media (max-width:640px){
+  .ustmenu{display:none}
+  .tabbar{
+    display:flex; position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:#fff; border-top:1px solid var(--cizgi);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tabbar a{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    height:var(--tabbar-h); text-decoration:none; color:var(--gri-acik);
+    font-size:12px; font-weight:600;
+  }
+  .tabbar a svg{width:24px; height:24px}
+  .tabbar a[aria-current="page"]{color:var(--cim)}
+  body.girisli{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+}
+
+
+.ust-rozet{display:inline-block; min-width:20px; height:20px; padding:0 6px; margin-left:2px; border-radius:999px; background:var(--kirmizi); color:#fff; font:700 13px/20px var(--baslik); text-align:center}
+.tab-ikon{position:relative; display:inline-flex}
+.tab-rozet{position:absolute; top:-6px; left:14px; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--kirmizi); color:#fff; font:700 12px/18px var(--baslik); text-align:center; box-shadow:0 0 0 2px #fff}
+
+/* ---------- Girişsiz üst menü ve alt bilgi ---------- */
+.ustmenu-acik{display:flex; align-items:center; gap:4px}
+.ustmenu-acik a:not(.btn){color:var(--gri); text-decoration:none; font-weight:600; font-size:15px; padding:8px 12px; border-radius:var(--r-kucuk)}
+.ustmenu-acik a:not(.btn):hover{color:var(--murekkep); background:var(--zemin)}
+.ustmenu-acik a[aria-current="page"]{color:var(--cim); background:var(--cim-acik)}
+@media (max-width:640px){ .gizle-mobil{display:none} }
+.altbilgi{max-width:760px; margin:0 auto; padding:8px 16px 32px; color:var(--gri); font-size:14px}
+.altbilgi nav{display:flex; flex-wrap:wrap; gap:6px 18px; padding-top:16px; border-top:1px solid var(--cizgi); margin-bottom:8px}
+.altbilgi a{color:var(--gri); font-weight:600; text-decoration:none}
+.altbilgi a:hover{color:var(--cim)}
+.altbilgi p{margin:0; font-size:13px}
+/* ---------- Sayfa ---------- */
+.sayfa{max-width:760px; margin:0 auto; padding:24px 16px 48px}
+.sayfa-bas{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px}
+.sayfa-bas h1{margin:0}
+.sayfa-bas .alt{color:var(--gri); margin:4px 0 0}
+.geri{display:inline-flex; align-items:center; gap:6px; color:var(--gri); text-decoration:none; font-weight:600; font-size:15px; margin-bottom:10px}
+.geri:hover{color:var(--murekkep)}
+
+/* ---------- Panel ---------- */
+.panel, .card{
+  background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r-buyuk);
+  padding:20px; margin-bottom:16px;
+}
+.panel-bas{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px}
+.panel-bas h2{margin:0}
+.panel-bas .yan{color:var(--gri); font-size:14px}
+.sessiz{color:var(--gri)}
+.kucuk{font-size:14px}
+
+/* ---------- Düğmeler ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:44px; padding:10px 18px; border-radius:var(--r);
+  border:1px solid var(--cim); background:var(--cim); color:#fff;
+  font:600 15px/1.2 var(--yazi); text-decoration:none; cursor:pointer;
+  transition:background .15s, border-color .15s;
+}
+.btn:hover{background:var(--cim-koyu); border-color:var(--cim-koyu); color:#fff}
+.btn:disabled{opacity:.55; cursor:default}
+.btn-ikincil{background:#fff; color:var(--murekkep); border-color:var(--cizgi-koyu)}
+.btn-ikincil:hover{background:var(--zemin); color:var(--murekkep); border-color:var(--cizgi-koyu)}
+.btn-tehlike{background:#fff; color:var(--kirmizi); border-color:#EFC2BD}
+.btn-tehlike:hover{background:var(--kirmizi-acik); color:var(--kirmizi); border-color:#EFC2BD}
+.btn-blok{width:100%}
+.btn-kucuk{min-height:36px; padding:6px 12px; font-size:14px; border-radius:var(--r-kucuk)}
+.btn-dizi{display:flex; flex-wrap:wrap; gap:8px}
+
+/* ---------- Formlar ---------- */
+label{display:block; font-weight:600; font-size:14px; margin:0 0 6px}
+input, textarea, select{
+  width:100%; padding:11px 12px; margin:0 0 14px;
+  font:16px/1.4 var(--yazi); color:var(--murekkep);
+  background:#fff; border:1px solid var(--cizgi-koyu); border-radius:var(--r-kucuk);
+}
+input:focus, textarea:focus, select:focus{outline:none; border-color:var(--cim); box-shadow:0 0 0 3px rgba(14,122,76,.15)}
+.ipucu{font-size:13px; color:var(--gri); margin:-8px 0 14px}
+
+/* ---------- Bildirimler ---------- */
+.flash{
+  padding:12px 14px; border-radius:var(--r); margin-bottom:12px; font-size:15px;
+  background:var(--cim-acik); color:var(--cim-koyu); border:1px solid #CBE5D7;
+}
+.flash-danger, .flash-error{background:var(--kirmizi-acik); color:#9E2B21; border-color:#F2CAC5}
+.flash-warning{background:var(--sari-acik); color:#7A5D00; border-color:#F2E2A6}
+
+/* ---------- Etiketler ---------- */
+.badge, .etiket{
+  display:inline-flex; align-items:center; gap:4px;
+  padding:2px 9px; border-radius:999px; font-size:13px; font-weight:600;
+  background:var(--zemin); color:var(--gri); white-space:nowrap;
+}
+.badge-win, .etiket-tam{background:var(--cim-acik); color:var(--cim-koyu)}
+.badge-draw, .etiket-sonuc{background:#E7EEF9; color:#2A4E8C}
+.badge-zero{background:var(--zemin); color:var(--gri)}
+.badge-warn, .etiket-uyari{background:var(--sari-acik); color:#7A5D00}
+.etiket-kapali{background:var(--kirmizi-acik); color:#9E2B21}
+.etiket-kral{background:var(--sari-acik); color:#6E5300}
+.etiket-cenabet{background:var(--kirmizi-acik); color:#9E2B21}
+.etiket-yz{background:#E8EEF7; color:#2B4A7A}
+
+/* Sarı / kırmızı kart işareti */
+.kart-isaret{display:inline-block; width:9px; height:12px; border-radius:2px; vertical-align:-1px}
+.kart-isaret.sari{background:var(--sari)}
+.kart-isaret.kirmizi{background:var(--kirmizi)}
+
+/* ---------- Maç satırı ---------- */
+.mac{padding:16px 0; border-top:1px solid var(--cizgi)}
+.mac:first-child{border-top:0; padding-top:4px}
+.mac-ust{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; font-size:14px; color:var(--gri)}
+.fikstur{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px}
+.takim{display:flex; align-items:center; gap:10px; font-weight:600; font-size:16px; line-height:1.2; min-width:0}
+.takim span{overflow-wrap:anywhere}
+.takim.ev{justify-content:flex-end; text-align:right}
+.logo{width:30px; height:30px; object-fit:contain; flex:none; margin:0}
+.skor{display:flex; align-items:center; gap:6px}
+.skor-kutu, .skor-girdi{
+  width:48px; height:52px; border-radius:var(--r);
+  display:flex; align-items:center; justify-content:center;
+  font:700 30px/1 var(--baslik); text-align:center; color:var(--murekkep);
+  background:var(--zemin); border:1px solid var(--cizgi); margin:0; padding:0;
+}
+.skor-kutu.bitti{background:var(--murekkep); color:#fff; border-color:var(--murekkep)}
+.skor-ayrac{font:600 22px/1 var(--baslik); color:var(--gri-acik)}
+.skor-vs{font:600 18px/1 var(--baslik); color:var(--gri-acik); padding:0 10px}
+.skor-girdi{background:#fff; border:2px solid var(--cizgi-koyu); -moz-appearance:textfield}
+.skor-girdi::-webkit-outer-spin-button, .skor-girdi::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.skor-girdi:focus{border-color:var(--cim); box-shadow:0 0 0 3px rgba(14,122,76,.15)}
+.skor-girdi.dolu{border-color:var(--cim); background:var(--cim-acik)}
+.mac-alt{margin-top:10px; font-size:14px; color:var(--gri); text-align:center}
+.mac-alt strong{color:var(--murekkep)}
+@media (max-width:480px){
+  .takim{flex-direction:column; gap:6px; font-size:14px; text-align:center}
+  .takim.ev{flex-direction:column-reverse; text-align:center}
+  .takim.ev, .takim.dep{justify-content:center}
+  .skor-kutu, .skor-girdi{width:44px; height:48px; font-size:28px}
+}
+
+/* ---------- Segment (lig seçici) ---------- */
+.segment{display:flex; gap:4px; padding:4px; background:var(--zemin); border:1px solid var(--cizgi); border-radius:var(--r); margin-bottom:16px}
+.segment button{
+  flex:1 1 0; min-width:0; min-height:40px; border:0; border-radius:var(--r-kucuk);
+  background:transparent; color:var(--gri); cursor:pointer;
+  font:600 15px/1.1 var(--yazi); display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
+}
+.segment button[aria-selected="true"]{background:#fff; color:var(--murekkep); box-shadow:0 1px 2px rgba(20,32,26,.12)}
+.segment .sayi{font:700 14px/1 var(--baslik); color:var(--gri-acik)}
+.segment button[aria-selected="true"] .sayi{color:var(--cim)}
+@media (max-width:400px){ .segment button{font-size:13.5px} }
+
+/* ---------- Sıralama tablosu ---------- */
+table{width:100%; border-collapse:collapse}
+th, td{padding:10px 8px; border-bottom:1px solid var(--cizgi); text-align:left}
+th{font-size:13px; font-weight:600; color:var(--gri)}
+tr:last-child td{border-bottom:0}
+.siralama td.sira{width:44px; font:700 20px/1 var(--baslik); color:var(--gri-acik)}
+.siralama td.puan{text-align:right; font:700 22px/1 var(--baslik)}
+.siralama th:last-child{text-align:right}
+.siralama tr.lider td.sira{color:#B38C00}
+.siralama tr.ben td{background:var(--cim-acik)}
+.siralama tr.ben td:first-child{border-radius:var(--r-kucuk) 0 0 var(--r-kucuk)}
+.siralama tr.ben td:last-child{border-radius:0 var(--r-kucuk) var(--r-kucuk) 0}
+.oyuncu{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:600}
+
+/* ---------- Boş durum ---------- */
+.bos{padding:24px 16px; text-align:center; color:var(--gri); background:var(--zemin); border-radius:var(--r); border:1px dashed var(--cizgi-koyu)}
+.bos strong{display:block; color:var(--murekkep); margin-bottom:2px}
+
+/* ---------- İstatistik şeridi ---------- */
+.serit{display:grid; grid-template-columns:repeat(4,1fr); background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); margin-bottom:16px}
+.serit > div{padding:14px 16px; border-left:1px solid var(--cizgi)}
+.serit > div:first-child{border-left:0}
+.serit .deger{font:700 32px/1 var(--baslik)}
+.serit .ad{font-size:13px; color:var(--gri); margin-top:4px}
+@media (max-width:560px){
+  .serit{grid-template-columns:repeat(2,1fr)}
+  .serit > div:nth-child(3){border-left:0}
+  .serit > div:nth-child(n+3){border-top:1px solid var(--cizgi)}
+}
+
+/* ---------- Eski şablonlarla uyum (admin) ---------- */
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px}
+.stat{font:700 32px/1 var(--baslik)}
+.teams{display:flex; justify-content:space-between; align-items:center; gap:12px; font-weight:600}
+.score-pill{font:700 20px/1 var(--baslik); background:var(--murekkep); color:#fff; border-radius:var(--r-kucuk); padding:6px 12px}
+.match{border:1px solid var(--cizgi); border-radius:var(--r); padding:14px 16px; margin-bottom:10px}
+.match-info{margin-top:8px; font-size:14px; color:var(--gri)}
+.text-muted{color:var(--gri)}
+.sayfa-genis{max-width:1100px}
+</style>
+{% block head %}{% endblock %}
+</head>
+
+{% set ep = request.endpoint or "" %}
+{% set sohbette = ep in ('sohbetler', 'grup_sohbet') %}
+<body class="{{ 'girisli' if current_user.is_authenticated else '' }}">
+
+<header class="appbar">
+  <div class="appbar-ic">
+    <a class="marka" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}">
+      <span class="marka-isaret" aria-hidden="true"></span>Tahmin Ligi
+    </a>
+    {% if current_user.is_authenticated %}
+    <nav class="ustmenu" aria-label="Ana menü">
+      <a href="{{ url_for('dashboard') }}" {% if ep == 'dashboard' %}aria-current="page"{% endif %}>Ana sayfa</a>
+      <a href="{{ url_for('gruplar') }}" {% if ep.startswith('grup') and not sohbette %}aria-current="page"{% endif %}>Gruplar</a>
+      <a href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
+      <a href="{{ url_for('profil') }}" {% if ep == 'profil' %}aria-current="page"{% endif %}>Profil</a>
+      <a href="{{ url_for('sohbetler') }}" {% if sohbette %}aria-current="page"{% endif %}>Sohbet{% if toplam_okunmamis %} <span class="ust-rozet">{{ toplam_okunmamis }}</span>{% endif %}</a>
+      {% if current_user.admin %}<a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>Admin</a>{% endif %}
+      <a href="{{ url_for('cikis') }}">Çıkış</a>
+    </nav>
+    {% else %}
+    <nav class="ustmenu-acik" aria-label="Ana menü">
+      <a class="gizle-mobil" href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
+      <a class="gizle-mobil" href="{{ url_for('nasil_oynanir') }}" {% if ep == 'nasil_oynanir' %}aria-current="page"{% endif %}>Nasıl oynanır</a>
+      {% if ep != 'giris' %}<a class="btn btn-kucuk" href="{{ url_for('giris') }}">Giriş yap</a>{% endif %}
+    </nav>
+    {% endif %}
+  </div>
+</header>
+
+<main class="sayfa {{ 'sayfa-genis' if ep.startswith('admin') else '' }}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}" role="status">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="altbilgi">
+  <nav aria-label="Site bağlantıları">
+    <a href="{{ url_for('puan_durumu') }}">Puan durumu</a>
+    <a href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır</a>
+    <a href="{{ url_for('gizlilik') }}">Gizlilik</a>
+    <a href="{{ url_for('iletisim') }}">İletişim</a>
+  </nav>
+  <p>Tahmin Ligi arkadaş grupları için parasız bir skor tahmin oyunudur. Bahis veya para ödülü yoktur.</p>
+</footer>
+
+{% if current_user.is_authenticated %}
+<nav class="tabbar" aria-label="Alt menü">
+  <a href="{{ url_for('dashboard') }}" {% if ep == 'dashboard' %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+    Ana sayfa
+  </a>
+  <a href="{{ url_for('gruplar') }}" {% if ep.startswith('grup') and not sohbette %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.2 4.4 1.9 5 5.4"/></svg>
+    Gruplar
+  </a>
+  <a href="{{ url_for('profil') }}" {% if ep == 'profil' %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></svg>
+    Profil
+  </a>
+  <a href="{{ url_for('sohbetler') }}" {% if sohbette %}aria-current="page"{% endif %} aria-label="Sohbet{% if toplam_okunmamis %}, {{ toplam_okunmamis }} okunmamış mesaj{% endif %}">
+    <span class="tab-ikon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01" stroke-width="2.6"/></svg>
+      {% if toplam_okunmamis %}<span class="tab-rozet">{{ toplam_okunmamis if toplam_okunmamis < 100 else '99+' }}</span>{% endif %}
+    </span>
+    Sohbet
+  </a>
+  {% if current_user.admin %}
+  <a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    Admin
+  </a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

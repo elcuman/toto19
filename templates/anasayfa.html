@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Tahmin Ligi · Arkadaşlarınla maç skoru tahmin et{% endblock %}
+{% block head %}
+<meta name="description" content="Tahmin Ligi: Süper Lig, Şampiyonlar Ligi ve Türkiye'nin Uluslar Ligi maçlarında skoru tahmin et, arkadaş grubunla puan yarışına gir. Parasız, bahissiz.">
+{% endblock %}
+
+{% block content %}
+
+<section class="karsilama">
+  <h1>Maç başlamadan skoru yaz,<br>haftanın kralı ol.</h1>
+  <p class="alt">Tahmin Ligi, arkadaş grupları için parasız bir skor tahmin oyunu. Süper Lig, Şampiyonlar Ligi ve Türkiye'nin Uluslar Ligi maçlarına tahmin girersin; sonuçlar gelince puanlar kendiliğinden hesaplanır.</p>
+  <div class="btn-dizi">
+    <a class="btn" href="{{ url_for('kayit') }}">Ücretsiz hesap aç</a>
+    <a class="btn btn-ikincil" href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır?</a>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Puanlama</h2>
+  <ul class="puanlama">
+    <li><span class="buyuk-puan">5</span><div><strong>Skoru tam bildin</strong><span class="sessiz">Tahminin 2–1, maç 2–1 bitti.</span></div></li>
+    <li><span class="buyuk-puan">3</span><div><strong>Kazananı ya da beraberliği bildin</strong><span class="sessiz">Tahminin 2–0, maç 3–1 bitti.</span></div></li>
+    <li><span class="buyuk-puan sifir">0</span><div><strong>Sonuç tutmadı</strong><span class="sessiz">Tahminin 1–1, maç 0–2 bitti.</span></div></li>
+  </ul>
+</section>
+
+{% if yaklasan %}
+<section class="panel">
+  <div class="panel-bas"><h2>Yaklaşan maçlar</h2></div>
+  {% for mac in yaklasan %}
+  <article class="mac">
+    <div class="mac-ust">
+      <span>{% if mac.baslangic %}{{ mac.baslangic | tr_saat("%d.%m %H:%M") }}{% endif %}, {{ mac.lig }}</span>
+    </div>
+    {{ p.fikstur(mac) }}
+  </article>
+  {% endfor %}
+  <a class="btn btn-blok" style="margin-top:12px" href="{{ url_for('kayit') }}">Tahmin girmek için hesap aç</a>
+</section>
+{% endif %}
+
+{% if ozet %}
+<section class="panel">
+  <div class="panel-bas">
+    <h2>Süper Lig'de ilk 6</h2>
+    <a class="kucuk" href="{{ url_for('puan_durumu') }}">Tüm puan durumu</a>
+  </div>
+  <table class="mini-tablo">
+    <thead><tr><th scope="col">#</th><th scope="col">Takım</th><th scope="col" class="n">O</th><th scope="col" class="n">AV</th><th scope="col" class="n">P</th></tr></thead>
+    <tbody>
+    {% for t in ozet %}
+      <tr>
+        <td class="s">{{ t.sira }}</td>
+        <td><div class="takim-hucre">{% set yedek = takim_logo_url(t.takim) %}{% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ t.logo or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}<span>{{ t.takim }}</span></div></td>
+        <td class="n">{{ t.o }}</td>
+        <td class="n">{{ '+' if t.av > 0 else '' }}{{ t.av }}</td>
+        <td class="n p">{{ t.p }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Grubunu kur</h2>
+  <ol class="adimlar">
+    <li><strong>Hesap aç.</strong> Sadece kullanıcı adı ve şifre yeter, e-posta istenmez.</li>
+    <li><strong>Grup kur, davet linkini paylaş.</strong> Arkadaşların WhatsApp'tan gelen linkle tek dokunuşta katılır.</li>
+    <li><strong>Her hafta tahminini gir.</strong> Maç başlayınca tahminler kapanır, herkesin tahmini o an görünür.</li>
+  </ol>
+  <p class="sessiz kucuk" style="margin:0">Grup kuralını siz belirlersiniz: haftanın sonuncusu kahveleri ısmarlar, sezonun kralı kupayı alır.</p>
+</section>
+
+<style>
+.karsilama{padding:12px 0 24px}
+.karsilama h1{font-size:clamp(34px, 8vw, 52px); line-height:1.02; margin-bottom:14px}
+.karsilama .alt{font-size:17px; color:var(--gri); max-width:56ch; margin-bottom:20px}
+.puanlama{list-style:none; margin:0; padding:0}
+.puanlama li{display:flex; gap:14px; align-items:center; padding:12px 0; border-top:1px solid var(--cizgi)}
+.puanlama li:first-child{border-top:0; padding-top:4px}
+.puanlama div{display:flex; flex-direction:column}
+.buyuk-puan{flex:none; width:48px; height:52px; border-radius:var(--r); background:var(--cim); color:#fff; font:700 30px/52px var(--baslik); text-align:center}
+.buyuk-puan.sifir{background:var(--zemin); color:var(--gri); border:1px solid var(--cizgi)}
+.mini-tablo td.s{width:30px; font:700 18px/1 var(--baslik); color:var(--gri-acik)}
+.mini-tablo .n{text-align:center; width:40px}
+.mini-tablo td.p{font:700 20px/1 var(--baslik)}
+.takim-hucre{display:flex; align-items:center; gap:8px; font-weight:600}
+.takim-hucre .logo{width:22px; height:22px}
+.adimlar{margin:0 0 12px; padding-left:22px}
+.adimlar li{margin-bottom:10px}
+</style>
+{% endblock %}

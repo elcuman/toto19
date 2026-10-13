@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}{{ grup.ad }} · Tahmin Ligi{% endblock %}
+
+{% block content %}
+
+{% set davet_linki = request.url_root ~ 'katil/' ~ grup.davet_kodu %}
+{% set davet_mesaji = "Tahmin Ligi'nde " ~ grup.ad ~ " grubuma katıl! Maç başlamadan tahminini gir, kazan ya da hesabını ver 😄 " ~ davet_linki %}
+
+<a class="geri" href="{{ url_for('gruplar') }}">‹ Gruplar</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>{{ grup.ad }}</h1>
+    <p class="alt">{{ members|length }} üye, davet kodu <strong>{{ grup.davet_kodu }}</strong></p>
+  </div>
+  <a class="btn" href="{{ url_for('grup_sohbet', grup_id=grup.id) }}">
+    Sohbet{% if mesaj_sayisi %}<span class="sohbet-sayac" aria-label="{{ mesaj_sayisi }} okunmamış">{{ mesaj_sayisi }}</span>{% endif %}
+  </a>
+</div>
+
+<div class="btn-dizi" style="margin-bottom:16px">
+  <a class="btn btn-ikincil btn-kucuk" target="_blank" rel="noopener" href="https://wa.me/?text={{ davet_mesaji | urlencode }}">WhatsApp'tan davet et</a>
+  <button type="button" class="btn btn-ikincil btn-kucuk" id="linkKopyala" data-link="{{ davet_linki }}">Davet linkini kopyala</button>
+</div>
+
+{% if grup.aciklama %}
+<div class="kural">
+  <span class="kart-isaret sari" aria-hidden="true"></span>
+  <div><strong>Grup kuralı</strong><p>{{ grup.aciklama }}</p></div>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-bas">
+    <h2>Bu haftanın maçları</h2>
+    <span class="kucuk"><a href="{{ url_for('puan_durumu') }}">Puan durumu</a> &nbsp; <a href="{{ url_for('grup_gecmis_maclar', grup_id=grup.id) }}">Geçmiş maçlar</a></span>
+  </div>
+
+  {% if lig_sekmeleri %}
+  <div class="segment" role="tablist" aria-label="Lig seç">
+    {% for s in lig_sekmeleri %}
+    <button type="button" role="tab" class="lig-sekme" data-sekme="{{ s.kod }}"
+            aria-selected="{{ 'true' if s.kod == varsayilan_sekme else 'false' }}">
+      <span class="uzun">{{ s.ad }}</span><span class="kisa">{{ {"Şampiyonlar Ligi":"Şampiyonlar","Uluslar Ligi":"Uluslar"}.get(s.ad, s.ad) }}</span> <span class="sayi">{{ s.maclar|length }}</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <form method="POST" action="{{ url_for('tahminleri_kaydet', grup_id=grup.id) }}" id="tahminFormu">
+
+  {% for s in lig_sekmeleri %}
+  <div class="lig-panel" data-panel="{{ s.kod }}" role="tabpanel" {% if s.kod != varsayilan_sekme %}hidden{% endif %}>
+
+    {% if s.maclar %}
+      {% if s.hafta %}<p class="sessiz kucuk" style="margin:-4px 0 4px">{{ s.ad }}, {{ s.hafta }}. hafta</p>{% endif %}
+
+      {% for mac in s.maclar %}
+      {% set t = tahminler.get(mac.id) %}
+      <article class="mac">
+        <div class="mac-ust">
+          <span>{% if mac.baslangic %}{{ mac.baslangic | tr_saat("%d.%m %H:%M") }}{% else %}Saat belli değil{% endif %}</span>
+          {% if mac.oynanabilir_mi() %}
+            {% if t %}<span class="etiket etiket-tam">Tahminin kayıtlı</span>{% else %}<span class="etiket etiket-uyari">Tahmin bekliyor</span>{% endif %}
+          {% elif mac.bitti_mi() %}
+            <span class="etiket">Bitti</span>
+          {% else %}
+            <span class="etiket etiket-kapali">Tahmine kapandı</span>
+          {% endif %}
+        </div>
+
+        {% if mac.oynanabilir_mi() %}
+          <div class="fikstur">
+            {{ p.takim_ev(mac) }}
+            <div class="skor">
+              <input class="skor-girdi {{ 'dolu' if t else '' }}" type="number" min="0" max="20" inputmode="numeric"
+                     name="ev_skor_{{ mac.id }}" value="{{ t.ev_skor if t else '' }}"
+                     aria-label="{{ mac.ev_sahibi }} golü">
+              <span class="skor-ayrac">–</span>
+              <input class="skor-girdi {{ 'dolu' if t else '' }}" type="number" min="0" max="20" inputmode="numeric"
+                     name="deplasman_skor_{{ mac.id }}" value="{{ t.deplasman_skor if t else '' }}"
+                     aria-label="{{ mac.deplasman }} golü">
+            </div>
+            {{ p.takim_dep(mac) }}
+          </div>
+        {% else %}
+          {{ p.fikstur(mac) }}
+          <p class="mac-alt">
+            {% if t %}
+              Tahminin <strong>{{ t.ev_skor }}–{{ t.deplasman_skor }}</strong>
+              {% if mac.bitti_mi() %}&nbsp;{{ p.puan_etiketi(t.puan) }}{% endif %}
+            {% else %}
+              Bu maça tahmin girmedin.
+            {% endif %}
+          </p>
+        {% endif %}
+
+        {% set mac_tahminleri = grup_tahmin_matrisi.get(mac.id, {}) if grup_tahmin_matrisi else {} %}
+        {% set digerleri = members | rejectattr('kullanici_id', 'equalto', current_user.id) | list %}
+        {% if digerleri %}
+        <details class="digerleri">
+          <summary>Diğerlerinin tahminleri <span class="sessiz">({{ digerleri | selectattr('kullanici_id', 'in', mac_tahminleri.keys() | list) | list | length }}/{{ digerleri|length }} girdi)</span></summary>
+          <ul>
+            {% for member in digerleri %}
+              {% set mt = mac_tahminleri.get(member.kullanici_id) %}
+              <li>
+                <span>{{ member.kullanici.kullanici_adi }}</span>
+                {% if mt %}
+                  {% if mac.basladi_mi() %}
+                    <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong>{% if mac.bitti_mi() %} {{ p.puan_etiketi(mt.puan) }}{% endif %}</span>
+                  {% else %}
+                    <span class="sessiz">Gizli, maç başlayınca açılır</span>
+                  {% endif %}
+                {% else %}
+                  <span class="sessiz">Girmedi</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </article>
+      {% endfor %}
+
+    {% else %}
+      <div class="bos">
+        <strong>Bu hafta {{ s.ad }} maçı yok.</strong>
+        {% if s.sonraki_mac %}Sıradaki maç {{ s.sonraki_mac | tr_saat }}.{% endif %}
+      </div>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+
+  {% if oynanabilir_mac_var %}
+  <div class="kaydet-cubugu">
+    <button type="submit" class="btn btn-blok">Tahminleri kaydet</button>
+    <p class="ipucu" style="margin:6px 0 0; text-align:center">Tüm liglerdeki tahminlerin birlikte kaydedilir.</p>
+  </div>
+  {% endif %}
+
+  </form>
+  {% else %}
+    <div class="bos"><strong>Bu hafta maç yok.</strong>Yeni maçlar eklenince burada görünecek.</div>
+  {% endif %}
+</section>
+
+{% if su_anki_hafta_siralamasi %}
+<section class="panel">
+  <div class="panel-bas">
+    <h2>Bu haftanın sıralaması</h2>
+    <a class="kucuk" href="{{ url_for('grup_haftalik_liderlik', grup_id=grup.id) }}">Tüm haftalar</a>
+  </div>
+  {% if hafta_basi and hafta_sonu %}
+  <p class="sessiz kucuk" style="margin-top:-6px">{{ hafta_basi | tr_saat("%d.%m") }} – {{ hafta_sonu | tr_saat("%d.%m") }} arası, tüm ligler birlikte. Her hafta sıfırdan başlar.</p>
+  {% endif %}
+  {{ p.siralama(su_anki_hafta_siralamasi, "Haftanın kralı", "Haftanın cenabeti", "Bu hafta") }}
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-bas"><h2>Sezon sıralaması</h2></div>
+  {{ p.siralama(leaderboard, "Sezonun kralı", "Sezonun cenabeti", "Toplam") }}
+</section>
+
+<style>
+.sohbet-sayac{min-width:22px; height:22px; padding:0 6px; border-radius:999px; background:#fff; color:var(--cim); font:700 14px/22px var(--baslik); text-align:center}
+.kural{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; margin-bottom:16px; background:var(--sari-acik); border:1px solid #F2E2A6; border-radius:var(--r)}
+.kural .kart-isaret{margin-top:5px; width:12px; height:16px}
+.kural p{margin:2px 0 0; white-space:pre-line; color:#5C4800}
+.digerleri{margin-top:12px}
+.digerleri summary{cursor:pointer; font-size:14px; font-weight:600; color:var(--cim); list-style:none; padding:4px 0}
+.digerleri summary::-webkit-details-marker{display:none}
+.digerleri summary::before{content:"+"; display:inline-block; width:16px; font-weight:700}
+.digerleri[open] summary::before{content:"–"}
+.digerleri ul{list-style:none; margin:6px 0 0; padding:0; border:1px solid var(--cizgi); border-radius:var(--r-kucuk)}
+.digerleri li{display:flex; justify-content:space-between; gap:12px; padding:8px 12px; font-size:14px; border-top:1px solid var(--cizgi)}
+.digerleri li:first-child{border-top:0}
+.mini-skor{font:700 17px/1 var(--baslik)}
+.kaydet-cubugu{position:sticky; bottom:12px; margin-top:16px; padding:12px; background:rgba(255,255,255,.96); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); box-shadow:0 6px 24px rgba(20,32,26,.10)}
+.segment .kisa{display:none}
+@media (max-width:480px){ .segment .uzun{display:none} .segment .kisa{display:inline} }
+@media (max-width:640px){
+  .kaydet-cubugu{bottom:calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom)); padding:8px; margin-left:-8px; margin-right:-8px}
+  .kaydet-cubugu .ipucu{display:none}
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var butonlar = document.querySelectorAll('.lig-sekme');
+  var paneller = document.querySelectorAll('.lig-panel');
+  function sec(kod){
+    butonlar.forEach(function(b){ b.setAttribute('aria-selected', b.dataset.sekme === kod ? 'true' : 'false'); });
+    paneller.forEach(function(p){ p.hidden = p.dataset.panel !== kod; });
+    try { sessionStorage.setItem('ligSekme_{{ grup.id }}', kod); } catch(e) {}
+  }
+  butonlar.forEach(function(b){ b.addEventListener('click', function(){ sec(b.dataset.sekme); }); });
+  try {
+    var kayitli = sessionStorage.getItem('ligSekme_{{ grup.id }}');
+    if (kayitli && document.querySelector('.lig-panel[data-panel="' + kayitli + '"]')) sec(kayitli);
+  } catch(e) {}
+
+  document.querySelectorAll('.skor-girdi').forEach(function(g){
+    g.addEventListener('input', function(){ g.classList.toggle('dolu', g.value !== ''); });
+    g.addEventListener('focus', function(){ g.select(); });
+  });
+
+  var kopya = document.getElementById('linkKopyala');
+  if (kopya) kopya.addEventListener('click', function(){
+    var yaz = function(){ kopya.textContent = 'Link kopyalandı'; setTimeout(function(){ kopya.textContent = 'Davet linkini kopyala'; }, 2000); };
+    if (navigator.clipboard) navigator.clipboard.writeText(kopya.dataset.link).then(yaz, function(){ prompt('Davet linki:', kopya.dataset.link); });
+    else prompt('Davet linki:', kopya.dataset.link);
+  });
+})();
+</script>
+{% endblock %}

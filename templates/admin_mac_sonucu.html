@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>⚽ Maç Sonucu Elle Gir</h1>
+
+<p style="color:var(--muted); margin-top:-6px;">
+  <a href="{{ url_for('admin') }}">← Admin Panele Dön</a>
+</p>
+
+<p style="font-size:0.85em; color:var(--muted);">
+  API (SportAPI7/football-data.org) kota doldurduğunda ya da geçici bir
+  hata verdiğinde, bir maçın sonucunu buradan elle girebilirsin. Kaydedince
+  maç otomatik olarak "bitti" durumuna alınır ve o maça tahmin yapmış
+  <strong>tüm kullanıcıların puanları anında otomatik olarak yeniden
+  hesaplanır</strong> — başka hiçbir şey yapmana gerek yok.
+</p>
+
+<p style="font-size:0.85em; color:var(--muted);">
+  Saati değişen bir maç için "Tarih" sütunundan yeni saati
+  <strong>Türkiye saatiyle</strong> girip "Saati Kaydet"e bas. Elle girilen
+  saat, API senkronu tarafından ezilmez; API'deki saate geri dönmek için
+  "API'ye dön" butonunu kullan.
+</p>
+
+<div class="card">
+
+<h2>Sonucu Bekleyen Maçlar</h2>
+
+{% if bekleyen_maclar %}
+<table class="table">
+<tr>
+<th>Maç</th>
+<th>Lig / Hafta</th>
+<th>Tarih</th>
+<th>Durum</th>
+<th>Skor</th>
+<th></th>
+</tr>
+
+{% for mac in bekleyen_maclar %}
+<tr>
+<td>{{ mac.ev_sahibi }} - {{ mac.deplasman }}</td>
+<td style="font-size:0.85em; color:var(--muted);">{{ mac.lig }}{% if mac.hafta %} · {{ mac.hafta }}{% endif %}</td>
+<td style="font-size:0.85em; color:var(--muted);">
+  <form method="POST" action="{{ url_for('admin_mac_saati_kaydet', mac_id=mac.id) }}"
+        style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+    <input type="datetime-local" name="baslangic" required
+           value="{% if mac.baslangic %}{{ mac.baslangic | tr_saat('%Y-%m-%dT%H:%M') }}{% endif %}"
+           style="padding:4px 6px;">
+    <button type="submit" class="btn" style="background:#475569; padding:6px 10px; font-size:0.8em;"
+            title="Saati değiştir (Türkiye saati)">
+      Saati Kaydet
+    </button>
+    {% if mac.id in elle_saatli_mac_id_seti %}
+    <span class="badge" style="background:#fef3c7;color:#92400e;" title="Bu saat elle girildi; API senkronu değiştirmez">✏️ elle</span>
+    <button type="submit" name="sifirla" value="1" formnovalidate class="btn"
+            style="background:#94a3b8; padding:6px 10px; font-size:0.8em;"
+            title="Elle girilen saati kaldır, API saatine dön">
+      API'ye dön
+    </button>
+    {% endif %}
+  </form>
+</td>
+<td>
+  <span class="badge" style="background:#f2f4f9;color:#64748b;">{{ mac.durum }}</span>
+</td>
+<td>
+  <form method="POST" action="{{ url_for('admin_mac_sonucu_kaydet', mac_id=mac.id) }}"
+        style="display:flex; align-items:center; gap:6px;"
+        onsubmit="return confirm('{{ mac.ev_sahibi }} - {{ mac.deplasman }} maçı bitti olarak işaretlenecek ve tahmin puanları yeniden hesaplanacak. Emin misin?');">
+    <input type="number" min="0" name="ev_skor" required
+           style="width:52px; padding:4px 6px;" placeholder="Ev">
+    <span>-</span>
+    <input type="number" min="0" name="deplasman_skor" required
+           style="width:52px; padding:4px 6px;" placeholder="Dep">
+    <button type="submit" class="btn" style="padding:6px 10px; font-size:0.8em;">
+      Kaydet
+    </button>
+  </form>
+</td>
+</tr>
+{% endfor %}
+
+</table>
+{% else %}
+<p style="color:var(--muted);">Sonucu bekleyen maç yok.</p>
+{% endif %}
+
+</div>
+
+<br>
+
+<div class="card">
+
+<h2>Son Tamamlanan Maçlar</h2>
+
+<p style="font-size:0.85em; color:var(--muted);">
+  Girilen bir skoru düzeltmek istersen, yeni skoru girip tekrar kaydet
+  yeterli — puanlar otomatik olarak güncellenir. "Muaf Tut" butonuna
+  basarsan o maç, "Puanları Sıfırla" butonuna basılsa bile puanı hep
+  normal şekilde sayılmaya devam eder (sıfırlamadan etkilenmez).
+</p>
+
+{% if tamamlanan_maclar %}
+<table class="table">
+<tr>
+<th>Maç</th>
+<th>Lig / Hafta</th>
+<th>Tarih</th>
+<th>Mevcut Skor</th>
+<th>Kaynak</th>
+<th>Düzelt</th>
+<th>Sıfırlamadan Muaf</th>
+</tr>
+
+{% for mac in tamamlanan_maclar %}
+<tr>
+<td>{{ mac.ev_sahibi }} - {{ mac.deplasman }}</td>
+<td style="font-size:0.85em; color:var(--muted);">{{ mac.lig }}{% if mac.hafta %} · {{ mac.hafta }}{% endif %}</td>
+<td style="font-size:0.85em; color:var(--muted);">
+  <form method="POST" action="{{ url_for('admin_mac_saati_kaydet', mac_id=mac.id) }}"
+        style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+    <input type="datetime-local" name="baslangic" required
+           value="{% if mac.baslangic %}{{ mac.baslangic | tr_saat('%Y-%m-%dT%H:%M') }}{% endif %}"
+           style="padding:4px 6px;">
+    <button type="submit" class="btn" style="background:#475569; padding:6px 10px; font-size:0.8em;"
+            title="Saati değiştir (Türkiye saati)">
+      Saati Kaydet
+    </button>
+    {% if mac.id in elle_saatli_mac_id_seti %}
+    <span class="badge" style="background:#fef3c7;color:#92400e;" title="Bu saat elle girildi; API senkronu değiştirmez">✏️ elle</span>
+    <button type="submit" name="sifirla" value="1" formnovalidate class="btn"
+            style="background:#94a3b8; padding:6px 10px; font-size:0.8em;"
+            title="Elle girilen saati kaldır, API saatine dön">
+      API'ye dön
+    </button>
+    {% endif %}
+  </form>
+</td>
+<td><strong>{{ mac.ev_skor }} - {{ mac.deplasman_skor }}</strong></td>
+<td style="font-size:0.8em; color:var(--muted);">{{ mac.api_status or "-" }}</td>
+<td>
+  <form method="POST" action="{{ url_for('admin_mac_sonucu_kaydet', mac_id=mac.id) }}"
+        style="display:flex; align-items:center; gap:6px;"
+        onsubmit="return confirm('{{ mac.ev_sahibi }} - {{ mac.deplasman }} maçının skoru güncellenecek ve tahmin puanları yeniden hesaplanacak. Emin misin?');">
+    <input type="number" min="0" name="ev_skor" required value="{{ mac.ev_skor }}"
+           style="width:52px; padding:4px 6px;">
+    <span>-</span>
+    <input type="number" min="0" name="deplasman_skor" required value="{{ mac.deplasman_skor }}"
+           style="width:52px; padding:4px 6px;">
+    <button type="submit" class="btn" style="background:#475569; padding:6px 10px; font-size:0.8em;">
+      Güncelle
+    </button>
+  </form>
+</td>
+<td>
+  <form method="POST" action="{{ url_for('admin_mac_muaf_degistir', mac_id=mac.id) }}">
+    {% if mac.id in muaf_mac_id_seti %}
+    <button type="submit" class="btn" style="background:#16a34a; padding:6px 10px; font-size:0.8em;">
+      ✅ Muaf (kaldır)
+    </button>
+    {% else %}
+    <button type="submit" class="btn" style="background:#94a3b8; padding:6px 10px; font-size:0.8em;">
+      Muaf Tut
+    </button>
+    {% endif %}
+  </form>
+</td>
+</tr>
+{% endfor %}
+
+</table>
+{% else %}
+<p style="color:var(--muted);">Henüz tamamlanmış maç yok.</p>
+{% endif %}
+
+</div>
+
+{% endblock %}

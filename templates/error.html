@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Hata {{ code }} · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="bos" style="margin-top:6vh; padding:40px 20px">
+  <div style="font:700 64px/1 var(--baslik); color:var(--murekkep)">{{ code }}</div>
+  <p style="margin:8px 0 18px">{{ message }}</p>
+  <a class="btn" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('giris') }}">Ana sayfaya dön</a>
+</div>
+{% endblock %}

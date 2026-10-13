@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="giris-alani">
+  <section class="panel">
+    <h2>{% if mode == "giris" %}Giriş yap{% else %}Kayıt ol{% endif %}</h2>
+    <form method="POST">
+      <label for="kullanici_adi">Kullanıcı adı</label>
+      <input id="kullanici_adi" name="kullanici_adi" required autocomplete="username">
+      <label for="sifre">Şifre</label>
+      <input id="sifre" type="password" name="sifre" required>
+      <button type="submit" class="btn btn-blok">{% if mode == "giris" %}Giriş yap{% else %}Kayıt ol{% endif %}</button>
+    </form>
+  </section>
+  <p class="giris-alt">
+    {% if mode == "giris" %}<a href="{{ url_for('kayit') }}">Hesap oluştur</a>{% else %}<a href="{{ url_for('giris') }}">Giriş yap</a>{% endif %}
+  </p>
+</div>
+{% include "_giris_stil.html" %}
+{% endblock %}

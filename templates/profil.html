@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Profil · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>{{ current_user.kullanici_adi }}</h1>
+    <p class="alt">{% if current_user.olusturulma %}{{ current_user.olusturulma | tr_saat("%d.%m.%Y") }} tarihinden beri oynuyor{% endif %}</p>
+  </div>
+</div>
+
+<div class="serit" style="grid-template-columns:repeat(2,1fr)">
+  <div><div class="deger">{{ toplam_puan }}</div><div class="ad">Toplam puan</div></div>
+  <div style="border-left:1px solid var(--cizgi); border-top:0"><div class="deger">{{ toplam_tahmin }}</div><div class="ad">Girilen tahmin</div></div>
+</div>
+
+<section class="panel">
+  <h2>Puanlama</h2>
+  <ul class="kurallar">
+    <li><span class="etiket etiket-tam">+5</span> Skoru tam bildin</li>
+    <li><span class="etiket etiket-sonuc">+3</span> Kazananı ya da beraberliği bildin</li>
+    <li><span class="etiket">+0</span> Sonuç tutmadı</li>
+  </ul>
+  <p class="sessiz kucuk" style="margin:0">Tahminler maç başlayınca kapanır, diğer üyelerin tahminleri o an açılır.</p>
+</section>
+
+<a class="btn btn-tehlike btn-blok" href="{{ url_for('cikis') }}">Çıkış yap</a>
+
+<style>
+.kurallar{list-style:none; margin:0 0 12px; padding:0}
+.kurallar li{display:flex; gap:12px; align-items:center; padding:8px 0; border-top:1px solid var(--cizgi)}
+.kurallar li:first-child{border-top:0}
+.kurallar .etiket{min-width:40px; justify-content:center; font-family:var(--baslik); font-size:15px}
+</style>
+{% endblock %}

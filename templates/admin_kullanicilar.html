@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>👤 Kullanıcı Yönetimi</h1>
+
+<p style="color:var(--muted); margin-top:-6px;">
+  <a href="{{ url_for('admin') }}">← Admin Panele Dön</a>
+</p>
+
+<div class="card">
+
+<table class="table">
+<tr>
+<th>#</th>
+<th>Kullanıcı Adı</th>
+<th>Admin mi?</th>
+<th>Grup Üyeliği</th>
+<th>Kurduğu Grup</th>
+<th>Kayıt Tarihi</th>
+<th>İşlemler</th>
+</tr>
+
+{% for kullanici in kullanicilar %}
+<tr>
+<td>{{ loop.index }}</td>
+<td>{{ kullanici.kullanici_adi }}</td>
+<td>
+  {% if kullanici.admin %}
+    <span class="badge" style="background:#fff4d6;color:#8a6d00;">Admin</span>
+  {% else %}
+    <span class="badge" style="background:#f2f4f9;color:#64748b;">Kullanıcı</span>
+  {% endif %}
+</td>
+<td>{{ grup_sayilari.get(kullanici.id, 0) }}</td>
+<td>{{ kurulan_gruplar.get(kullanici.id, 0) }}</td>
+<td style="font-size:0.85em; color:var(--muted);">
+  {{ kullanici.olusturulma.strftime("%d.%m.%Y") if kullanici.olusturulma else "-" }}
+</td>
+<td>
+  <div style="display:flex; gap:6px; flex-wrap:wrap;">
+
+    <form method="POST" action="{{ url_for('admin_kullanici_sifre_sifirla', kullanici_id=kullanici.id) }}"
+          onsubmit="return confirm('{{ kullanici.kullanici_adi }} için yeni bir şifre oluşturulacak. Emin misin?');">
+      <button type="submit" class="btn" style="background:#0f766e; padding:6px 10px; font-size:0.8em;">
+        🔑 Şifre Sıfırla
+      </button>
+    </form>
+
+    {% if kullanici.id != current_user.id %}
+    <form method="POST" action="{{ url_for('admin_kullanici_admin_degistir', kullanici_id=kullanici.id) }}"
+          onsubmit="return confirm('{{ kullanici.kullanici_adi }} kullanıcısının admin durumu değiştirilecek. Emin misin?');">
+      <button type="submit" class="btn" style="background:#475569; padding:6px 10px; font-size:0.8em;">
+        {% if kullanici.admin %}⬇️ Admin Kaldır{% else %}⬆️ Admin Yap{% endif %}
+      </button>
+    </form>
+
+    <form method="POST" action="{{ url_for('admin_kullanici_sil', kullanici_id=kullanici.id) }}"
+          onsubmit="return confirm('{{ kullanici.kullanici_adi }} kalıcı olarak silinecek (tahminleri ve grup üyelikleri dahil). Emin misin?');">
+      <button type="submit" class="btn" style="background:#b91c1c; padding:6px 10px; font-size:0.8em;">
+        🗑️ Sil
+      </button>
+    </form>
+    {% endif %}
+
+  </div>
+</td>
+</tr>
+{% endfor %}
+
+</table>
+
+</div>
+
+<p style="font-size:0.8em; color:var(--muted);">
+  ℹ️ Bir grubun kurucusu olan kullanıcı silinemez — önce o grup silinmeli ya da kurucusu değiştirilmeli.
+  Şifre sıfırlandığında yeni şifre sadece bir kez, üstteki bildirimde gösterilir.
+</p>
+
+{% endblock %}

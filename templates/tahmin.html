@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Tahmin · {{ grup.ad }}{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('grup', grup_id=grup.id) }}">‹ {{ grup.ad }}</a>
+
+<section class="panel" style="margin-top:8px">
+  <div class="mac-ust" style="justify-content:center; gap:10px">
+    <span>{{ mac.lig }}</span>
+    {% if mac.baslangic %}<span>{{ mac.baslangic | tr_saat }}</span>{% endif %}
+  </div>
+  <form method="POST">
+    <div class="fikstur" style="margin:18px 0 22px">
+      {{ p.takim_ev(mac) }}
+      <div class="skor">
+        <input class="skor-girdi {{ 'dolu' if tahmin else '' }}" type="number" min="0" max="20" inputmode="numeric" required
+               name="ev_skor" value="{{ tahmin.ev_skor if tahmin else '' }}" aria-label="{{ mac.ev_sahibi }} golü">
+        <span class="skor-ayrac">–</span>
+        <input class="skor-girdi {{ 'dolu' if tahmin else '' }}" type="number" min="0" max="20" inputmode="numeric" required
+               name="deplasman_skor" value="{{ tahmin.deplasman_skor if tahmin else '' }}" aria-label="{{ mac.deplasman }} golü">
+      </div>
+      {{ p.takim_dep(mac) }}
+    </div>
+    <button type="submit" class="btn btn-blok">{% if tahmin %}Tahmini güncelle{% else %}Tahmini kaydet{% endif %}</button>
+    <p class="ipucu" style="margin:8px 0 0; text-align:center">Maç başlayınca tahminler kapanır.</p>
+  </form>
+</section>
+{% endblock %}

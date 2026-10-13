@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Nasıl oynanır · Tahmin Ligi{% endblock %}
+{% block head %}
+<meta name="description" content="Tahmin Ligi kuralları: skor tahmini nasıl girilir, puanlar nasıl hesaplanır, haftalık ve sezonluk sıralama nasıl oluşur.">
+{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>Nasıl oynanır</h1>
+    <p class="alt">Kurallar kısa: maç başlamadan skoru yaz, sonuç gelince puanını al.</p>
+  </div>
+</div>
+
+<article class="metin">
+
+<section class="panel">
+  <h2>Hangi maçlar var?</h2>
+  <ul>
+    <li><strong>Süper Lig:</strong> Ligdeki tüm maçlar.</li>
+    <li><strong>UEFA Şampiyonlar Ligi:</strong> Lig aşaması ve sonraki turlar.</li>
+    <li><strong>UEFA Uluslar Ligi:</strong> Sadece A Milli Takım'ın maçları.</li>
+  </ul>
+  <p>Grup sayfasında her lig için ayrı bir sekme vardır ve sadece o haftanın maçları listelenir. Bir ligin o hafta maçı yoksa sıradaki maçın tarihi yazar.</p>
+</section>
+
+<section class="panel">
+  <h2>Tahmin girmek</h2>
+  <p>Her maç için iki takımın atacağı gol sayısını yazarsın. Tüm liglerdeki tahminlerini tek seferde <em>Tahminleri kaydet</em> düğmesiyle kaydedersin.</p>
+  <p>Tahminini maç başlayana kadar istediğin kadar değiştirebilirsin. <strong>Maç başladığı anda tahminler kapanır</strong>; bundan sonra kimse tahmin giremez veya değiştiremez.</p>
+  <p>Gruptaki diğer oyuncuların tahminleri maç başlayana kadar gizlidir. Maç başlayınca herkesin tahmini açılır, böylece kimse başkasınınkine bakıp yazamaz.</p>
+</section>
+
+<section class="panel">
+  <h2>Puanlama</h2>
+  <table class="kural-tablosu">
+    <thead><tr><th scope="col">Durum</th><th scope="col">Örnek</th><th scope="col">Puan</th></tr></thead>
+    <tbody>
+      <tr><td>Skoru tam bildin</td><td>Tahmin 2–1, sonuç 2–1</td><td class="p">5</td></tr>
+      <tr><td>Kazananı bildin</td><td>Tahmin 1–0, sonuç 3–1</td><td class="p">3</td></tr>
+      <tr><td>Beraberliği bildin</td><td>Tahmin 0–0, sonuç 2–2</td><td class="p">3</td></tr>
+      <tr><td>Sonuç tutmadı</td><td>Tahmin 2–0, sonuç 1–1</td><td class="p">0</td></tr>
+      <tr><td>Tahmin girmedin</td><td>—</td><td class="p">0</td></tr>
+    </tbody>
+  </table>
+  <p class="sessiz kucuk" style="margin-top:10px">Sonuçlar maç bittikten kısa süre sonra otomatik gelir ve puanlar kendiliğinden hesaplanır. Ertelenen veya iptal edilen maçlar puan getirmez.</p>
+</section>
+
+<section class="panel">
+  <h2>Sıralamalar</h2>
+  <p><strong>Haftanın sıralaması</strong> her hafta sıfırdan başlar ve o haftanın tüm liglerdeki maçlarını birlikte sayar. Lider <span class="etiket etiket-kral"><span class="kart-isaret sari" aria-hidden="true"></span>Haftanın kralı</span>, sonuncu <span class="etiket etiket-cenabet"><span class="kart-isaret kirmizi" aria-hidden="true"></span>Haftanın cenabeti</span> olur.</p>
+  <p><strong>Sezon sıralaması</strong> tüm haftaların toplam puanıdır. Geçmiş haftaların kral ve cenabetleri <em>Haftalık sıralama</em> sayfasında durur.</p>
+</section>
+
+<section class="panel">
+  <h2>Gruplar</h2>
+  <p>Herkes istediği kadar grup kurabilir veya gruba katılabilir. Her grubun bir davet kodu ve paylaşılabilir bir davet linki vardır. Bir maça girdiğin tahmin, o grup için geçerlidir; farklı gruplarda farklı tahmin girebilirsin.</p>
+  <p>Grubu kuran kişi bir <strong>grup kuralı</strong> yazabilir, örneğin "haftanın sonuncusu kahveleri ısmarlar". Her grubun kendi sohbet odası da vardır.</p>
+</section>
+
+<section class="panel">
+  <h2>Yapay Zekâ oyuncusu</h2>
+  <p>Her grupta <strong>Yapay Zekâ</strong> adında bir bot oyuncu vardır. Her hafta maçlara kendisi tahmin girer ve sizin gibi puan toplar; sıralamada <span class="etiket etiket-yz">🤖 bot</span> etiketiyle görünür.</p>
+  <p style="margin:0">Tahminlerini bir istatistik modeliyle yapar: takımların bu ligde attığı ve yediği gollere bakarak en olası skoru seçer. Onun tahmini de maç başlayana kadar gizlidir. Hedef basit: botu geçmek.</p>
+</section>
+
+<section class="panel">
+  <h2>Para var mı?</h2>
+  <p style="margin:0">Hayır. Tahmin Ligi tamamen ücretsizdir; bahis, kupon veya para ödülü yoktur. Gruptaki iddialar arkadaşlar arasında kalır.</p>
+</section>
+
+</article>
+
+<div class="btn-dizi" style="margin-top:4px">
+  {% if current_user.is_authenticated %}
+    <a class="btn" href="{{ url_for('gruplar') }}">Gruplarıma git</a>
+  {% else %}
+    <a class="btn" href="{{ url_for('kayit') }}">Hesap aç</a>
+    <a class="btn btn-ikincil" href="{{ url_for('giris') }}">Giriş yap</a>
+  {% endif %}
+</div>
+
+<style>
+.metin p, .metin li{max-width:68ch}
+.metin ul{padding-left:20px; margin:0 0 .75em}
+.metin li{margin-bottom:6px}
+.kural-tablosu td.p{font:700 22px/1 var(--baslik); text-align:right}
+.kural-tablosu th:last-child{text-align:right}
+</style>
+{% endblock %}

@@ -1,0 +1,68 @@
+{# Ortak şablon parçaları. Kullanım: {% import "_parcalar.html" as p %} #}
+
+{% macro logo(ad, url) -%}
+  {%- set yedek = takim_logo_url(ad) -%}
+  {%- set src = url or yedek -%}
+  {%- if src -%}
+  <img loading="lazy" class="logo" src="{{ src }}" alt=""{% if yedek and yedek != src %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro takim_ev(mac) -%}
+  <div class="takim ev"><span>{{ mac.ev_sahibi }}</span>{{ logo(mac.ev_sahibi, mac.ev_logo) }}</div>
+{%- endmacro %}
+
+{% macro takim_dep(mac) -%}
+  <div class="takim dep">{{ logo(mac.deplasman, mac.deplasman_logo) }}<span>{{ mac.deplasman }}</span></div>
+{%- endmacro %}
+
+{# Skoru belli olan / oynanmamış maç için salt-okunur fikstür #}
+{% macro fikstur(mac) -%}
+  <div class="fikstur">
+    {{ takim_ev(mac) }}
+    {% if mac.bitti_mi() or (mac.basladi_mi() and mac.ev_skor is not none) %}
+      <div class="skor" aria-label="Skor {{ mac.ev_skor }} - {{ mac.deplasman_skor }}">
+        <span class="skor-kutu {{ 'bitti' if mac.bitti_mi() else '' }}">{{ mac.ev_skor }}</span>
+        <span class="skor-ayrac">–</span>
+        <span class="skor-kutu {{ 'bitti' if mac.bitti_mi() else '' }}">{{ mac.deplasman_skor }}</span>
+      </div>
+    {% else %}
+      <div class="skor"><span class="skor-vs">VS</span></div>
+    {% endif %}
+    {{ takim_dep(mac) }}
+  </div>
+{%- endmacro %}
+
+{# Puan etiketi (5 = tam isabet, 3 = sonuç) #}
+{% macro puan_etiketi(puan) -%}
+  {%- if puan == 5 -%}<span class="etiket etiket-tam">Tam isabet, +5</span>
+  {%- elif puan == 3 -%}<span class="etiket etiket-sonuc">Sonuç tuttu, +3</span>
+  {%- elif puan -%}<span class="etiket etiket-sonuc">+{{ puan }}</span>
+  {%- else -%}<span class="etiket">+0</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{# Sıralama tablosu. satirlar: [{"user":..,"points":..}] #}
+{% macro siralama(satirlar, kral_yazisi, cenabet_yazisi, puan_basligi="Puan") -%}
+  <table class="siralama">
+    <thead><tr><th scope="col">#</th><th scope="col">Oyuncu</th><th scope="col">{{ puan_basligi }}</th></tr></thead>
+    <tbody>
+    {% for row in satirlar %}
+      {% set lider = loop.index == 1 %}
+      {% set sonuncu = loop.index == loop.length and loop.length > 1 %}
+      <tr class="{{ 'lider' if lider else '' }} {{ 'ben' if row.user and row.user.id == current_user.id else '' }}">
+        <td class="sira">{{ loop.index }}</td>
+        <td>
+          <div class="oyuncu">
+            {{ row.user.kullanici_adi if row.user else "?" }}
+            {% if row.user and yz_mi(row.user) %}<span class="etiket etiket-yz" title="İstatistik modeliyle tahmin yapan bot oyuncu">🤖 bot</span>{% endif %}
+            {% if lider %}<span class="etiket etiket-kral"><span class="kart-isaret sari" aria-hidden="true"></span>{{ kral_yazisi }} 👑</span>{% endif %}
+            {% if sonuncu %}<span class="etiket etiket-cenabet"><span class="kart-isaret kirmizi" aria-hidden="true"></span>{{ cenabet_yazisi }} 💩</span>{% endif %}
+          </div>
+        </td>
+        <td class="puan">{{ row.points }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{%- endmacro %}

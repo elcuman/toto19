@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Geçmiş maçlar · {{ grup.ad }}{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('grup', grup_id=grup.id) }}">‹ {{ grup.ad }}</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Geçmiş maçlar</h1>
+    <p class="alt">Biten maçlar ve gruptaki herkesin tahmini.</p>
+  </div>
+</div>
+
+{% if maclar %}
+  <section class="panel">
+  {% for mac in maclar %}
+    {% set mac_tahminleri = tahmin_matrisi.get(mac.id, {}) %}
+    <article class="mac">
+      <div class="mac-ust">
+        <span>{{ mac.lig }}{% if mac.hafta %}, {{ mac.hafta }}. hafta{% endif %}</span>
+        <span>{% if mac.baslangic %}{{ mac.baslangic | tr_saat("%d.%m.%Y") }}{% endif %}</span>
+      </div>
+      {{ p.fikstur(mac) }}
+      <ul class="tahmin-listesi">
+        {% for member in members %}
+          {% set mt = mac_tahminleri.get(member.kullanici_id) %}
+          <li class="{{ 'ben' if member.kullanici_id == current_user.id else '' }}">
+            <span>{{ member.kullanici.kullanici_adi }}</span>
+            {% if mt %}
+              <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong> {{ p.puan_etiketi(mt.puan) }}</span>
+            {% else %}
+              <span class="sessiz">Girmedi</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </article>
+  {% endfor %}
+  </section>
+{% else %}
+  <div class="bos"><strong>Henüz biten maç yok.</strong>Maçlar oynandıkça herkesin tahmini burada listelenecek.</div>
+{% endif %}
+
+<style>
+.tahmin-listesi{list-style:none; margin:12px 0 0; padding:0; border:1px solid var(--cizgi); border-radius:var(--r-kucuk)}
+.tahmin-listesi li{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:7px 12px; font-size:14.5px; border-top:1px solid var(--cizgi)}
+.tahmin-listesi li:first-child{border-top:0}
+.tahmin-listesi li.ben{background:var(--cim-acik)}
+.mini-skor{font:700 17px/1 var(--baslik); margin-right:4px}
+</style>
+{% endblock %}

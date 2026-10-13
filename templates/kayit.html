@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Kayıt · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="giris-alani">
+  <div class="giris-bas">
+    <h1>Tahmin Ligi</h1>
+    <p class="alt sessiz">Hesabını aç, arkadaşının davet koduyla gruba katıl.</p>
+  </div>
+
+  <section class="panel">
+    <h2>Hesap oluştur</h2>
+    <form method="POST">
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+      <label for="kullanici_adi">Kullanıcı adı</label>
+      <input id="kullanici_adi" name="kullanici_adi" required minlength="3" maxlength="30" autocomplete="username" autocapitalize="none" placeholder="Örn. huseyin">
+      <p class="ipucu">Grup sıralamasında bu isim görünür.</p>
+      <label for="sifre">Şifre</label>
+      <input id="sifre" type="password" name="sifre" required minlength="6" autocomplete="new-password">
+      <label for="sifre_tekrar">Şifre tekrar</label>
+      <input id="sifre_tekrar" type="password" name="sifre_tekrar" required minlength="6" autocomplete="new-password">
+      <p class="ipucu">En az 6 karakter.</p>
+      <button type="submit" class="btn btn-blok">Hesap oluştur</button>
+    </form>
+  </section>
+
+  <p class="giris-alt">Zaten hesabın var mı? <a href="{{ url_for('giris', next=next_url) if next_url else url_for('giris') }}">Giriş yap</a></p>
+</div>
+{% include "_giris_stil.html" %}
+{% endblock %}

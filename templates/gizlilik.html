@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Gizlilik · Tahmin Ligi{% endblock %}
+{% block head %}
+<meta name="description" content="Tahmin Ligi gizlilik politikası: hangi verileri topladığımız, çerezler, reklamlar ve verilerinin silinmesi.">
+{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>Gizlilik</h1>
+    <p class="alt">Tahmin Ligi'nde hangi bilgilerin tutulduğunu ve ne için kullanıldığını burada bulabilirsin.</p>
+  </div>
+</div>
+
+<article class="metin">
+
+<section class="panel">
+  <h2>Topladığımız bilgiler</h2>
+  <ul>
+    <li><strong>Hesap bilgileri:</strong> Kullanıcı adın ve şifren. Şifren düz metin olarak değil, geri çevrilemeyen bir özet (hash) olarak saklanır.</li>
+    <li><strong>Oyun verileri:</strong> Girdiğin skor tahminleri, kazandığın puanlar, kurduğun veya katıldığın gruplar.</li>
+    <li><strong>Sohbet mesajları:</strong> Grup sohbet odalarına yazdığın mesajlar. Bunları yalnızca o grubun üyeleri görür.</li>
+  </ul>
+  <p>E-posta adresi, telefon numarası, konum veya ödeme bilgisi istemiyoruz.</p>
+</section>
+
+<section class="panel">
+  <h2>Bilgileri ne için kullanıyoruz</h2>
+  <p>Bu bilgiler yalnızca oyunun çalışması için kullanılır: giriş yapabilmen, tahminlerinin puanlanması, grup sıralamalarının ve sohbetin gösterilmesi. Bilgilerini satmıyor veya başkalarıyla paylaşmıyoruz.</p>
+</section>
+
+<section class="panel">
+  <h2>Çerezler</h2>
+  <p>Giriş yaptığında tarayıcına bir <strong>oturum çerezi</strong> yerleştirilir; bu çerez olmadan her sayfada yeniden giriş yapman gerekirdi.</p>
+  <p>Herkese açık sayfalarda (ana sayfa, puan durumu, nasıl oynanır gibi) <strong>Google AdSense</strong> reklamları gösterilebilir. Google ve iş ortakları, sana ilgi alanına uygun reklam göstermek için çerez kullanabilir. Google'ın bu verileri nasıl kullandığını <a href="https://policies.google.com/technologies/partner-sites" rel="noopener" target="_blank">Google'ın iş ortağı siteleri sayfasında</a> okuyabilir, kişiselleştirilmiş reklamları <a href="https://adssettings.google.com" rel="noopener" target="_blank">Reklam Ayarları</a>'ndan kapatabilirsin.</p>
+  <p>Giriş, kayıt, tahmin ve sohbet sayfalarında reklam gösterilmez.</p>
+</section>
+
+<section class="panel">
+  <h2>Maç verileri</h2>
+  <p>Fikstür ve maç sonuçları herkese açık spor veri kaynaklarından otomatik olarak alınır. Bu kaynaklara senin hakkında hiçbir bilgi gönderilmez.</p>
+</section>
+
+<section class="panel">
+  <h2>Verilerinin silinmesi</h2>
+  <p style="margin:0">Hesabının ve ona bağlı tahmin, puan ve mesajlarının silinmesini istersen <a href="{{ url_for('iletisim') }}">iletişim sayfasındaki</a> yoldan bize yazman yeterli. Talebin en geç 30 gün içinde yerine getirilir.</p>
+</section>
+
+<p class="sessiz kucuk">Bu metin değişirse güncel hali her zaman bu sayfada yer alır.</p>
+
+</article>
+
+<style>
+.metin p, .metin li{max-width:68ch}
+.metin ul{padding-left:20px; margin:0 0 .75em}
+.metin li{margin-bottom:6px}
+</style>
+{% endblock %}

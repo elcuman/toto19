@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Sohbet · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>Sohbet</h1>
+    <p class="alt">Hangi grubun sohbetine gireceksin?</p>
+  </div>
+</div>
+
+{% if gruplar %}
+<ul class="sohbet-listesi">
+  {% for g in gruplar %}
+  {% set son = son_mesajlar.get(g.id) %}
+  {% set n = okunmamis.get(g.id, 0) %}
+  <li>
+    <a href="{{ url_for('grup_sohbet', grup_id=g.id) }}" class="{{ 'yeni' if n else '' }}">
+      <div class="sl-ust">
+        <strong>{{ g.ad }}</strong>
+        {% if son %}<span class="sessiz kucuk">{{ son.saat }}</span>{% endif %}
+      </div>
+      <div class="sl-alt">
+        <span class="sl-onizleme">
+          {% if son %}<b>{{ son.kullanici_adi }}:</b> {{ son.icerik }}{% else %}Henüz mesaj yok. İlk mesajı sen yaz.{% endif %}
+        </span>
+        {% if n %}<span class="sl-sayi" aria-label="{{ n }} okunmamış">{{ n }}</span>{% endif %}
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="bos">
+  <strong>Sohbet için önce bir gruba katıl.</strong>
+  Her grubun kendi sohbet odası var.
+  <div style="margin-top:12px"><a class="btn" href="{{ url_for('gruplar') }}">Gruplara git</a></div>
+</div>
+{% endif %}
+
+<style>
+.sohbet-listesi{list-style:none; margin:0; padding:0; background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); overflow:hidden}
+.sohbet-listesi li{border-top:1px solid var(--cizgi)}
+.sohbet-listesi li:first-child{border-top:0}
+.sohbet-listesi a{display:block; padding:14px 16px; color:var(--murekkep); text-decoration:none}
+.sohbet-listesi a:hover{background:var(--zemin)}
+.sl-ust{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.sl-ust strong{font:700 20px/1.2 var(--baslik)}
+.sl-alt{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:2px}
+.sl-onizleme{color:var(--gri); font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
+.sl-onizleme b{font-weight:600; color:var(--murekkep)}
+.yeni .sl-onizleme{color:var(--murekkep)}
+.sl-sayi{flex:none; min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:var(--kirmizi); color:#fff; font:700 14px/22px var(--baslik); text-align:center}
+</style>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Haftalık sıralama · {{ grup.ad }}{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('grup', grup_id=grup.id) }}">‹ {{ grup.ad }}</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Haftalık sıralama</h1>
+    <p class="alt">Her hafta puanlar sıfırdan başlar. Geçmiş haftaların kralları ve cenabetleri burada.</p>
+  </div>
+</div>
+
+{% if haftalik_liderlik %}
+  {% for hafta_verisi in haftalik_liderlik %}
+  <section class="panel">
+    <div class="panel-bas">
+      <h2>
+        {% if hafta_verisi.hafta_basi %}{{ hafta_verisi.hafta_basi | tr_saat("%d.%m") }} – {{ hafta_verisi.hafta_sonu | tr_saat("%d.%m.%Y") }}{% else %}Tarihsiz maçlar{% endif %}
+      </h2>
+      {% if hafta_verisi.lider %}<span class="yan">Lider: <strong>{{ hafta_verisi.lider.user.kullanici_adi }}</strong></span>{% endif %}
+    </div>
+    {{ p.siralama(hafta_verisi.siralama, "Haftanın kralı", "Haftanın cenabeti", "Puan") }}
+  </section>
+  {% endfor %}
+{% else %}
+  <div class="bos"><strong>Henüz biten hafta yok.</strong>İlk hafta bitince sıralaması burada görünecek.</div>
+{% endif %}
+{% endblock %}

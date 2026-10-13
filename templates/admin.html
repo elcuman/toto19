@@ -1,0 +1,244 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+Admin Panel
+</h1>
+
+<div class="grid">
+
+<div class="card">
+Kullanıcı
+
+<div class="stat">
+{{ kullanici_sayisi }}
+</div>
+
+</div>
+
+<div class="card">
+Grup
+
+<div class="stat">
+{{ grup_sayisi }}
+</div>
+
+</div>
+
+<div class="card">
+Toplam Maç
+
+<div class="stat">
+{{ mac_sayisi }}
+</div>
+
+</div>
+
+<div class="card">
+Champions League
+
+<div class="stat">
+{{ cl_mac_sayisi }}
+</div>
+
+</div>
+
+<div class="card">
+Süper Lig
+
+<div class="stat">
+{{ super_lig_mac_sayisi }}
+</div>
+
+</div>
+
+<div class="card">
+Uluslar Ligi (TR)
+
+<div class="stat">
+{{ uluslar_ligi_mac_sayisi }}
+</div>
+
+</div>
+
+<div class="card">
+Tahmin
+
+<div class="stat">
+{{ tahmin_sayisi }}
+</div>
+
+</div>
+
+</div>
+
+
+<div class="grid">
+
+<div class="card">
+
+<h2>
+Champions League
+</h2>
+
+<p>
+Competition:
+<strong>
+CL
+</strong>
+</p>
+
+<p>
+Provider:
+<strong>
+football-data.org
+</strong>
+</p>
+
+<a
+class="btn"
+href="{{ url_for('admin_sync_tek_lig', lig_kodu='CL') }}"
+>
+Sadece Bunu Sync Et
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>
+Süper Lig
+</h2>
+
+<p>
+Competition:
+<strong>
+TR1
+</strong>
+</p>
+
+<p style="font-size:0.85em; color:var(--muted);">
+ℹ️ Süper Lig ESPN'in ücretsiz, anahtar gerektirmeyen uç noktasından ay ay çekilir (kota yok). Gelen maçlar mevcut maçlarla saat ve takım adına göre eşleştirilir; elle girilen sonuçlara dokunulmaz.
+</p>
+
+<p>
+Provider:
+<strong>
+ESPN (key gerektirmez)
+</strong>
+</p>
+
+<a
+class="btn"
+href="{{ url_for('admin_sync_tek_lig', lig_kodu='TR1') }}"
+>
+Sadece Bunu Sync Et
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>
+UEFA Uluslar Ligi
+</h2>
+
+<p>
+Competition:
+<strong>
+UNL
+</strong>
+</p>
+
+<p style="font-size:0.85em; color:var(--muted);">
+ℹ️ Sadece Türkiye Milli Takımı'nın maçları alınır, diğer maçlar atlanır.
+</p>
+
+<p>
+Provider:
+<strong>
+ESPN (key gerektirmez)
+</strong>
+</p>
+
+<a
+class="btn"
+href="{{ url_for('admin_sync_tek_lig', lig_kodu='UNL') }}"
+>
+Sadece Bunu Sync Et
+</a>
+
+</div>
+
+</div>
+
+<br>
+
+<div class="card">
+
+<h2>
+Tüm Ligler
+</h2>
+
+<p style="font-size:0.85em; color:var(--muted);">
+Her iki sağlayıcıyı da tek seferde çalıştırır. Bir ligde hata olursa
+(örn. günlük API limiti dolduysa) diğer lig etkilenmez.
+</p>
+
+<a
+class="btn"
+href="{{ url_for('admin_sync') }}"
+>
+Şimdi Hepsini Sync Et
+</a>
+
+<a
+class="btn"
+href="{{ url_for('admin_api_test') }}"
+>
+API Test (İkisi de)
+</a>
+
+<a
+class="btn"
+href="{{ url_for('admin_durum') }}"
+>
+DB Durumu
+</a>
+
+<form
+method="POST"
+action="{{ url_for('admin_puanlari_sifirla') }}"
+style="display:inline;"
+onsubmit="return confirm('Tüm kullanıcıların haftalık ve sezonluk puanları sıfırlanacak. Emin misiniz?');"
+>
+<button
+type="submit"
+class="btn"
+style="background:#b45309;"
+>
+🔄 Puanları Sıfırla (Haftalık + Sezonluk)
+</button>
+</form>
+
+<a
+class="btn"
+style="background:#b91c1c;"
+href="{{ url_for('admin_mac_sonucu') }}"
+>
+⚽ Maç Sonucu Elle Gir
+</a>
+
+<a
+class="btn"
+style="background:#7c3aed;"
+href="{{ url_for('admin_kullanicilar') }}"
+>
+👤 Kullanıcı Yönetimi
+</a>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,35 @@
+# Veritabanı Supabase'e taşındı (Render ücretsiz Postgres 30 günde siliniyordu).
+
+services:
+  # --- WEB SERVİSİ ---
+  - type: web
+    name: tahmin-ligi-web
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # Supabase > Connect > Session pooler adresini Render Dashboard'dan elle gir
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FOOTBALL_DATA_TOKEN
+        sync: false          # Render Dashboard'dan elle gireceksin (Champions League için)
+      - key: API_FOOTBALL_KEY
+        sync: false          # Render Dashboard'dan elle gireceksin (Süper Lig için — dashboard.api-football.com'dan ücretsiz alınır)
+      - key: SPORTAPI7_KEY
+        sync: false          # Render Dashboard'dan elle gireceksin (Süper Lig için — rapidapi.com/rapidsportapi/api/sportapi7 ücretsiz Basic plana abone olup buradan alınır)
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false          # Render Dashboard'dan elle gireceksin (güçlü bir şifre koy)
+      - key: CRON_SECRET
+        generateValue: true  # cron job bu değeri otomatik okuyacak (aşağıya bak)
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+# NOT: Render'ın kendi cron job servisi kullanılmıyor (min. $1/ay ücretli).
+# Bunun yerine /cron/sync endpoint'i, dışarıdan BEDAVA bir servisle (cron-job.org)
+# tetiklenecek şekilde tasarlandı. CRON_SECRET değeri web servisin Environment
+# sekmesinde otomatik oluşacak, oradan kopyalayıp cron-job.org'a gireceksin.
