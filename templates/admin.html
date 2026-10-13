@@ -277,6 +277,51 @@ style="background:#2B4A7A;"
 </button>
 </form>
 
+<form
+method="POST"
+action="{{ url_for('admin_ziya_yenile') }}"
+style="display:inline;"
+onsubmit="return confirm('Ziya\'nın henüz başlamamış maçlardaki tahminleri silinip yeniden girilecek. Devam?');"
+>
+<button
+type="submit"
+class="btn"
+style="background:#475569;"
+>
+♻️ Tahminleri Yenile
+</button>
+</form>
+
+{% if ziya %}
+<p style="margin-top:14px">Tahmin kaynağı: <strong>{{ ziya.kaynak }}</strong></p>
+
+{% if ziya.teshis %}
+<details style="margin-top:8px">
+<summary style="cursor:pointer; font-weight:600">Yaklaşan maçlarda Ziya ne görüyor? ({{ ziya.teshis|length }} maç)</summary>
+<div style="overflow-x:auto; margin-top:8px">
+<table style="width:100%; font-size:0.85em; border-collapse:collapse">
+<thead><tr style="text-align:left">
+<th>Maç</th><th>Lig</th><th>Ziya</th><th>Model</th><th>Beklenen gol</th><th>Veri (maç)</th>
+</tr></thead>
+<tbody>
+{% for r in ziya.teshis %}
+<tr style="border-top:1px solid #e5e7eb">
+<td>{{ r.mac.ev_sahibi }} – {{ r.mac.deplasman }}<br><span style="color:var(--muted)">{{ r.mac.baslangic | tr_saat("%d.%m %H:%M") }}</span></td>
+<td>{{ r.mac.lig }}<br><span style="color:var(--muted)">{{ r.lig_mac }} maç</span></td>
+<td><strong>{% if r.ziya %}{{ r.ziya[0] }}–{{ r.ziya[1] }}{% else %}—{% endif %}</strong></td>
+<td>{{ r.model[0] }}–{{ r.model[1] }}</td>
+<td>{{ "%.2f"|format(r.lam_ev) }} – {{ "%.2f"|format(r.lam_dep) }}</td>
+<td{% if r.ev_n == 0 or r.dep_n == 0 %} style="color:#b91c1c; font-weight:600"{% endif %}>{{ r.ev_n }} / {{ r.dep_n }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<p style="font-size:0.8em; color:var(--muted)">"Veri" sütununda 0 görünen takım için geçmiş maç bulunamamış demektir (isim eşleşmiyor ya da veritabanında maçı yok); model o takımı lig ortalaması sayar.</p>
+</details>
+{% endif %}
+{% endif %}
+
 </div>
 
 {% endblock %}
