@@ -856,6 +856,7 @@ def football_data_get(endpoint, params=None):
 def map_match_status(api_status):
     mapping = {
         "FINISHED": "bitti",
+        "AWARDED": "bitti",
         "CANCELLED": "iptal",
         "POSTPONED": "ertelendi",
         "SUSPENDED": "ertelendi",
@@ -905,15 +906,29 @@ def football_match_to_db(match, competition_id=None, active_season=None):
     mac.hafta = str(match.get("matchday")) if match.get("matchday") else None
     mac.baslangic = parse_api_date(match.get("utcDate"))
     elle_saat_uygula(mac)
-    mac.api_status = match.get("status")
-    mac.durum = map_match_status(match.get("status"))
-
+    api_status = match.get("status")
     home_score = full_time.get("home")
     away_score = full_time.get("away")
+
+    # Admin sonucu elle girdiyse, API maçı "bitti" demeden onu ezme
+    if mac.api_status == "MANUEL" and api_status not in ("FINISHED", "AWARDED"):
+        mac.son_guncelleme = utc_now_naive()
+        return mac
+
+    mac.api_status = api_status
+    mac.durum = map_match_status(api_status)
     if home_score is not None:
         mac.ev_skor = home_score
     if away_score is not None:
         mac.deplasman_skor = away_score
+
+    # football-data'nın ücretsiz planında maç bittiği halde durum bir süre
+    # "IN_PLAY"/"PAUSED"/"TIMED" kalabiliyor; skor gelmiş ve başlama saatinin
+    # üzerinden 2,5 saat geçmişse maçı bitmiş say ki puanlar hesaplansın.
+    if (mac.durum in ("planlandi", "oynaniyor") and mac.ev_skor is not None
+            and mac.deplasman_skor is not None and mac.baslangic
+            and utc_now_naive() > mac.baslangic + timedelta(minutes=150)):
+        mac.durum = "bitti"
 
     mac.son_guncelleme = utc_now_naive()
     return mac
