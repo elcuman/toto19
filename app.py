@@ -1946,7 +1946,7 @@ def kayit():
             flash("Form bilgilerini kontrol edin (Şifre en az 6 karakter olmalı ve uyuşmalı).", "danger")
             return redirect(url_for("kayit", next=next_url) if next_url else url_for("kayit"))
 
-        if kullanici_adi.casefold() in {YZ_KULLANICI_ADI.casefold(), "yapay zeka"} or Kullanici.query.filter_by(kullanici_adi=kullanici_adi).first():
+        if _yz_adi_rezerve_mi(kullanici_adi) or Kullanici.query.filter_by(kullanici_adi=kullanici_adi).first():
             flash("Bu kullanıcı adı zaten kullanılıyor.", "danger")
             return redirect(url_for("kayit", next=next_url) if next_url else url_for("kayit"))
 
@@ -3449,7 +3449,14 @@ def sonucu_beklenen_maclar(now=None):
 # maçlara bakar. Tahminleri normal oyuncular gibi puanlanır.
 # ============================================================
 
-YZ_KULLANICI_ADI = "Yapay Zekâ"
+YZ_KULLANICI_ADI = "Robot Ziya"
+
+
+def _yz_adi_rezerve_mi(ad):
+    """'robot ziya', 'ROBOT ZİYA', 'robot_ziya', 'RobotZiya' gibi taklitleri engeller."""
+    sade = (ad or "").replace("İ", "i").replace("I", "ı").lower()
+    sade = "".join(h for h in sade if h.isalnum()).replace("ı", "i").replace("\u0307", "")
+    return sade in {"robotziya", "ziyarobot", "yapayzeka", "yapayzekâ"}
 YZ_TAHMIN_PENCERESI_GUN = 7       # bu kadar gün içindeki maçlara tahmin girer
 YZ_GECMIS_GUN = 400               # modelin baktığı geçmiş
 YZ_ONSEL_MAC = 4                  # az maçı olan takımı lig ortalamasına çeker
