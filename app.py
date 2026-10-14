@@ -128,6 +128,13 @@ SUPER_LIG_ID = 2036
 NATIONS_LEAGUE_CODE = "UNL"
 NATIONS_LEAGUE_ID = 2037
 
+# Avrupa kupaları (Avrupa Ligi + Konferans Ligi) — SADECE Beşiktaş ve
+# Trabzonspor'un maçları. ESPN'den (key gerektirmez) çekilir. İki kupa tek
+# sekmede ("Avrupa") toplanır; Mac.lig alanında maçın asıl kupası yazar.
+# (Şampiyonlar Ligi zaten football-data'dan tümüyle geliyor.)
+AVRUPA_CODE = "AVR"
+AVRUPA_ID = 2038
+
 # Takip edilen tüm ligler burada tanımlı. "provider" hangi API/senkronizasyon
 # fonksiyonunun kullanılacağını belirler. Yeni bir lig eklemek için buraya bir
 # satır eklemek yeterli; sync_all_leagues() otomatik olarak hepsini çeker.
@@ -135,6 +142,7 @@ LEAGUES = {
     CHAMPIONS_LEAGUE_CODE: {"id": CHAMPIONS_LEAGUE_ID, "ad": "UEFA Champions League", "provider": "football-data"},
     SUPER_LIG_CODE: {"id": SUPER_LIG_ID, "ad": "Süper Lig", "provider": "espn"},  # ücretsiz, kota yok
     NATIONS_LEAGUE_CODE: {"id": NATIONS_LEAGUE_ID, "ad": "UEFA Uluslar Ligi", "provider": "espn-nations"},
+    AVRUPA_CODE: {"id": AVRUPA_ID, "ad": "Avrupa Kupaları (BJK & TS)", "provider": "espn-avrupa"},
 }
 
 TAKIP_EDILEN_LIG_ID_LISTESI = [lig["id"] for lig in LEAGUES.values()]
@@ -144,6 +152,7 @@ LIG_KISA_ADLARI = {
     CHAMPIONS_LEAGUE_ID: "Şampiyonlar Ligi",
     SUPER_LIG_ID: "Süper Lig",
     NATIONS_LEAGUE_ID: "Uluslar Ligi",
+    AVRUPA_ID: "Avp/Konf",
 }
 
 # Grup sayfasında "bu hafta" sayılan süre: bir ligin sıradaki maçı bu kadar
@@ -163,6 +172,11 @@ SOHBET_MIN_ARALIK_SN = 1     # aynı kullanıcının iki mesajı arasındaki en 
 CHAMPIONS_LEAGUE_GORUNUM_BASLANGICI = datetime(2026, 10, 1)
 
 
+# Şimdilik kullanıcıya gösterilmeyen ligler (senkron arka planda sürer).
+# Tekrar göstermek için buradan çıkarmak yeterli.
+GIZLI_LIG_ID_LISTESI = [NATIONS_LEAGUE_ID]
+
+
 def gosterilecek_lig_id_listesi():
     """Kullanıcıya gösterilecek lig id listesi.
 
@@ -170,9 +184,10 @@ def gosterilecek_lig_id_listesi():
     Ligi'nin CHAMPIONS_LEAGUE_GORUNUM_BASLANGICI tarihinden önce bu listeden
     çıkarılmasıdır (bkz. yukarıdaki not).
     """
+    liste = [lig_id for lig_id in TAKIP_EDILEN_LIG_ID_LISTESI if lig_id not in GIZLI_LIG_ID_LISTESI]
     if datetime.now(timezone.utc).replace(tzinfo=None) < CHAMPIONS_LEAGUE_GORUNUM_BASLANGICI:
-        return [lig_id for lig_id in TAKIP_EDILEN_LIG_ID_LISTESI if lig_id != CHAMPIONS_LEAGUE_ID]
-    return TAKIP_EDILEN_LIG_ID_LISTESI
+        return [lig_id for lig_id in liste if lig_id != CHAMPIONS_LEAGUE_ID]
+    return liste
 
 
 API_TIMEOUT = 30
@@ -224,6 +239,11 @@ ESPN_NATIONS_LEAGUE_SLUG = "uefa.nations"
 # "Turkey" diye adlandırabildiği için ikisi de var; ayrıca ESPN kısaltması "TUR".
 NATIONS_LEAGUE_TAKIP_EDILEN_TAKIMLAR = ["türkiye", "turkiye", "turkey"]
 NATIONS_LEAGUE_TAKIP_KISALTMALARI = ["TUR"]
+
+# Avrupa kupalarında takip edilen kulüpler (ESPN kısaltmaları: BES, TRAB)
+ESPN_AVRUPA_SLUGLARI = {"uefa.europa": "UEFA Avrupa Ligi", "uefa.europa.conf": "UEFA Konferans Ligi"}
+AVRUPA_TAKIP_EDILEN_TAKIMLAR = ["besiktas", "beşiktaş", "trabzonspor"]
+AVRUPA_TAKIP_KISALTMALARI = ["BES", "TRAB"]
 
 # ESPN fikstür id'leri de diğer iki sağlayıcıyla çakışmasın diye kendi
 # ofsetini kullanıyor.
@@ -962,6 +982,9 @@ def sync_league(competition_code, requested_season=None, aylar=None):
     if provider == "espn-nations":
         return sync_nations_league_espn(requested_season=requested_season, aylar=aylar)
 
+    if provider == "espn-avrupa":
+        return sync_avrupa_espn(requested_season=requested_season, aylar=aylar)
+
     if provider == "api-football":
         return sync_super_lig_api_football(requested_season=requested_season)
 
@@ -1627,6 +1650,86 @@ def sync_nations_league_espn(requested_season=None, aylar=None):
     }
 
 
+def espn_avrupa_takip_maci_mi(event):
+    """ESPN eventinde takımlardan biri Beşiktaş ya da Trabzonspor mu?"""
+    competitions = event.get("competitions") or []
+    competition = competitions[0] if competitions else {}
+    for c in competition.get("competitors") or []:
+        team = c.get("team") or {}
+        if (team.get("abbreviation") or "").upper() in AVRUPA_TAKIP_KISALTMALARI:
+            return True
+        for alan in ("displayName", "name", "shortDisplayName", "location"):
+            deger = (team.get(alan) or "").lower()
+            if any(anahtar in deger for anahtar in AVRUPA_TAKIP_EDILEN_TAKIMLAR):
+                return True
+    return False
+
+
+def sync_avrupa_espn(requested_season=None, aylar=None):
+    """
+    Avrupa Ligi ve Konferans Ligi'nde SADECE Beşiktaş ve Trabzonspor'un
+    maçlarını ESPN'den çekip AVRUPA_ID altında kaydeder. Sezon Temmuz'da
+    (ön eleme) başlar, Mayıs'ta biter. Diğer takımların maçları DB'ye yazılmaz.
+    "hafta" alanı takvim haftası (YYYY-HH) olarak tutulur ki aynı Perşembe
+    oynanan BJK ve TS maçları grup sayfasında birlikte görünsün.
+    """
+    simdi = datetime.now(timezone.utc)
+    sezon_baslangic_yili = requested_season or (simdi.year if simdi.month >= 7 else simdi.year - 1)
+    if not aylar:
+        aylar = [(sezon_baslangic_yili, m) for m in range(7, 13)] + [
+            (sezon_baslangic_yili + 1, m) for m in range(1, 7)
+        ]
+
+    eventler = {}   # event id -> (event, kupa adı)
+    hatalar, basarili_istek = [], 0
+    for slug, kupa_adi in ESPN_AVRUPA_SLUGLARI.items():
+        for yil, ay in aylar:
+            try:
+                yanit = espn_get(slug, "scoreboard", params={"dates": f"{yil}{ay:02d}", "limit": 500})
+                basarili_istek += 1
+            except Exception as e:
+                hatalar.append(f"{slug} {yil}-{ay:02d}: {e}")
+                continue
+            for e in yanit.get("events", []) or []:
+                if e.get("id") and espn_avrupa_takip_maci_mi(e):
+                    eventler[e["id"]] = (e, kupa_adi)
+    if basarili_istek == 0:
+        raise RuntimeError("ESPN Avrupa kupaları istekleri başarısız: " + " | ".join(hatalar[:2]))
+
+    inserted = updated = skipped = 0
+    for event_id, (event, kupa_adi) in eventler.items():
+        tarih = parse_api_date(event.get("date"))
+        if tarih is None:
+            skipped += 1
+            continue
+        tr = tarih + timedelta(hours=3)
+        yil_hafta = tr.isocalendar()
+        hafta = f"{yil_hafta[0]}-{yil_hafta[1]:02d}"
+        existing = Mac.query.filter_by(external_id=ESPN_EXTERNAL_ID_OFFSET + int(event_id)).first()
+        if existing and existing.api_status == "MANUEL":
+            skipped += 1
+            continue
+        if not espn_event_to_db(event, hafta, sezon_baslangic_yili, lig_adi=kupa_adi, lig_id=AVRUPA_ID):
+            skipped += 1
+            continue
+        if existing:
+            updated += 1
+        else:
+            inserted += 1
+
+    db.session.commit()
+    recalculate_all_points()
+    return {
+        "success": True,
+        "lig_kodu": AVRUPA_CODE,
+        "competition_id": AVRUPA_ID,
+        "api_matches": len(eventler),
+        "inserted": inserted,
+        "updated": updated,
+        "skipped": skipped,
+    }
+
+
 def api_football_get(endpoint, params=None):
     if not API_FOOTBALL_KEY:
         raise RuntimeError("API_FOOTBALL_KEY bulunamadı.")
@@ -2256,7 +2359,7 @@ def grup(grup_id):
             "kod": kod,
             "ad": LIG_KISA_ADLARI.get(bilgi["id"], bilgi["ad"]),
             "maclar": lig_maclari,
-            "hafta": aktif_haftalar.get(bilgi["id"]),
+            "hafta": None if bilgi["id"] == AVRUPA_ID else aktif_haftalar.get(bilgi["id"]),
             "sonraki_mac": sonraki_mac_tarihleri.get(bilgi["id"]),
             "acik_mac": sum(1 for m in lig_maclari if m.oynanabilir_mi()),
         })
@@ -2786,7 +2889,7 @@ def admin_sync_tek_lig(lig_kodu):
             ipucu = " — Not: SportAPI7'nin ücretsiz RapidAPI planı aylık istek limitlidir (limit dolduysa bir süre bekleyin) ve SPORTAPI7_KEY'in doğru olduğundan emin olun."
         elif provider == "api-football":
             ipucu = " — Not: API-Football ücretsiz planı günde 100 istekle sınırlıdır; limit dolduysa bir süre sonra tekrar deneyin ve API_FOOTBALL_KEY'in doğru olduğundan emin olun."
-        elif provider in ("espn", "espn-nations"):
+        elif provider in ("espn", "espn-nations", "espn-avrupa"):
             ipucu = " — Not: ESPN uç noktası resmi/dokümante değildir, ESPN tarafında geçici bir sorun olabilir; birkaç dakika sonra tekrar deneyin."
         flash(f"Senkronizasyon hatası ({lig_kodu}): {e}{ipucu}", "danger")
     return redirect(url_for("admin"))
@@ -2967,6 +3070,13 @@ def admin_api_test():
                 mesajlar.append(f"{bilgi['ad']} (ESPN): OK ({lig_adi_espn})")
             except Exception as e:
                 mesajlar.append(f"{bilgi['ad']} (ESPN): HATA — {e}")
+        elif provider == "espn-avrupa":
+            for slug, kupa in ESPN_AVRUPA_SLUGLARI.items():
+                try:
+                    espn_get(slug, "scoreboard", params={"limit": 5})
+                    mesajlar.append(f"{kupa} (ESPN): OK")
+                except Exception as e:
+                    mesajlar.append(f"{kupa} (ESPN): HATA — {e}")
         elif provider == "espn":
             try:
                 info = espn_get(ESPN_SUPER_LIG_SLUG, "scoreboard", params={"limit": 5})
@@ -3462,7 +3572,7 @@ def puan_durumu():
     """Herkese açık: girişsiz ziyaretçiler de liglerin puan tablosunu görebilir."""
     sekmeler = []
     for kod, bilgi in LEAGUES.items():
-        if bilgi["id"] not in gosterilecek_lig_id_listesi():
+        if bilgi["id"] not in gosterilecek_lig_id_listesi() or bilgi["id"] == AVRUPA_ID:
             continue
         sekme = {"kod": kod, "ad": LIG_KISA_ADLARI.get(bilgi["id"], bilgi["ad"]), "satirlar": [], "not": None, "hata": None}
         if bilgi["id"] == NATIONS_LEAGUE_ID:
