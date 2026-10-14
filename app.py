@@ -3583,7 +3583,7 @@ def _poisson(k, lam):
 
 
 YZ_FORM_YARI_OMUR_GUN = 90   # 90 gün önceki maç, bugünkünün yarısı kadar önemli
-YZ_CESARET = 1.3             # >1: güçlü-zayıf farkını büyütür, daha cesur skorlar
+YZ_CESARET = 1.0             # 1: kalibre (istatistiğe sadık); >1 güç farkını büyütür
 
 
 def _yz_lig_istatistigi(lig_id, simdi):
@@ -3663,17 +3663,8 @@ def yz_beklenen_goller(mac, istatistik):
     return min(max(lam_ev, 0.2), 5.0), min(max(lam_dep, 0.2), 5.0), ev["n"], dep["n"]
 
 
-def _yuvarla(x):
-    import math
-    return int(math.floor(x + 0.5))
-
-
-def yz_skor_tahmini(mac, istatistik):
-    """
-    İstatistik modeli: en olası sonucu seçer, sonra beklenen gollere göre skoru
-    yazar. Favori netse farkı açar (3-0, 4-1), dengeli maçta beraberlik der.
-    """
-    lam_ev, lam_dep, _, _ = yz_beklenen_goller(mac, istatistik)
+def yz_sonuc_olasiliklari(lam_ev, lam_dep):
+    """Poisson ile (ev, beraberlik, deplasman) olasılıkları."""
     p_ev = p_x = p_dep = 0.0
     for i in range(10):
         for j in range(10):
@@ -3681,21 +3672,37 @@ def yz_skor_tahmini(mac, istatistik):
             if i > j: p_ev += p
             elif i < j: p_dep += p
             else: p_x += p
+    return p_ev, p_x, p_dep
 
-    fark = lam_ev - lam_dep
-    if abs(fark) < 0.22 and p_x >= max(p_ev, p_dep) * 0.8:
-        ortalama = (lam_ev + lam_dep) / 2
-        g = 0 if ortalama < 0.8 else (2 if ortalama >= 1.9 else 1)
-        return g, g
-    if fark >= 0:
-        ev, dep = max(1, _yuvarla(lam_ev)), _yuvarla(lam_dep)
-        if p_ev >= 0.62 and fark >= 1.1:     # açık favori: en az 2 fark
-            ev = max(ev, dep + 2)
-        return ev, min(dep, ev - 1)
-    ev, dep = _yuvarla(lam_ev), max(1, _yuvarla(lam_dep))
-    if p_dep >= 0.62 and -fark >= 1.1:
-        dep = max(dep, ev + 2)
-    return min(ev, dep - 1), dep
+
+def _yuvarla(x):
+    import math
+    return int(math.floor(x + 0.5))
+
+
+def yz_skor_tahmini(mac, istatistik):
+    """
+    İstatistik modeli: (1) ev / beraberlik / deplasman olasılıklarını hesaplar,
+    en olası sonucu seçer (dengeli maçta beraberliği de değerlendirir);
+    (2) o sonucun içindeki en olası tam skoru yazar.
+    """
+    lam_ev, lam_dep, _, _ = yz_beklenen_goller(mac, istatistik)
+    p_ev, p_x, p_dep = yz_sonuc_olasiliklari(lam_ev, lam_dep)
+
+    if abs(lam_ev - lam_dep) < 0.22 and p_x >= max(p_ev, p_dep) * 0.8:
+        sonuc = 0
+    else:
+        sonuc = 1 if p_ev >= p_dep else -1
+
+    en_iyi, en_iyi_p = (1, 1), -1.0
+    for i in range(7):
+        for j in range(7):
+            if (i > j) - (i < j) != sonuc:
+                continue
+            p = _poisson(i, lam_ev) * _poisson(j, lam_dep)
+            if p > en_iyi_p:
+                en_iyi, en_iyi_p = (i, j), p
+    return en_iyi
 
 
 def _yz_takim_ozeti(ad, ist):
@@ -3742,13 +3749,9 @@ def yz_analiz_metni(mac, istatistik, skor):
             cumle += f", {yer_adi} maç başı {b[1] / b[0]:.1f} atıp {b[2] / b[0]:.1f} yiyor"
         parcalar.append(cumle + ".")
     ev, dep = skor
-    if ev > dep:
-        yorum = f"Bence {mac.ev_sahibi} kazanır" + (", hem de rahat." if ev - dep >= 2 else ".")
-    elif ev < dep:
-        yorum = f"{mac.deplasman} deplasmandan galibiyetle döner" + (", fark da açılır." if dep - ev >= 2 else ".")
-    else:
-        yorum = "Güçler denk, puanlar paylaşılır."
-    return " ".join(parcalar) + f" Beklenen gol: {lam_ev:.1f}–{lam_dep:.1f}. {yorum} Tahminim {ev}-{dep}."
+    p_ev, p_x, p_dep = yz_sonuc_olasiliklari(lam_ev, lam_dep)
+    olasilik = f"Olasılıklar: ev %{p_ev * 100:.0f}, beraberlik %{p_x * 100:.0f}, deplasman %{p_dep * 100:.0f}."
+    return " ".join(parcalar) + f" Beklenen gol {lam_ev:.1f}–{lam_dep:.1f}. {olasilik} Tahmin: {ev}-{dep}."
 
 
 # ---------- İsteğe bağlı: ücretsiz Google Gemini ----------
@@ -3780,20 +3783,22 @@ def _yz_gemini_sor(maclar, istatistikler):
             "deplasman_veri": _yz_takim_ozeti(mac.deplasman, ist),
             "aralarindaki_son_maclar": ikili[-3:],
             "istatistik_modeli_beklenen_gol": [round(lam_ev, 2), round(lam_dep, 2)],
+            "istatistik_modeli_olasiliklar_ev_x_dep": [round(p * 100) for p in yz_sonuc_olasiliklari(lam_ev, lam_dep)],
             "lig_ortalamasi_ev_dep": [round(ist["ev_ort"], 2), round(ist["dep_ort"], 2)],
         })
     istem = (
-        "Sen 'Robot Ziya' adında, arkadaş grubunun skor tahmin oyununda yarışan iddialı bir futbol analistisin. "
-        "Puanlama: tam skor 5 puan, sadece doğru sonuç (ev/beraberlik/deplasman) 3 puan.\n"
-        "Her maç için önce analiz yap: lig sırası, son 5 maç formu, iç saha/deplasman gol ortalamaları, "
-        "aralarındaki son maçlar ve kendi futbol bilgin (kadro kalitesi, teknik direktör, maçın önemi). "
-        "Sonra CESUR ve GERÇEKÇİ bir skor yaz:\n"
-        "- Favori açıksa farkı yazmaktan çekinme (3-0, 3-1, 4-1 gibi).\n"
-        "- Dengeli maçlarda beraberlik de yaz (1-1, 2-2).\n"
-        "- Sürpriz ihtimali yüksek gördüğün maçta deplasman galibiyeti de yazabilirsin.\n"
-        "- Her maça 2-1 ya da 1-0 yazma; skorlar maçtan maça farklı olsun.\n"
-        "Her maç için 'analiz' alanına 1-2 cümlelik, esprili ama bilgili Türkçe bir yorum yaz "
-        "(somut veriye dayan, örn. form, gol ortalaması, sıra).\n"
+        "Sen 'Robot Ziya' adında, veriyle çalışan bir futbol analistisin ve arkadaş grubunun skor tahmin "
+        "oyununda yarışıyorsun. Puanlama: tam skor 5 puan, sadece doğru sonuç (ev/beraberlik/deplasman) 3 puan.\n"
+        "Her maç için şu sırayla düşün:\n"
+        "1) Verilen istatistikleri değerlendir: lig sırası ve puan, son 5 maç formu, iç saha/deplasman maç başı "
+        "atılan-yenilen gol, aralarındaki son maçlar, istatistik modelinin beklenen golleri ve olasılıkları.\n"
+        "2) Kendi futbol bilginle düzelt: kadro kalitesi, sakatlık/rotasyon ihtimali, maçın önemi, "
+        "Avrupa maçı yorgunluğu gibi. Verinin az olduğu takımlarda (mac_sayisi düşük) bu bilgiye daha çok yaslan.\n"
+        "3) Ev / beraberlik / deplasman olasılığını yüzde olarak belirle; en olası sonucu seç.\n"
+        "4) O sonuç içinde beklenen gollerle tutarlı, en olası skoru yaz. Skoru abartma ya da kısma; "
+        "beklenen goller 1.2–1.0 ise 1-1 ya da 1-0, 2.6–0.6 ise 2-0 / 3-0 gibi.\n"
+        "'analiz' alanına 2-3 cümlelik, somut sayılara dayanan, sakin ve analitik bir Türkçe değerlendirme yaz; "
+        "belirleyici 2-3 etkeni ve olasılıkları belirt (örn. 'Ev %55 / X %25 / D %20').\n"
         "Sadece şu biçimde JSON dizi döndür: [{\"id\": <maç id>, \"ev\": <gol>, \"dep\": <gol>, \"analiz\": \"...\"}]\n\n"
         + json.dumps(satirlar, ensure_ascii=False)
     )
@@ -3803,7 +3808,7 @@ def _yz_gemini_sor(maclar, istatistikler):
             params={"key": GEMINI_API_KEY},
             json={
                 "contents": [{"parts": [{"text": istem}]}],
-                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.9},
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.3},
             },
             timeout=GEMINI_TIMEOUT,
         )
