@@ -104,8 +104,9 @@
           <ul>
             {% for member in digerleri %}
               {% set mt = mac_tahminleri.get(member.kullanici_id) %}
-              <li>
-                <span>{{ member.kullanici.kullanici_adi }}</span>
+              {% set ziya_mi = yz_mi(member.kullanici) %}
+              <li{% if ziya_mi %} class="ziya-satir"{% endif %}>
+                <span>{{ member.kullanici.kullanici_adi }}{% if ziya_mi %} 🤖{% endif %}</span>
                 {% if mt %}
                   {% if mac.basladi_mi() %}
                     <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong>{% if mac.bitti_mi() %} {{ p.puan_etiketi(mt.puan) }}{% endif %}</span>
@@ -114,6 +115,9 @@
                   {% endif %}
                 {% else %}
                   <span class="sessiz">Girmedi</span>
+                {% endif %}
+                {% if ziya_mi and mt and mac.basladi_mi() and yz_analizleri and yz_analizleri.get(mac.id) %}
+                  <p class="ziya-analiz">{{ yz_analizleri[mac.id].metin }}</p>
                 {% endif %}
               </li>
             {% endfor %}
@@ -177,6 +181,8 @@
 .digerleri ul{list-style:none; margin:6px 0 0; padding:0; border:1px solid var(--cizgi); border-radius:var(--r-kucuk)}
 .digerleri li{display:flex; justify-content:space-between; gap:12px; padding:8px 12px; font-size:14px; border-top:1px solid var(--cizgi)}
 .digerleri li:first-child{border-top:0}
+.digerleri li.ziya-satir{flex-wrap:wrap}
+.ziya-analiz{flex-basis:100%; margin:4px 0 0; padding:8px 10px; font-size:13px; line-height:1.45; color:var(--murekkep); background:#EEF2F8; border-radius:var(--r-kucuk)}
 .mini-skor{font:700 17px/1 var(--baslik)}
 .kaydet-cubugu{position:sticky; bottom:12px; margin-top:16px; padding:12px; background:rgba(255,255,255,.96); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); box-shadow:0 6px 24px rgba(20,32,26,.10)}
 .segment .kisa{display:none}

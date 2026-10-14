@@ -313,6 +313,7 @@ style="background:#475569;"
 <td>{{ "%.2f"|format(r.lam_ev) }} – {{ "%.2f"|format(r.lam_dep) }}</td>
 <td{% if r.ev_n == 0 or r.dep_n == 0 %} style="color:#b91c1c; font-weight:600"{% endif %}>{{ r.ev_n }} / {{ r.dep_n }}</td>
 </tr>
+{% if r.analiz %}<tr><td colspan="6" style="font-size:0.95em; color:var(--muted); padding-bottom:8px">💬 {{ r.analiz }}</td></tr>{% endif %}
 {% endfor %}
 </tbody>
 </table>

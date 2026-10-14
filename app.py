@@ -751,6 +751,15 @@ class Mesaj(db.Model):
         return veri
 
 
+class YzAnaliz(db.Model):
+    """Robot Ziya'nın maç başına yazdığı kısa analiz (maç başlayınca gösterilir)."""
+    __tablename__ = "yz_analizleri"
+    mac_id = db.Column(db.Integer, db.ForeignKey("maclar.id"), primary_key=True)
+    metin = db.Column(db.Text, nullable=False)
+    kaynak = db.Column(db.String(40), nullable=True)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+
+
 class SohbetOkuma(db.Model):
     """Kullanıcının bir grubun sohbetinde en son gördüğü mesaj (okunmamış sayacı için)."""
     __tablename__ = "sohbet_okumalari"
@@ -1852,6 +1861,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE mesajlar ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sohbet_okumalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE senkron_kayitlari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE yz_analizleri ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -2304,9 +2314,14 @@ def grup(grup_id):
     su_anki_hafta_siralamasi = su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu)
     oynanabilir_mac_var = any(m.oynanabilir_mi() for m in maclar)
 
+    yz_analizleri = {}
+    if maclar:
+        yz_analizleri = {a.mac_id: a for a in YzAnaliz.query.filter(YzAnaliz.mac_id.in_([m.id for m in maclar])).all()}
+
     return render_template(
         "grup.html",
         grup=grup_obj,
+        yz_analizleri=yz_analizleri,
         maclar=maclar,
         lig_sekmeleri=lig_sekmeleri,
         mesaj_sayisi=okunmamis_mesaj_sayisi(grup_id, current_user.id),
@@ -3567,8 +3582,15 @@ def _poisson(k, lam):
     return math.exp(-lam) * lam ** k / math.factorial(k)
 
 
+YZ_FORM_YARI_OMUR_GUN = 90   # 90 gün önceki maç, bugünkünün yarısı kadar önemli
+YZ_CESARET = 1.3             # >1: güçlü-zayıf farkını büyütür, daha cesur skorlar
+
+
 def _yz_lig_istatistigi(lig_id, simdi):
-    """Ligin geçmiş maçlarından takım bazında gol ortalamaları ve son maç formu."""
+    """
+    Ligin geçmiş maçlarından takım bazında ağırlıklı (yakın maç daha önemli)
+    iç saha / deplasman gol ortalamaları, son maç formu, sıralama ve ikili maçlar.
+    """
     maclar = Mac.query.filter(
         Mac.lig_id == lig_id, Mac.durum == "bitti",
         Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
@@ -3586,67 +3608,147 @@ def _yz_lig_istatistigi(lig_id, simdi):
         ev_ort, dep_ort = 1.5, 1.15
     ev_ort, dep_ort = max(ev_ort, 0.5), max(dep_ort, 0.4)
 
-    takimlar, form = {}, {}
+    # takim -> {"genel"|"ic"|"dis": [agirlik, atti*agirlik, yedi*agirlik], "n": maç sayısı}
+    takimlar, form, ikili = {}, {}, {}
     for m in maclar:
-        for ad, rakip, atti, yedi, yer in ((m.ev_sahibi, m.deplasman, m.ev_skor, m.deplasman_skor, "iç"),
-                                           (m.deplasman, m.ev_sahibi, m.deplasman_skor, m.ev_skor, "dış")):
-            anahtar = takim_adi_normalize(ad)
-            t = takimlar.setdefault(anahtar, [0, 0, 0])
-            t[0] += 1; t[1] += atti; t[2] += yedi
+        gun = max((simdi - m.baslangic).days, 0)
+        w = 0.5 ** (gun / YZ_FORM_YARI_OMUR_GUN)
+        for ad, rakip, atti, yedi, yer in ((m.ev_sahibi, m.deplasman, m.ev_skor, m.deplasman_skor, "ic"),
+                                           (m.deplasman, m.ev_sahibi, m.deplasman_skor, m.ev_skor, "dis")):
+            k = takim_adi_normalize(ad)
+            t = takimlar.setdefault(k, {"genel": [0.0, 0.0, 0.0], "ic": [0.0, 0.0, 0.0], "dis": [0.0, 0.0, 0.0], "n": 0})
+            for bolum in ("genel", yer):
+                t[bolum][0] += w; t[bolum][1] += atti * w; t[bolum][2] += yedi * w
+            t["n"] += 1
             harf = "G" if atti > yedi else ("M" if atti < yedi else "B")
-            form.setdefault(anahtar, []).append(f"{harf} {atti}-{yedi} {rakip} ({yer})")
-    return {"ev_ort": ev_ort, "dep_ort": dep_ort, "takimlar": takimlar, "form": form, "mac_sayisi": len(maclar)}
+            form.setdefault(k, []).append({"harf": harf, "skor": f"{atti}-{yedi}", "rakip": rakip,
+                                           "yer": "iç saha" if yer == "ic" else "deplasman"})
+        anahtar = frozenset((takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman)))
+        ikili.setdefault(anahtar, []).append(f"{m.ev_sahibi} {m.ev_skor}-{m.deplasman_skor} {m.deplasman}")
+
+    siralama = {}
+    try:
+        for satir in lig_puan_tablosu_hesapla(lig_id):
+            siralama[takim_adi_normalize(satir["takim"])] = {"sira": satir["sira"], "puan": satir["p"], "o": satir["o"]}
+    except Exception:
+        db.session.rollback()
+    return {"ev_ort": ev_ort, "dep_ort": dep_ort, "takimlar": takimlar, "form": form,
+            "ikili": ikili, "siralama": siralama, "mac_sayisi": len(maclar)}
+
+
+def _yz_oran(bolum, ort, onsel=2.0):
+    """Ağırlıklı (atılan, yenilen) ortalamanın lig ortalamasına oranı; az veri lig ortalamasına çekilir."""
+    w, atti, yedi = bolum
+    return (atti + onsel * ort) / (w + onsel) / ort, (yedi + onsel * ort) / (w + onsel) / ort
 
 
 def yz_beklenen_goller(mac, istatistik):
     """(ev_beklenen, dep_beklenen, ev_mac_sayisi, dep_mac_sayisi)"""
     ort = (istatistik["ev_ort"] + istatistik["dep_ort"]) / 2
+    bos = {"genel": [0.0, 0.0, 0.0], "ic": [0.0, 0.0, 0.0], "dis": [0.0, 0.0, 0.0], "n": 0}
+    ev = istatistik["takimlar"].get(takim_adi_normalize(mac.ev_sahibi), bos)
+    dep = istatistik["takimlar"].get(takim_adi_normalize(mac.deplasman), bos)
 
-    def guc(ad):
-        o, atti, yedi = istatistik["takimlar"].get(takim_adi_normalize(ad), (0, 0, 0))
-        hucum = (atti + YZ_ONSEL_MAC * ort) / (o + YZ_ONSEL_MAC) / ort
-        savunma = (yedi + YZ_ONSEL_MAC * ort) / (o + YZ_ONSEL_MAC) / ort
-        return hucum, savunma, o
+    ev_h, ev_s = _yz_oran(ev["genel"], ort)
+    dep_h, dep_s = _yz_oran(dep["genel"], ort)
+    # İç saha / deplasman performansını genel güce yarı yarıya kat
+    ev_ic_h, ev_ic_s = _yz_oran(ev["ic"], istatistik["ev_ort"], onsel=3.0)
+    dep_dis_h, dep_dis_s = _yz_oran(dep["dis"], istatistik["dep_ort"], onsel=3.0)
+    ev_h, ev_s = (ev_h * ev_ic_h) ** 0.5, (ev_s * ev_ic_s) ** 0.5
+    dep_h, dep_s = (dep_h * dep_dis_h) ** 0.5, (dep_s * dep_dis_s) ** 0.5
 
-    ev_h, ev_s, ev_n = guc(mac.ev_sahibi)
-    dep_h, dep_s, dep_n = guc(mac.deplasman)
-    lam_ev = min(max(istatistik["ev_ort"] * ev_h * dep_s, 0.2), 4.5)
-    lam_dep = min(max(istatistik["dep_ort"] * dep_h * ev_s, 0.2), 4.5)
-    return lam_ev, lam_dep, ev_n, dep_n
+    # Cesaret: güç farkını büyüt (oran^1.3)
+    lam_ev = istatistik["ev_ort"] * (ev_h * dep_s) ** YZ_CESARET
+    lam_dep = istatistik["dep_ort"] * (dep_h * ev_s) ** YZ_CESARET
+    return min(max(lam_ev, 0.2), 5.0), min(max(lam_dep, 0.2), 5.0), ev["n"], dep["n"]
 
 
 def _yuvarla(x):
     import math
-    return int(math.floor(x + 0.4))  # 0.6 ve üstü yukarı: 0.55 gol beklentisi 0 sayılır
+    return int(math.floor(x + 0.5))
 
 
 def yz_skor_tahmini(mac, istatistik):
     """
-    İstatistik modeli: önce en olası sonucu (ev / beraberlik / deplasman) seçer,
-    sonra beklenen gol sayılarını yuvarlayıp o sonuca uyan skoru yazar.
-    Böylece güçlü-zayıf maçta 3-0, dengeli maçta 1-1 gibi çeşitli skorlar çıkar.
+    İstatistik modeli: en olası sonucu seçer, sonra beklenen gollere göre skoru
+    yazar. Favori netse farkı açar (3-0, 4-1), dengeli maçta beraberlik der.
     """
     lam_ev, lam_dep, _, _ = yz_beklenen_goller(mac, istatistik)
     p_ev = p_x = p_dep = 0.0
-    for i in range(YZ_MAX_GOL + 2):
-        for j in range(YZ_MAX_GOL + 2):
+    for i in range(10):
+        for j in range(10):
             p = _poisson(i, lam_ev) * _poisson(j, lam_dep)
             if i > j: p_ev += p
             elif i < j: p_dep += p
             else: p_x += p
 
-    # Beraberlik nadiren "en olası" çıkar; dengeli maçlarda beraberliği de yaz
-    if abs(lam_ev - lam_dep) < 0.3 or p_x >= max(p_ev, p_dep) * 0.9:
+    fark = lam_ev - lam_dep
+    if abs(fark) < 0.22 and p_x >= max(p_ev, p_dep) * 0.8:
         ortalama = (lam_ev + lam_dep) / 2
-        g = 0 if ortalama < 0.75 else (2 if ortalama >= 2.1 else 1)
+        g = 0 if ortalama < 0.8 else (2 if ortalama >= 1.9 else 1)
         return g, g
-    if p_ev >= p_dep:
-        ev = max(1, _yuvarla(lam_ev))
-        dep = min(_yuvarla(lam_dep), ev - 1)
-        return ev, dep
-    dep = max(1, _yuvarla(lam_dep))
-    ev = min(_yuvarla(lam_ev), dep - 1)
-    return ev, dep
+    if fark >= 0:
+        ev, dep = max(1, _yuvarla(lam_ev)), _yuvarla(lam_dep)
+        if p_ev >= 0.62 and fark >= 1.1:     # açık favori: en az 2 fark
+            ev = max(ev, dep + 2)
+        return ev, min(dep, ev - 1)
+    ev, dep = _yuvarla(lam_ev), max(1, _yuvarla(lam_dep))
+    if p_dep >= 0.62 and -fark >= 1.1:
+        dep = max(dep, ev + 2)
+    return min(ev, dep - 1), dep
+
+
+def _yz_takim_ozeti(ad, ist):
+    k = takim_adi_normalize(ad)
+    t = ist["takimlar"].get(k)
+    son = ist["form"].get(k, [])[-5:]
+    sira = ist["siralama"].get(k)
+    if not t:
+        return {"veri": "yok"}
+    def ort(b):
+        return [round(b[1] / b[0], 2), round(b[2] / b[0], 2)] if b[0] else None
+    return {
+        "lig_sirasi": sira["sira"] if sira else None,
+        "puan": sira["puan"] if sira else None,
+        "mac_sayisi": t["n"],
+        "mac_basi_attigi_yedigi_genel": ort(t["genel"]),
+        "ic_sahada_attigi_yedigi": ort(t["ic"]),
+        "deplasmanda_attigi_yedigi": ort(t["dis"]),
+        "son_5": [f'{f["harf"]} {f["skor"]} {f["rakip"]} ({f["yer"]})' for f in son],
+    }
+
+
+def yz_analiz_metni(mac, istatistik, skor):
+    """Gemini yokken kullanılan, istatistiklerden üretilen kısa Türkçe analiz."""
+    lam_ev, lam_dep, _, _ = yz_beklenen_goller(mac, istatistik)
+    parcalar = []
+    for ad, yer in ((mac.ev_sahibi, "ic"), (mac.deplasman, "dis")):
+        k = takim_adi_normalize(ad)
+        son = istatistik["form"].get(k, [])[-5:]
+        t = istatistik["takimlar"].get(k)
+        sira = istatistik["siralama"].get(k)
+        if not t:
+            parcalar.append(f"{ad} hakkında elimde pek veri yok.")
+            continue
+        form = "".join(f["harf"] for f in son)
+        cumle = f"{ad}"
+        if sira:
+            cumle += f" ({sira['sira']}. sırada)"
+        if form:
+            cumle += f" son {len(son)} maçta {form.count('G')}G {form.count('B')}B {form.count('M')}M"
+        b = t[yer]
+        if b[0] >= 1:
+            yer_adi = "evinde" if yer == "ic" else "deplasmanda"
+            cumle += f", {yer_adi} maç başı {b[1] / b[0]:.1f} atıp {b[2] / b[0]:.1f} yiyor"
+        parcalar.append(cumle + ".")
+    ev, dep = skor
+    if ev > dep:
+        yorum = f"Bence {mac.ev_sahibi} kazanır" + (", hem de rahat." if ev - dep >= 2 else ".")
+    elif ev < dep:
+        yorum = f"{mac.deplasman} deplasmandan galibiyetle döner" + (", fark da açılır." if dep - ev >= 2 else ".")
+    else:
+        yorum = "Güçler denk, puanlar paylaşılır."
+    return " ".join(parcalar) + f" Beklenen gol: {lam_ev:.1f}–{lam_dep:.1f}. {yorum} Tahminim {ev}-{dep}."
 
 
 # ---------- İsteğe bağlı: ücretsiz Google Gemini ----------
@@ -3655,38 +3757,44 @@ def yz_skor_tahmini(mac, istatistik):
 # Gemini cevap vermezse/hata verirse istatistik modelinin tahmini kullanılır.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
-GEMINI_TIMEOUT = 40
+GEMINI_TIMEOUT = 60
 
 
 def _yz_gemini_sor(maclar, istatistikler):
-    """maclar: [Mac]. Dönüş: {mac_id: (ev, dep)} — hata olursa boş sözlük."""
+    """maclar: [Mac]. Dönüş: {mac_id: (ev, dep, analiz)} — hata olursa boş sözlük."""
     if not GEMINI_API_KEY or not maclar:
         return {}
     import json
     satirlar = []
     for mac in maclar:
         ist = istatistikler[mac.lig_id]
-        lam_ev, lam_dep, ev_n, dep_n = yz_beklenen_goller(mac, ist)
-        def ozet(ad):
-            o, atti, yedi = ist["takimlar"].get(takim_adi_normalize(ad), (0, 0, 0))
-            son = ist["form"].get(takim_adi_normalize(ad), [])[-5:]
-            return {"mac": o, "atti": atti, "yedi": yedi, "son_5_mac": son}
+        lam_ev, lam_dep, _, _ = yz_beklenen_goller(mac, ist)
+        ikili = ist["ikili"].get(frozenset((takim_adi_normalize(mac.ev_sahibi), takim_adi_normalize(mac.deplasman))), [])
         satirlar.append({
             "id": mac.id,
             "lig": mac.lig,
             "tarih": to_turkiye_saati(mac.baslangic).strftime("%d.%m.%Y %H:%M") if mac.baslangic else "",
             "ev_sahibi": mac.ev_sahibi,
             "deplasman": mac.deplasman,
-            "ev_sahibi_istatistik": ozet(mac.ev_sahibi),
-            "deplasman_istatistik": ozet(mac.deplasman),
-            "model_beklenen_gol": [round(lam_ev, 2), round(lam_dep, 2)],
+            "ev_sahibi_veri": _yz_takim_ozeti(mac.ev_sahibi, ist),
+            "deplasman_veri": _yz_takim_ozeti(mac.deplasman, ist),
+            "aralarindaki_son_maclar": ikili[-3:],
+            "istatistik_modeli_beklenen_gol": [round(lam_ev, 2), round(lam_dep, 2)],
+            "lig_ortalamasi_ev_dep": [round(ist["ev_ort"], 2), round(ist["dep_ort"], 2)],
         })
     istem = (
-        "Sen bir futbol skor tahmin oyununda yarışan oyuncusun. Puanlama: tam skor 5 puan, "
-        "sadece doğru sonuç (ev/beraberlik/deplasman) 3 puan. Aşağıdaki her maç için gerçekçi bir skor tahmini yap. "
-        "Takımların bu ligdeki istatistiklerini, son maçlarını ve kendi futbol bilgini kullan. "
-        "Her maça aynı skoru yazma; beraberlikleri de düşün.\n"
-        "Sadece şu biçimde JSON dizi döndür: [{\"id\": <maç id>, \"ev\": <gol>, \"dep\": <gol>}]\n\n"
+        "Sen 'Robot Ziya' adında, arkadaş grubunun skor tahmin oyununda yarışan iddialı bir futbol analistisin. "
+        "Puanlama: tam skor 5 puan, sadece doğru sonuç (ev/beraberlik/deplasman) 3 puan.\n"
+        "Her maç için önce analiz yap: lig sırası, son 5 maç formu, iç saha/deplasman gol ortalamaları, "
+        "aralarındaki son maçlar ve kendi futbol bilgin (kadro kalitesi, teknik direktör, maçın önemi). "
+        "Sonra CESUR ve GERÇEKÇİ bir skor yaz:\n"
+        "- Favori açıksa farkı yazmaktan çekinme (3-0, 3-1, 4-1 gibi).\n"
+        "- Dengeli maçlarda beraberlik de yaz (1-1, 2-2).\n"
+        "- Sürpriz ihtimali yüksek gördüğün maçta deplasman galibiyeti de yazabilirsin.\n"
+        "- Her maça 2-1 ya da 1-0 yazma; skorlar maçtan maça farklı olsun.\n"
+        "Her maç için 'analiz' alanına 1-2 cümlelik, esprili ama bilgili Türkçe bir yorum yaz "
+        "(somut veriye dayan, örn. form, gol ortalaması, sıra).\n"
+        "Sadece şu biçimde JSON dizi döndür: [{\"id\": <maç id>, \"ev\": <gol>, \"dep\": <gol>, \"analiz\": \"...\"}]\n\n"
         + json.dumps(satirlar, ensure_ascii=False)
     )
     try:
@@ -3695,7 +3803,7 @@ def _yz_gemini_sor(maclar, istatistikler):
             params={"key": GEMINI_API_KEY},
             json={
                 "contents": [{"parts": [{"text": istem}]}],
-                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7},
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.9},
             },
             timeout=GEMINI_TIMEOUT,
         )
@@ -3710,11 +3818,22 @@ def _yz_gemini_sor(maclar, istatistikler):
             except (KeyError, TypeError, ValueError):
                 continue
             if mid in gecerli_idler and 0 <= ev <= 9 and 0 <= dep <= 9:
-                sonuc[mid] = (ev, dep)
+                analiz = str(kayit.get("analiz") or "").strip()[:600]
+                sonuc[mid] = (ev, dep, analiz)
         return sonuc
     except Exception as e:
         app.logger.warning("Gemini tahmini alınamadı: %s", e)
         return {}
+
+
+def _yz_analiz_kaydet(mac_id, metin, kaynak):
+    if not metin:
+        return
+    kayit = db.session.get(YzAnaliz, mac_id)
+    if kayit is None:
+        db.session.add(YzAnaliz(mac_id=mac_id, metin=metin, kaynak=kaynak))
+    else:
+        kayit.metin, kayit.kaynak, kayit.olusturulma = metin, kaynak, datetime.utcnow()
 
 
 def yz_son_tahmin_ani(simdi):
@@ -3781,7 +3900,15 @@ def yz_tahminleri_uret(simdi=None, zorla=False):
         gemini = _yz_gemini_sor([m for m, _ in yapilacak], istatistikler)
         sonuc["kaynak"] = "Gemini" if gemini else "istatistik modeli"
         for mac, eksik in yapilacak:
-            ev, dep = gemini.get(mac.id) or yz_skor_tahmini(mac, istatistikler[mac.lig_id])
+            if mac.id in gemini:
+                ev, dep, analiz = gemini[mac.id]
+                kaynak = "Gemini"
+                if not analiz:
+                    analiz = yz_analiz_metni(mac, istatistikler[mac.lig_id], (ev, dep))
+            else:
+                ev, dep = yz_skor_tahmini(mac, istatistikler[mac.lig_id])
+                analiz, kaynak = yz_analiz_metni(mac, istatistikler[mac.lig_id], (ev, dep)), "istatistik"
+            _yz_analiz_kaydet(mac.id, analiz, kaynak)
             for gid in eksik:
                 db.session.add(Tahmin(grup_id=gid, mac_id=mac.id, kullanici_id=yz.id, ev_skor=ev, deplasman_skor=dep))
                 sonuc["yeni_tahmin"] += 1
@@ -3850,6 +3977,7 @@ def yz_teshis():
             "mac": mac, "ziya": tahminler.get(mac.id), "model": yz_skor_tahmini(mac, ist),
             "lam_ev": lam_ev, "lam_dep": lam_dep, "ev_n": ev_n, "dep_n": dep_n,
             "lig_mac": ist["mac_sayisi"],
+            "analiz": (db.session.get(YzAnaliz, mac.id).metin if db.session.get(YzAnaliz, mac.id) else ""),
         })
     return satirlar
 
