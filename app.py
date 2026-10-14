@@ -951,13 +951,8 @@ def football_match_to_db(match, competition_id=None, active_season=None):
     if away_score is not None:
         mac.deplasman_skor = away_score
 
-    # football-data'nın ücretsiz planında maç bittiği halde durum bir süre
-    # "IN_PLAY"/"PAUSED"/"TIMED" kalabiliyor; skor gelmiş ve başlama saatinin
-    # üzerinden 2,5 saat geçmişse maçı bitmiş say ki puanlar hesaplansın.
-    if (mac.durum in ("planlandi", "oynaniyor") and mac.ev_skor is not None
-            and mac.deplasman_skor is not None and mac.baslangic
-            and utc_now_naive() > mac.baslangic + timedelta(minutes=150)):
-        mac.durum = "bitti"
+    # API maçı geç "bitti" yapsa bile en geç PUANLAMA_EN_GEC_DAKIKA'da puanla
+    _gecikmis_maci_bitir(mac)
 
     mac.son_guncelleme = utc_now_naive()
     return mac
@@ -1912,7 +1907,39 @@ def calculate_points(prediction_home, prediction_away, actual_home, actual_away)
     return 0
 
 
+# Maç başladıktan en geç bu kadar dakika sonra, API hâlâ "bitti" demese de
+# skor gelmişse maç bitmiş sayılır ve puanlar hesaplanır. Sonradan API skoru
+# düzeltirse (geç gol vb.) bir sonraki senkronda puanlar kendiliğinden düzelir.
+PUANLAMA_EN_GEC_DAKIKA = 120
+
+
+def _gecikmis_maci_bitir(mac, simdi=None):
+    simdi = simdi or utc_now_naive()
+    if (mac.durum in ("planlandi", "oynaniyor") and mac.api_status != "MANUEL"
+            and mac.ev_skor is not None and mac.deplasman_skor is not None
+            and mac.baslangic and simdi >= mac.baslangic + timedelta(minutes=PUANLAMA_EN_GEC_DAKIKA)):
+        mac.durum = "bitti"
+        return True
+    return False
+
+
+def gecikmis_maclari_bitir():
+    """Skoru gelmiş, başlamasının üzerinden PUANLAMA_EN_GEC_DAKIKA geçmiş maçları bitti say."""
+    simdi = utc_now_naive()
+    adaylar = Mac.query.filter(
+        Mac.durum.in_(["planlandi", "oynaniyor"]),
+        Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
+        Mac.baslangic.isnot(None),
+        Mac.baslangic <= simdi - timedelta(minutes=PUANLAMA_EN_GEC_DAKIKA),
+    ).all()
+    degisti = [m for m in adaylar if _gecikmis_maci_bitir(m, simdi)]
+    if degisti:
+        db.session.commit()
+    return len(degisti)
+
+
 def recalculate_all_points():
+    gecikmis_maclari_bitir()
     sistem = Sistem.query.first()
     sifirlama_tarihi = sistem.puan_sifirlama_tarihi if sistem else None
     muaf_mac_id_seti = {m.mac_id for m in MacMuafiyet.query.all()}
@@ -3607,6 +3634,9 @@ def puan_durumu():
 # "bitti" olmayan) bir maç varsa gidilir — ve sadece o maçın ligi / ayı
 # çekilir. Günde bir kez de tüm sezon taranır (ertelenen/yeni maçlar için).
 MAC_BITIS_DAKIKA = 105          # 90 dk + devre arası + uzatmalar
+KESINLESME_IZLEME_SAAT = 4      # 120. dk'da bitti sayılan maçı API kesinleştirene kadar izle
+API_KESIN_BITTI_DURUMLARI = ["FINISHED", "AWARDED", "STATUS_FULL_TIME", "STATUS_FINAL",
+                             "STATUS_FINAL_AET", "STATUS_FINAL_PEN", "STATUS_FULL_PEN", "MANUEL"]
 BEKLEYEN_MAC_GERI_BAKIS_SAAT = 48
 TAM_SENKRON_ARALIK_SAAT = 24
 
@@ -3632,7 +3662,16 @@ def sonucu_beklenen_maclar(now=None):
         Mac.baslangic.isnot(None),
         Mac.baslangic <= now - timedelta(minutes=MAC_BITIS_DAKIKA),
         Mac.baslangic >= now - timedelta(hours=BEKLEYEN_MAC_GERI_BAKIS_SAAT),
-        ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
+        db.or_(
+            ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
+            # 120. dakikada bizim "bitti" saydığımız ama API'nin henüz kesinleştirmediği
+            # maçlar: skor sonradan değişirse puan düzelsin diye birkaç saat daha izle
+            db.and_(
+                Mac.durum == "bitti",
+                Mac.baslangic >= now - timedelta(hours=KESINLESME_IZLEME_SAAT),
+                db.or_(Mac.api_status.is_(None), ~Mac.api_status.in_(API_KESIN_BITTI_DURUMLARI)),
+            ),
+        ),
         db.or_(Mac.api_status.is_(None), Mac.api_status != "MANUEL"),
     ).all()
 
@@ -4108,6 +4147,12 @@ def _yz_guvenli_calistir(zorla=False):
 def akilli_senkron():
     now = utc_now_naive()
     yz_sonuc = _yz_guvenli_calistir()
+    try:
+        # API'ye gidemesek bile 120. dakikası dolmuş, skoru gelmiş maçları puanla
+        if gecikmis_maclari_bitir():
+            recalculate_all_points()
+    except Exception:
+        db.session.rollback()
 
     son_tam = _senkron_zamani_oku("tam")
     if son_tam is None or (now - son_tam) >= timedelta(hours=TAM_SENKRON_ARALIK_SAAT):
