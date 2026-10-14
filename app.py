@@ -158,6 +158,9 @@ LIG_KISA_ADLARI = {
 # Grup sayfasında "bu hafta" sayılan süre: bir ligin sıradaki maçı bu kadar
 # gün içinde değilse o lig için maç listelenmez.
 HAFTA_PENCERESI_GUN = 7
+# Başlamış ama sonucu gelmemiş bir maç, haftayı en fazla bu kadar saat açık tutar
+# (API hiç güncellemezse grup sayfası eski haftada takılı kalmasın diye).
+AKTIF_HAFTA_BEKLEME_SAAT = 12
 
 # Sohbet odası ayarları
 MESAJ_MAX_UZUNLUK = 500
@@ -2355,7 +2358,14 @@ def grup(grup_id):
     aktif_haftalar = {}
     sonraki_mac_tarihleri = {}
     for lig_id in gosterilecek_lig_id_listesi():
+        # Haftanın son maçı BİTENE kadar o hafta gösterilsin: önce başlamış ama
+        # henüz bitmemiş (oynanan / sonucu beklenen) maça bak, yoksa sıradaki maça.
         en_yakin_mac = Mac.query.filter(
+            Mac.lig_id == lig_id, Mac.baslangic.isnot(None),
+            Mac.baslangic < now, Mac.baslangic >= now - timedelta(hours=AKTIF_HAFTA_BEKLEME_SAAT),
+            ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
+            super_lig_takim_filtresi(),
+        ).order_by(Mac.baslangic.asc()).first() or Mac.query.filter(
             Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic >= now,
             super_lig_takim_filtresi(),
         ).order_by(Mac.baslangic.asc()).first()
