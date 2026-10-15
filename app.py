@@ -3620,6 +3620,28 @@ def _espn_turkiye_grubu():
     return None
 
 
+def grup_sezon_siralamasi(grup_id):
+    """Grubun sezonluk (tüm zamanlar) sıralaması: üye başına toplam puan."""
+    members = (GrupUyeligi.query.options(db.joinedload(GrupUyeligi.kullanici))
+               .filter_by(grup_id=grup_id).all())
+    toplam = dict(
+        db.session.query(Tahmin.kullanici_id, db.func.coalesce(db.func.sum(Tahmin.puan), 0))
+        .filter(Tahmin.grup_id == grup_id).group_by(Tahmin.kullanici_id).all()
+    )
+    return sorted(
+        [{"user": m.kullanici, "points": int(toplam.get(m.kullanici_id, 0))} for m in members],
+        key=lambda x: x["points"], reverse=True,
+    )
+
+
+def bu_haftanin_araligi(now=None):
+    """Grup haftası Cuma 00:00'da başlar (grup sayfasıyla aynı)."""
+    now = now or utc_now_naive()
+    gun = (now.weekday() - 4) % 7
+    bas = (now - timedelta(days=gun)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return bas, bas + timedelta(days=7)
+
+
 @app.route("/puan-durumu")
 def puan_durumu():
     """Herkese açık: girişsiz ziyaretçiler de liglerin puan tablosunu görebilir."""
@@ -3648,8 +3670,35 @@ def puan_durumu():
                 sekme["not"] = "Son 3 takım küme düşer."
                 sekme["bolgeler"] = {"yesil": range(1, 2), "kirmizi": range(max(n - 2, 1), n + 1) if n >= 6 else range(0)}
         sekmeler.append(sekme)
-    secili = request.args.get("lig") or (sekmeler[1]["kod"] if len(sekmeler) > 1 and sekmeler[1]["satirlar"] else (sekmeler[0]["kod"] if sekmeler else None))
-    return render_template("puan_durumu.html", sekmeler=sekmeler, secili=secili)
+    # Giriş yapmış kullanıcıya kendi grubunun sezonluk ve haftalık sıralaması
+    secili_grup, gruplarim = None, []
+    if current_user.is_authenticated:
+        gruplarim = [u.grup for u in GrupUyeligi.query.options(db.joinedload(GrupUyeligi.grup))
+                     .filter_by(kullanici_id=current_user.id).all() if u.grup]
+        istenen = request.args.get("grup", type=int)
+        secili_grup = next((g for g in gruplarim if g.id == istenen), None) or (gruplarim[0] if gruplarim else None)
+    if secili_grup:
+        hafta_basi, hafta_sonu = bu_haftanin_araligi()
+        sekmeler = [
+            {"kod": "SEZON", "ad": "Grup · Sezon", "kisa": "Sezon", "grup_tablosu": True,
+             "siralama": grup_sezon_siralamasi(secili_grup.id), "kral": "Sezonun lideri", "cenabet": "Sezonun sonuncusu",
+             "not": f"{secili_grup.ad}: tüm maçların toplam puanı."},
+            {"kod": "HAFTA", "ad": "Grup · Haftalık", "kisa": "Haftalık", "grup_tablosu": True,
+             "siralama": su_anki_hafta_liderligi_hesapla(secili_grup.id, hafta_basi, hafta_sonu),
+             "kral": "Haftanın kralı", "cenabet": "Haftanın cenabeti",
+             "not": f"{secili_grup.ad}: {to_turkiye_saati(hafta_basi).strftime('%d.%m')} – "
+                    f"{to_turkiye_saati(hafta_sonu - timedelta(days=1)).strftime('%d.%m')} arası, her hafta sıfırdan başlar."},
+        ] + sekmeler
+
+    gecerli = {s["kod"] for s in sekmeler}
+    if request.args.get("lig") in gecerli:
+        secili = request.args.get("lig")
+    elif secili_grup:
+        secili = "SEZON"
+    else:
+        secili = sekmeler[1]["kod"] if len(sekmeler) > 1 and sekmeler[1]["satirlar"] else (sekmeler[0]["kod"] if sekmeler else None)
+    return render_template("puan_durumu.html", sekmeler=sekmeler, secili=secili,
+                           secili_grup=secili_grup, gruplarim=gruplarim)
 
 
 # ------------------------------------------------------------
