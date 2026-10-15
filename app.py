@@ -161,6 +161,8 @@ HAFTA_PENCERESI_GUN = 7
 # Başlamış ama sonucu gelmemiş bir maç, haftayı en fazla bu kadar saat açık tutar
 # (API hiç güncellemezse grup sayfası eski haftada takılı kalmasın diye).
 AKTIF_HAFTA_BEKLEME_SAAT = 12
+# Haftanın son maçı bittikten sonra o hafta bu kadar saat daha gösterilir.
+BITEN_HAFTA_GOSTERIM_SAAT = 24
 
 # Sohbet odası ayarları
 MESAJ_MAX_UZUNLUK = 500
@@ -2360,15 +2362,28 @@ def grup(grup_id):
     for lig_id in gosterilecek_lig_id_listesi():
         # Haftanın son maçı BİTENE kadar o hafta gösterilsin: önce başlamış ama
         # henüz bitmemiş (oynanan / sonucu beklenen) maça bak, yoksa sıradaki maça.
-        en_yakin_mac = Mac.query.filter(
+        devam_eden = Mac.query.filter(
             Mac.lig_id == lig_id, Mac.baslangic.isnot(None),
             Mac.baslangic < now, Mac.baslangic >= now - timedelta(hours=AKTIF_HAFTA_BEKLEME_SAAT),
             ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
             super_lig_takim_filtresi(),
-        ).order_by(Mac.baslangic.asc()).first() or Mac.query.filter(
+        ).order_by(Mac.baslangic.asc()).first()
+        siradaki = Mac.query.filter(
             Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic >= now,
             super_lig_takim_filtresi(),
         ).order_by(Mac.baslangic.asc()).first()
+        # Hafta bittikten sonra 1 gün daha o haftayı göster (sonuçlar/puanlar
+        # görülsün). Ama yeni haftanın ilk maçı o 1 gün içinde başlıyorsa
+        # tahmin girilebilsin diye yeni haftaya geç.
+        son_biten = None
+        if not devam_eden and not (siradaki and siradaki.baslangic <= now + timedelta(hours=BITEN_HAFTA_GOSTERIM_SAAT)):
+            son_biten = Mac.query.filter(
+                Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic < now,
+                Mac.baslangic >= now - timedelta(hours=BITEN_HAFTA_GOSTERIM_SAAT + 2),
+                Mac.durum == "bitti",
+                super_lig_takim_filtresi(),
+            ).order_by(Mac.baslangic.desc()).first()
+        en_yakin_mac = devam_eden or son_biten or siradaki
         if not en_yakin_mac:
             continue
         if en_yakin_mac.hafta and en_yakin_mac.baslangic <= pencere_sonu:
