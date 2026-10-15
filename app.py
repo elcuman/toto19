@@ -1,4 +1,5 @@
 import hashlib
+import threading
 import os
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -4229,24 +4230,67 @@ def cron_sync():
     if gelen_secret != beklenen_secret:
         abort(403)
 
+    # Ağır iş (ESPN/football-data senkronu, Gemini) arka planda çalışır; cron'a
+    # HEMEN 200 döneriz ki zaman aşımı / geçici hata yüzünden cron-job.org görevi
+    # kapatmasın. Sonucu görmek için ?bekle=1 eklenebilir (eski davranış).
     if request.args.get("ziya") == "1":
-        # Robot Ziya'yı Perşembe'yi beklemeden şimdi çalıştır (bu haftanın maçları)
-        return jsonify({"tur": "robot ziya", "yapay_zeka": _yz_guvenli_calistir(zorla=True)}), 200
-
-    if request.args.get("tam") == "1":
-        try:
+        is_adi, is_fonk = "robot ziya", (lambda: {"yapay_zeka": _yz_guvenli_calistir(zorla=True)})
+    elif request.args.get("tam") == "1":
+        def is_fonk():
             sonuclar = sync_all_leagues()
             _senkron_zamani_yaz("tam")
-            return jsonify({"tur": "tam", "sonuclar": sonuclar, "yapay_zeka": _yz_guvenli_calistir()}), 200
+            return {"sonuclar": sonuclar, "yapay_zeka": _yz_guvenli_calistir()}
+        is_adi = "tam"
+    else:
+        is_adi, is_fonk = "akıllı", akilli_senkron
+
+    if request.args.get("bekle") == "1":
+        try:
+            return jsonify({"tur": is_adi, "sonuc": is_fonk()}), 200
         except Exception as e:
             db.session.rollback()
-            return jsonify({"success": False, "error": str(e)}), 500
+            return jsonify({"success": False, "error": str(e)}), 200
 
-    try:
-        return jsonify(akilli_senkron()), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify(_cron_arka_planda_baslat(is_adi, is_fonk)), 200
+
+
+_CRON_KILIDI = threading.Lock()
+_CRON_SON_DURUM = {"is": None, "basladi": None, "bitti": None, "sonuc": None}
+
+
+def _cron_arka_planda_baslat(is_adi, is_fonk):
+    """İşi ayrı bir thread'de başlatır; zaten bir senkron sürüyorsa yenisini başlatmaz."""
+    if not _CRON_KILIDI.acquire(blocking=False):
+        return {"durum": "zaten çalışıyor", "onceki": _cron_durum_ozeti()}
+
+    def calistir():
+        try:
+            with app.app_context():
+                _CRON_SON_DURUM.update({"is": is_adi, "basladi": utc_now_naive().isoformat(), "bitti": None, "sonuc": None})
+                try:
+                    sonuc = is_fonk()
+                except Exception as e:
+                    db.session.rollback()
+                    app.logger.exception("Cron işi hata verdi")
+                    sonuc = {"success": False, "error": str(e)}
+                finally:
+                    db.session.remove()
+                _CRON_SON_DURUM.update({"bitti": utc_now_naive().isoformat(), "sonuc": sonuc})
+        finally:
+            _CRON_KILIDI.release()
+
+    onceki = _cron_durum_ozeti()
+    threading.Thread(target=calistir, daemon=True).start()
+    return {"durum": "başlatıldı", "is": is_adi, "onceki": onceki}
+
+
+def _cron_durum_ozeti():
+    d = dict(_CRON_SON_DURUM)
+    d.pop("is_", None)
+    sonuc = d.get("sonuc")
+    if isinstance(sonuc, dict):
+        d["sonuc"] = {k: v for k, v in sonuc.items() if k in ("tur", "success", "error", "mesaj", "bekleyen", "yapay_zeka")}
+    return d
 
 
 @app.errorhandler(403)
