@@ -116,9 +116,6 @@
                 {% else %}
                   <span class="sessiz">Girmedi</span>
                 {% endif %}
-                {% if ziya_mi and mt and mac.basladi_mi() and yz_analizleri and yz_analizleri.get(mac.id) %}
-                  <p class="ziya-analiz">{{ yz_analizleri[mac.id].metin }}</p>
-                {% endif %}
               </li>
             {% endfor %}
           </ul>
@@ -182,7 +179,6 @@
 .digerleri li{display:flex; justify-content:space-between; gap:12px; padding:8px 12px; font-size:14px; border-top:1px solid var(--cizgi)}
 .digerleri li:first-child{border-top:0}
 .digerleri li.ziya-satir{flex-wrap:wrap}
-.ziya-analiz{flex-basis:100%; margin:4px 0 0; padding:8px 10px; font-size:13px; line-height:1.45; color:var(--murekkep); background:#EEF2F8; border-radius:var(--r-kucuk)}
 .mini-skor{font:700 17px/1 var(--baslik)}
 .kaydet-cubugu{position:sticky; bottom:12px; margin-top:16px; padding:12px; background:rgba(255,255,255,.96); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); box-shadow:0 6px 24px rgba(20,32,26,.10)}
 .segment .kisa{display:none}

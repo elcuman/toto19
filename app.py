@@ -2470,14 +2470,9 @@ def grup(grup_id):
     su_anki_hafta_siralamasi = su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu)
     oynanabilir_mac_var = any(m.oynanabilir_mi() for m in maclar)
 
-    yz_analizleri = {}
-    if maclar:
-        yz_analizleri = {a.mac_id: a for a in YzAnaliz.query.filter(YzAnaliz.mac_id.in_([m.id for m in maclar])).all()}
-
     return render_template(
         "grup.html",
         grup=grup_obj,
-        yz_analizleri=yz_analizleri,
         maclar=maclar,
         lig_sekmeleri=lig_sekmeleri,
         mesaj_sayisi=okunmamis_mesaj_sayisi(grup_id, current_user.id),
