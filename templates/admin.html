@@ -271,6 +271,10 @@ Yaklaşan maçlardan tahmin girdiği: <strong>{{ ziya.tahminli_mac }}</strong>
 </p>
 {% endif %}
 
+<form method="POST" action="{{ url_for('admin_haberleri_yenile') }}" style="display:inline;">
+<button type="submit" class="btn" style="background:#0E7A4C;">📰 Haberleri Yenile</button>
+</form>
+
 <form
 method="POST"
 action="{{ url_for('admin_ziya_tahminlesin') }}"

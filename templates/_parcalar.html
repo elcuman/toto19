@@ -66,3 +66,60 @@
     </tbody>
   </table>
 {%- endmacro %}
+
+
+{% macro haber_slider(haberler) -%}
+{% if haberler %}
+<section class="haber-blok" aria-label="Spor haberleri">
+  <div class="panel-bas"><h2>Spor haberleri</h2><span class="kucuk sessiz">Kaynak sitelerden</span></div>
+  <div class="haber-serit" data-haber-serit>
+    {% for h in haberler %}
+    <a class="haber-kart" href="{{ h.link }}" target="_blank" rel="noopener nofollow">
+      <div class="haber-gorsel">
+        <img src="{{ h.gorsel }}" alt="" loading="{{ 'eager' if loop.index <= 2 else 'lazy' }}" referrerpolicy="no-referrer"
+             onerror="this.closest('.haber-kart').classList.add('gorselsiz'); this.remove();">
+      </div>
+      <div class="haber-metin">
+        <strong>{{ h.baslik }}</strong>
+        <span class="haber-alt">{{ h.kaynak }}{% if h.yayin %} · {{ h.yayin | tr_saat("%d.%m %H:%M") }}{% endif %}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  <div class="haber-noktalar" aria-hidden="true">{% for h in haberler %}<span></span>{% endfor %}</div>
+</section>
+<style>
+.haber-blok{margin:0 0 20px}
+.haber-blok .panel-bas{margin-bottom:10px}
+.haber-serit{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px}
+.haber-serit::-webkit-scrollbar{display:none}
+.haber-kart{flex:0 0 82%; max-width:340px; scroll-snap-align:start; display:flex; flex-direction:column; background:#fff; border:1px solid var(--cizgi); border-radius:var(--r); overflow:hidden; color:var(--murekkep); text-decoration:none}
+.haber-kart:hover{border-color:var(--cim)}
+.haber-gorsel{aspect-ratio:16/9; background:linear-gradient(135deg,var(--cim),#0A5C39); overflow:hidden}
+.haber-gorsel img{width:100%; height:100%; object-fit:cover; display:block}
+.haber-metin{padding:10px 12px 12px; display:flex; flex-direction:column; gap:6px}
+.haber-metin strong{font-size:15px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+.haber-alt{font-size:12px; color:var(--gri)}
+.haber-noktalar{display:flex; justify-content:center; gap:6px; margin-top:10px}
+.haber-noktalar span{width:6px; height:6px; border-radius:50%; background:var(--cizgi)}
+.haber-noktalar span.aktif{background:var(--cim); width:16px; border-radius:3px}
+@media (min-width:720px){ .haber-kart{flex-basis:calc((100% - 24px)/3)} }
+</style>
+<script>
+(function(){
+  var serit = document.querySelector('[data-haber-serit]'); if (!serit) return;
+  var kartlar = serit.children, noktalar = serit.parentNode.querySelectorAll('.haber-noktalar span'), dur = false;
+  function aktif(){ var i = Math.round(serit.scrollLeft / (kartlar[0].offsetWidth + 12));
+    noktalar.forEach(function(n, k){ n.classList.toggle('aktif', k === i); }); return i; }
+  serit.addEventListener('scroll', function(){ window.requestAnimationFrame(aktif); }, {passive:true});
+  ['touchstart','mouseenter','focusin'].forEach(function(e){ serit.addEventListener(e, function(){ dur = true; }, {passive:true}); });
+  aktif();
+  setInterval(function(){
+    if (dur || document.hidden) return;
+    var i = aktif() + 1, son = serit.scrollWidth - serit.clientWidth - 4;
+    serit.scrollTo({left: serit.scrollLeft >= son ? 0 : i * (kartlar[0].offsetWidth + 12)});
+  }, 5000);
+})();
+</script>
+{% endif %}
+{%- endmacro %}

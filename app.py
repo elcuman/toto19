@@ -790,6 +790,18 @@ class YzAnaliz(db.Model):
     olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class Haber(db.Model):
+    """Türk spor sitelerinin RSS akışlarından gelen, Türk takımlarıyla ilgili haber başlıkları."""
+    __tablename__ = "haberler"
+    id = db.Column(db.Integer, primary_key=True)
+    link = db.Column(db.String(600), unique=True, nullable=False)
+    baslik = db.Column(db.String(400), nullable=False)
+    kaynak = db.Column(db.String(80), nullable=True)
+    gorsel = db.Column(db.String(800), nullable=True)
+    yayin = db.Column(db.DateTime, nullable=True, index=True)
+    eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+
+
 class SohbetOkuma(db.Model):
     """Kullanıcının bir grubun sohbetinde en son gördüğü mesaj (okunmamış sayacı için)."""
     __tablename__ = "sohbet_okumalari"
@@ -2002,6 +2014,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE sohbet_okumalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE senkron_kayitlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE yz_analizleri ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE haberler ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -2053,7 +2066,7 @@ def index():
         Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.baslangic.isnot(None), Mac.baslangic > now,
         ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
     ).order_by(Mac.baslangic.asc()).limit(5).all()
-    return render_template("anasayfa.html", ozet=ozet, yaklasan=yaklasan)
+    return render_template("anasayfa.html", ozet=ozet, yaklasan=yaklasan, haberler=son_haberler())
 
 
 # ------------------------------------------------------------
@@ -2170,6 +2183,7 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
+        haberler=son_haberler(),
         yaklasan_maclar=yaklasan_maclar,
         biten_maclar=biten_maclar,
         tahminler=tahminler,
@@ -2859,6 +2873,18 @@ def admin_ziya_tahminlesin():
     else:
         flash(f"{YZ_KULLANICI_ADI} için yeni tahmin yok: önümüzdeki maçların hepsine zaten tahmin girmiş"
               f" ya da fikstürde yaklaşan maç yok.", "warning")
+    return redirect(url_for("admin"))
+
+
+@app.route("/admin/haberleri-yenile", methods=["POST"])
+@admin_required
+def admin_haberleri_yenile():
+    sonuc = _haber_guvenli_guncelle(zorla=True)
+    if sonuc.get("success") is False:
+        flash(f"Haberler alınamadı: {sonuc.get('error')}", "danger")
+    else:
+        hata = f" Ulaşılamayan kaynaklar: {'; '.join(sonuc.get('hatalar') or [])}" if sonuc.get("hatalar") else ""
+        flash(f"Haberler yenilendi: {sonuc.get('eklenen', 0)} yeni haber.{hata}", "success" if not hata else "warning")
     return redirect(url_for("admin"))
 
 
@@ -4242,9 +4268,188 @@ def _yz_guvenli_calistir(zorla=False):
         return {"success": False, "error": str(e)}
 
 
+# ============================================================
+# SPOR HABERLERİ (ana sayfa slider'ı)
+# Türk spor sitelerinin herkese açık RSS akışlarından sadece başlık, kaynak,
+# bağlantı ve kapak fotoğrafı alınır; haberin metni kopyalanmaz. Tıklayınca
+# haber kaynak sitede açılır. Cron 30 dakikada bir yeniler.
+# ============================================================
+HABER_KAYNAKLARI = [
+    ("TRT Haber", "https://www.trthaber.com/spor_articles.rss"),
+    ("NTV Spor", "https://www.ntvspor.net/rss/anasayfa"),
+    ("AA", "https://www.aa.com.tr/tr/rss/default?cat=spor"),
+    ("Fanatik", "https://www.fanatik.com.tr/rss/futbol"),
+    ("Fotomaç", "https://www.fotomac.com.tr/rss/anasayfa.xml"),
+]
+HABER_YENILEME_DAKIKA = 30
+HABER_SAKLAMA_GUN = 4
+HABER_GOSTERILEN = 12
+HABER_OG_GORSEL_LIMIT = 20       # bir yenilemede fotoğrafı sayfadan çekilecek en fazla haber
+# Türk takımları / milli takım: başlık veya özet bunlardan birini içermeli
+HABER_ANAHTAR_KELIMELER = [
+    "galatasaray", "fenerbahce", "besiktas", "trabzonspor", "basaksehir", "samsunspor", "goztepe",
+    "kasimpasa", "antalyaspor", "alanyaspor", "konyaspor", "kayserispor", "sivasspor", "rizespor",
+    "gaziantep", "eyupspor", "kocaelispor", "genclerbirligi", "karagumruk", "hatayspor", "bodrum",
+    "super lig", "milli takim", "a milli", "montella", "tff",
+]
+HABER_UA = "Mozilla/5.0 (compatible; TahminLigi/1.0; +haber-basliklari)"
+
+
+def _haber_metin_sade(m):
+    return (m or "").translate(_TR_HARF).lower()
+
+
+def _haber_ilgili_mi(baslik, ozet=""):
+    sade = _haber_metin_sade(baslik + " " + (ozet or ""))
+    anahtarlar = set(HABER_ANAHTAR_KELIMELER)
+    try:  # veritabanındaki Süper Lig takımlarını da ekle (yeni çıkan takımlar için)
+        for (ad,) in db.session.query(Mac.ev_sahibi).filter(Mac.lig_id == SUPER_LIG_ID).distinct().limit(60):
+            ilk = takim_adi_normalize(ad).split()
+            if ilk and len(ilk[0]) >= 5:
+                anahtarlar.add(ilk[0])
+    except Exception:
+        db.session.rollback()
+    return any(k in sade for k in anahtarlar)
+
+
+def _rss_tarih(metin):
+    from email.utils import parsedate_to_datetime
+    if not metin:
+        return None
+    try:
+        d = parsedate_to_datetime(metin.strip())
+        if d.tzinfo:
+            d = d.astimezone(timezone.utc).replace(tzinfo=None)
+        return d
+    except Exception:
+        pass
+    try:
+        d = datetime.fromisoformat(metin.strip().replace("Z", "+00:00"))
+        return d.astimezone(timezone.utc).replace(tzinfo=None) if d.tzinfo else d
+    except Exception:
+        return None
+
+
+def _rss_gorsel(item, ozet_html):
+    """RSS öğesindeki fotoğraf: enclosure, media:content/thumbnail, image, açıklamadaki <img>."""
+    import re
+    for el in item.iter():
+        etiket = el.tag.split('}')[-1].lower()
+        if etiket == "enclosure" and (el.get("type") or "image").startswith("image") and el.get("url"):
+            return el.get("url")
+        if etiket in ("content", "thumbnail") and el.get("url") and (el.get("medium") in (None, "image") ):
+            if not (el.get("type") or "").startswith("video"):
+                return el.get("url")
+        if etiket in ("image", "img", "resim", "imageurl") and (el.text or "").strip().startswith("http"):
+            return el.text.strip()
+    m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', ozet_html or "", re.I)
+    return m.group(1) if m else None
+
+
+def _og_gorsel(url):
+    import re
+    try:
+        r = requests.get(url, headers={"User-Agent": HABER_UA}, timeout=6)
+        if r.status_code != 200:
+            return None
+        html = r.text[:200000]
+        for desen in (r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+                      r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image',
+                      r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)'):
+            m = re.search(desen, html, re.I)
+            if m:
+                return m.group(1).replace("&amp;", "&")
+    except Exception:
+        return None
+    return None
+
+
+def rss_oku(kaynak, url, xml_metni=None):
+    """Bir RSS/Atom akışını okuyup [{baslik, link, ozet, gorsel, yayin, kaynak}] döner."""
+    import xml.etree.ElementTree as ET
+    import html as htmlmod
+    if xml_metni is None:
+        r = requests.get(url, headers={"User-Agent": HABER_UA}, timeout=10)
+        r.raise_for_status()
+        xml_metni = r.content
+    kok = ET.fromstring(xml_metni)
+    ogeler = [e for e in kok.iter() if e.tag.split('}')[-1] in ("item", "entry")]
+    sonuc = []
+    for it in ogeler:
+        def bul(*adlar):
+            for e in it:
+                if e.tag.split('}')[-1] in adlar:
+                    if e.tag.split('}')[-1] == "link" and e.get("href"):
+                        return e.get("href")
+                    return (e.text or "").strip()
+            return ""
+        baslik = htmlmod.unescape(bul("title"))
+        link = bul("link") or bul("guid")
+        if not baslik or not link.startswith("http"):
+            continue
+        ozet = bul("description", "summary", "encoded")
+        sonuc.append({
+            "kaynak": kaynak, "baslik": baslik[:400], "link": link[:600],
+            "ozet": ozet, "gorsel": _rss_gorsel(it, ozet),
+            "yayin": _rss_tarih(bul("pubDate", "published", "updated", "date")),
+        })
+    return sonuc
+
+
+def haberleri_guncelle(zorla=False):
+    simdi = utc_now_naive()
+    son = _senkron_zamani_oku("haber")
+    if not zorla and son and simdi - son < timedelta(minutes=HABER_YENILEME_DAKIKA):
+        return {"tur": "haber", "atlandi": True}
+    eklenen, hatalar, og_sayac = 0, [], 0
+    mevcut = {l for (l,) in db.session.query(Haber.link).all()}
+    for kaynak, url in HABER_KAYNAKLARI:
+        try:
+            ogeler = rss_oku(kaynak, url)
+        except Exception as e:
+            hatalar.append(f"{kaynak}: {e}")
+            continue
+        for o in ogeler:
+            if o["link"] in mevcut or not _haber_ilgili_mi(o["baslik"], o["ozet"]):
+                continue
+            yayin = o["yayin"] or simdi
+            if yayin < simdi - timedelta(days=HABER_SAKLAMA_GUN):
+                continue
+            gorsel = o["gorsel"]
+            if not gorsel and og_sayac < HABER_OG_GORSEL_LIMIT:
+                og_sayac += 1
+                gorsel = _og_gorsel(o["link"])
+            if not gorsel:
+                continue  # fotoğrafsız haber gösterilmez
+            db.session.add(Haber(link=o["link"], baslik=o["baslik"], kaynak=kaynak, gorsel=gorsel[:800], yayin=yayin))
+            mevcut.add(o["link"])
+            eklenen += 1
+    Haber.query.filter(Haber.yayin < simdi - timedelta(days=HABER_SAKLAMA_GUN)).delete(synchronize_session=False)
+    db.session.commit()
+    _senkron_zamani_yaz("haber")
+    return {"tur": "haber", "eklenen": eklenen, "hatalar": hatalar[:5]}
+
+
+def son_haberler(adet=HABER_GOSTERILEN):
+    try:
+        return Haber.query.order_by(Haber.yayin.desc()).limit(adet).all()
+    except Exception:
+        db.session.rollback()
+        return []
+
+
+def _haber_guvenli_guncelle(zorla=False):
+    try:
+        return haberleri_guncelle(zorla=zorla)
+    except Exception as e:
+        db.session.rollback()
+        return {"tur": "haber", "success": False, "error": str(e)}
+
+
 def akilli_senkron():
     now = utc_now_naive()
     yz_sonuc = _yz_guvenli_calistir()
+    _haber_guvenli_guncelle()
     try:
         # API'ye gidemesek bile 120. dakikası dolmuş, skoru gelmiş maçları puanla
         if gecikmis_maclari_bitir():
