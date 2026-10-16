@@ -12,7 +12,7 @@
 
 <!-- Google AdSense (Auto Ads): giriş/kayıt, sohbet ve admin sayfalarında YÜKLENMEZ (içeriksiz ve kullanıcı içerikli sayfalar) -->
 {% set _ep = request.endpoint or "" %}
-{% if not (_ep in ('giris', 'kayit', 'cikis', 'sohbetler', 'grup_sohbet', 'tahmin', 'sifremi_unuttum', 'sifre_talebi_durum', 'sifre_degistir') or _ep.startswith('admin') or _ep == 'static') %}
+{% if not (_ep in ('giris', 'kayit', 'cikis', 'sohbetler', 'grup_sohbet', 'tahmin', 'sifremi_unuttum', 'sifre_talebi_durum', 'sifre_degistir', 'geri_bildirim') or _ep.startswith('admin') or _ep == 'static') %}
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3716423648799781" crossorigin="anonymous"></script>
 {% endif %}
 
@@ -322,7 +322,7 @@ tr:last-child td{border-bottom:0}
       <a href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
       <a href="{{ url_for('profil') }}" {% if ep == 'profil' %}aria-current="page"{% endif %}>Profil</a>
       <a href="{{ url_for('sohbetler') }}" {% if sohbette %}aria-current="page"{% endif %}>Sohbet{% if toplam_okunmamis %} <span class="ust-rozet">{{ toplam_okunmamis }}</span>{% endif %}</a>
-      {% if current_user.admin %}<a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>Admin{% if bekleyen_sifre_sayisi %} <span class="ust-rozet">{{ bekleyen_sifre_sayisi }}</span>{% endif %}</a>{% endif %}
+      {% if current_user.admin %}<a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>Admin{% if admin_rozet %} <span class="ust-rozet">{{ admin_rozet }}</span>{% endif %}</a>{% endif %}
       <a href="{{ url_for('cikis') }}">Çıkış</a>
     </nav>
     {% else %}
@@ -351,6 +351,7 @@ tr:last-child td{border-bottom:0}
     <a href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır</a>
     <a href="{{ url_for('gizlilik') }}">Gizlilik</a>
     <a href="{{ url_for('iletisim') }}">İletişim</a>
+    <a href="{{ url_for('geri_bildirim') }}">Geri bildirim</a>
   </nav>
   <p>Tahmin Ligi arkadaş grupları için parasız bir skor tahmin oyunudur. Bahis veya para ödülü yoktur.</p>
 </footer>
@@ -378,7 +379,7 @@ tr:last-child td{border-bottom:0}
   </a>
   {% if current_user.admin %}
   <a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>
-    <span class="tab-ikon">{% if bekleyen_sifre_sayisi %}<span class="tab-rozet">{{ bekleyen_sifre_sayisi }}</span>{% endif %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+    <span class="tab-ikon">{% if admin_rozet %}<span class="tab-rozet">{{ admin_rozet }}</span>{% endif %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
     Admin
   </a>
   {% endif %}

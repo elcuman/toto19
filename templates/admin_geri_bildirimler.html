@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Geri bildirimler · Admin{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('admin') }}">‹ Admin</a>
+<div class="sayfa-bas">
+  <div>
+    <h1>Geri bildirimler</h1>
+    <p class="alt">{{ 'Tümü' if hepsi else 'Okunmamışlar' }} · {{ bildirimler|length }} kayıt</p>
+  </div>
+  <div class="btn-dizi">
+    {% if hepsi %}
+      <a class="btn btn-kucuk btn-ikincil" href="{{ url_for('admin_geri_bildirimler') }}">Sadece okunmamışlar</a>
+    {% else %}
+      <a class="btn btn-kucuk btn-ikincil" href="{{ url_for('admin_geri_bildirimler', hepsi=1) }}">Tümünü göster</a>
+      {% if bildirimler %}
+      <form method="POST" action="{{ url_for('admin_geri_bildirim_hepsi_okundu') }}" style="margin:0"><button class="btn btn-kucuk">Hepsini okundu yap</button></form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% for g in bildirimler %}
+<article class="panel gb-kart {{ 'okundu' if g.okundu else '' }}">
+  <div class="gb-ust">
+    <span class="etiket">{{ turler.get(g.tur, g.tur) }}</span>
+    <strong>{{ g.kullanici.kullanici_adi if g.kullanici else (g.ad or 'Misafir') }}</strong>
+    {% if not g.kullanici %}<span class="sessiz kucuk">(girişsiz)</span>{% endif %}
+    <span class="sessiz kucuk gb-zaman">{{ g.olusturulma | tr_saat("%d.%m.%Y %H:%M") }}</span>
+  </div>
+  <p class="gb-metin">{{ g.metin }}</p>
+  <div class="gb-alt">
+    {% if g.sayfa %}<span class="sessiz kucuk">Sayfa: {{ g.sayfa }}</span>{% endif %}
+    <div class="gb-dugmeler">
+      {% if g.okundu %}
+        <form method="POST" action="{{ url_for('admin_geri_bildirim_islem', gb_id=g.id, islem='okunmadi', hepsi=1 if hepsi else None) }}"><button class="btn btn-kucuk btn-ikincil">Okunmadı yap</button></form>
+      {% else %}
+        <form method="POST" action="{{ url_for('admin_geri_bildirim_islem', gb_id=g.id, islem='okundu', hepsi=1 if hepsi else None) }}"><button class="btn btn-kucuk">Okundu</button></form>
+      {% endif %}
+      <form method="POST" action="{{ url_for('admin_geri_bildirim_islem', gb_id=g.id, islem='sil', hepsi=1 if hepsi else None) }}" onsubmit="return confirm('Silinsin mi?')"><button class="btn btn-kucuk btn-ikincil">Sil</button></form>
+    </div>
+  </div>
+</article>
+{% else %}
+<div class="bos"><strong>Yeni geri bildirim yok.</strong>Gelenler burada görünür.</div>
+{% endfor %}
+
+<style>
+.gb-kart{padding:14px 16px}
+.gb-kart.okundu{opacity:.65}
+.gb-ust{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:baseline}
+.gb-zaman{margin-left:auto}
+.gb-metin{white-space:pre-wrap; overflow-wrap:anywhere; margin:8px 0}
+.gb-alt{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between}
+.gb-dugmeler{display:flex; gap:8px; margin-left:auto}
+.gb-dugmeler form{margin:0}
+</style>
+{% endblock %}

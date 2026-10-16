@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Geri bildirim · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>Geri bildirim</h1>
+    <p class="alt">Fikrin, önerin ya da gördüğün bir hata mı var? Doğrudan yöneticiye gider.</p>
+  </div>
+</div>
+
+{% if tamam %}
+<section class="panel gb-tamam">
+  <div class="gb-tik" aria-hidden="true">✓</div>
+  <h2>Teşekkürler!</h2>
+  <p>Mesajın yöneticiye iletildi.</p>
+  <div class="btn-dizi" style="justify-content:center">
+    <a class="btn" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}">Ana sayfaya dön</a>
+    <a class="btn btn-ikincil" href="{{ url_for('geri_bildirim') }}">Bir tane daha yaz</a>
+  </div>
+</section>
+{% else %}
+<section class="panel" style="max-width:560px">
+  <form method="POST">
+    <fieldset class="gb-turler">
+      <legend>Konu</legend>
+      {% for k, etiket in turler.items() %}
+        <label class="gb-tur"><input type="radio" name="tur" value="{{ k }}" {% if k == secili_tur %}checked{% endif %}><span>{{ etiket }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <label for="metin">Mesajın</label>
+    <textarea id="metin" name="metin" rows="5" maxlength="2000" required placeholder="Ne düşünüyorsun?">{{ metin }}</textarea>
+    {% if not current_user.is_authenticated %}
+      <label for="ad">Adın <span class="sessiz" style="font-weight:400">(isteğe bağlı)</span></label>
+      <input id="ad" name="ad" maxlength="80" value="{{ ad }}">
+    {% endif %}
+    <input type="hidden" name="sayfa" value="{{ sayfa }}">
+    <div class="gb-tuzak" aria-hidden="true"><label>Web sitesi <input name="web_sitesi" tabindex="-1" autocomplete="off"></label></div>
+    <button type="submit" class="btn btn-blok">Gönder</button>
+    {% if current_user.is_authenticated %}<p class="ipucu" style="margin:10px 0 0">Kullanıcı adınla ({{ current_user.kullanici_adi }}) gönderilir.</p>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+<style>
+.gb-turler{border:0; padding:0; margin:0 0 14px; display:flex; flex-wrap:wrap; gap:8px}
+.gb-turler legend{font-weight:600; font-size:14px; margin-bottom:6px; padding:0}
+.gb-tur{margin:0; cursor:pointer}
+.gb-tur input{position:absolute; opacity:0; width:1px; height:1px; margin:0}
+.gb-tur span{display:inline-block; padding:8px 14px; border:1px solid var(--cizgi-koyu); border-radius:999px; font-weight:600; font-size:14.5px; background:#fff}
+.gb-tur input:checked + span{background:var(--cim-acik); border-color:var(--cim); color:var(--cim-koyu)}
+.gb-tur input:focus-visible + span{outline:3px solid rgba(14,122,76,.45); outline-offset:2px}
+.gb-tuzak{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+.gb-tamam{text-align:center; max-width:560px}
+.gb-tik{width:48px; height:48px; margin:4px auto 10px; border-radius:50%; background:var(--cim); color:#fff; font:700 26px/48px var(--baslik)}
+</style>
+{% endblock %}

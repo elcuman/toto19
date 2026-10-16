@@ -7,6 +7,9 @@
 Admin Panel
 </h1>
 
+<p class="admin-gb"><a href="{{ url_for('admin_geri_bildirimler') }}">💬 Geri bildirimler{% if okunmamis_geri_bildirim %} <span class="ust-rozet">{{ okunmamis_geri_bildirim }}</span>{% endif %}</a></p>
+<style>.admin-gb{margin:-4px 0 16px}.admin-gb a{font-weight:600; text-decoration:none}</style>
+
 {% if sifre_talepleri %}
 <section class="sifre-talepleri">
   <h2>🔑 Şifre talepleri ({{ sifre_talepleri|length }})</h2>

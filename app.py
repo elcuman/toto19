@@ -809,6 +809,20 @@ class Haber(db.Model):
     eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class GeriBildirim(db.Model):
+    """Kullanıcıların yöneticiye ilettiği fikir, öneri ve hata bildirimleri."""
+    __tablename__ = "geri_bildirimler"
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="SET NULL"), nullable=True)
+    ad = db.Column(db.String(80))           # girişsiz gönderenin yazdığı isim (isteğe bağlı)
+    tur = db.Column(db.String(20), nullable=False, default="oneri")   # oneri / hata / diger
+    metin = db.Column(db.Text, nullable=False)
+    sayfa = db.Column(db.String(200))       # nereden geldiği (referrer yolu)
+    okundu = db.Column(db.Boolean, nullable=False, default=False)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    kullanici = db.relationship("Kullanici")
+
+
 class SifreTalebi(db.Model):
     """Şifresini unutan kullanıcının yöneticiye ilettiği sıfırlama talebi.
     Talep eden tarayıcıya gizli bir anahtar verilir; yönetici onaylayınca
@@ -2046,6 +2060,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE yz_analizleri ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE haberler ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sifre_talepleri ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE geri_bildirimler ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -2143,7 +2158,7 @@ def robots_txt():
     satirlar = [
         "User-agent: *",
         "Allow: /$", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2321,13 +2336,91 @@ def admin_sifre_talebi_karar(talep_id, karar):
 
 @app.context_processor
 def admin_sifre_rozeti():
+    """Admin menüsündeki rozet: bekleyen şifre talepleri + okunmamış geri bildirimler."""
     if not current_user.is_authenticated or not getattr(current_user, "admin", False):
         return {}
     try:
-        return {"bekleyen_sifre_sayisi": len(bekleyen_sifre_talepleri())}
+        sifre = len(bekleyen_sifre_talepleri())
+        gb = GeriBildirim.query.filter_by(okundu=False).count()
+        return {"bekleyen_sifre_sayisi": sifre, "okunmamis_geri_bildirim": gb, "admin_rozet": sifre + gb}
     except Exception:
         db.session.rollback()
-        return {"bekleyen_sifre_sayisi": 0}
+        return {"bekleyen_sifre_sayisi": 0, "okunmamis_geri_bildirim": 0, "admin_rozet": 0}
+
+
+GERI_BILDIRIM_TURLERI = {"oneri": "💡 Fikir / öneri", "hata": "🐞 Hata", "diger": "💬 Diğer"}
+
+
+@app.route("/geri-bildirim", methods=["GET", "POST"])
+def geri_bildirim():
+    if request.method == "POST":
+        metin = request.form.get("metin", "").strip()[:2000]
+        tur = request.form.get("tur", "oneri")
+        tur = tur if tur in GERI_BILDIRIM_TURLERI else "diger"
+        ad = request.form.get("ad", "").strip()[:80] or None
+        sayfa = request.form.get("sayfa", "")[:200] or None
+        # Bot tuzağı: gerçek kullanıcı bu gizli alanı boş bırakır
+        if request.form.get("web_sitesi"):
+            return redirect(url_for("geri_bildirim", tamam=1))
+        if len(metin) < 3:
+            flash("Biraz daha yazar mısın? 🙂", "warning")
+            return render_template("geri_bildirim.html", turler=GERI_BILDIRIM_TURLERI, metin=metin, secili_tur=tur, ad=ad or "", sayfa=sayfa or "")
+        # Basit sınır: oturum başına 10 dakikada en fazla 5 mesaj
+        simdi = utc_now_naive().timestamp()
+        gecmis = [t for t in session.get("gb_zamanlar", []) if simdi - t < 600]
+        if len(gecmis) >= 5:
+            flash("Kısa sürede çok mesaj gönderdin, biraz sonra tekrar dene.", "warning")
+            return redirect(url_for("geri_bildirim"))
+        session["gb_zamanlar"] = gecmis + [simdi]
+        db.session.add(GeriBildirim(
+            kullanici_id=current_user.id if current_user.is_authenticated else None,
+            ad=None if current_user.is_authenticated else ad,
+            tur=tur, metin=metin, sayfa=sayfa))
+        db.session.commit()
+        return redirect(url_for("geri_bildirim", tamam=1))
+    onceki = request.args.get("sayfa") or ""
+    if not onceki and request.referrer:
+        from urllib.parse import urlparse
+        r = urlparse(request.referrer)
+        if r.netloc == request.host:
+            onceki = r.path
+    return render_template("geri_bildirim.html", turler=GERI_BILDIRIM_TURLERI, metin="",
+                           secili_tur=request.args.get("tur", "oneri"), ad="", sayfa=onceki,
+                           tamam=request.args.get("tamam") == "1")
+
+
+@app.route("/admin/geri-bildirimler")
+@admin_required
+def admin_geri_bildirimler():
+    hepsi = request.args.get("hepsi") == "1"
+    q = GeriBildirim.query.options(db.joinedload(GeriBildirim.kullanici)).order_by(GeriBildirim.id.desc())
+    if not hepsi:
+        q = q.filter_by(okundu=False)
+    return render_template("admin_geri_bildirimler.html", bildirimler=q.limit(200).all(),
+                           hepsi=hepsi, turler=GERI_BILDIRIM_TURLERI)
+
+
+@app.route("/admin/geri-bildirimler/<int:gb_id>/<islem>", methods=["POST"])
+@admin_required
+def admin_geri_bildirim_islem(gb_id, islem):
+    gb = db.session.get(GeriBildirim, gb_id)
+    if gb:
+        if islem == "okundu":
+            gb.okundu = True
+        elif islem == "okunmadi":
+            gb.okundu = False
+        elif islem == "sil":
+            db.session.delete(gb)
+        db.session.commit()
+    return redirect(url_for("admin_geri_bildirimler", hepsi=request.args.get("hepsi")))
+
+
+@app.route("/admin/geri-bildirimler/hepsini-okundu-yap", methods=["POST"])
+@admin_required
+def admin_geri_bildirim_hepsi_okundu():
+    GeriBildirim.query.filter_by(okundu=False).update({"okundu": True})
+    db.session.commit()
+    return redirect(url_for("admin_geri_bildirimler"))
 
 
 @app.route("/cikis")
