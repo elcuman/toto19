@@ -72,9 +72,19 @@
 {% if haberler %}
 <section class="haber-blok" aria-label="Spor haberleri">
   <div class="panel-bas"><h2>Spor haberleri</h2><span class="kucuk sessiz">Kaynak sitelerden</span></div>
+  {% set kodlar = {} %}
+  {% for h in haberler %}{% for k in haber_takim_kodlari(h.baslik) %}{% set _ = kodlar.update({k: kodlar.get(k, 0) + 1}) %}{% endfor %}{% endfor %}
+  {% if kodlar %}
+  <div class="haber-filtre" role="tablist" aria-label="Takıma göre süz">
+    <button type="button" class="aktif" data-takim="">Tümü</button>
+    {% for kod, ad, _k in HABER_TAKIM_FILTRELERI %}{% if kodlar.get(kod) %}
+    <button type="button" data-takim="{{ kod }}">{{ ad }}</button>
+    {% endif %}{% endfor %}
+  </div>
+  {% endif %}
   <div class="haber-serit" data-haber-serit>
     {% for h in haberler %}
-    <a class="haber-kart" href="{{ h.link }}" target="_blank" rel="noopener nofollow">
+    <a class="haber-kart" href="{{ h.link }}" target="_blank" rel="noopener nofollow" data-takimlar="{{ haber_takim_kodlari(h.baslik)|join(' ') }}">
       <div class="haber-gorsel">
         <img src="{{ h.gorsel }}" alt="" loading="{{ 'eager' if loop.index <= 2 else 'lazy' }}" referrerpolicy="no-referrer"
              onerror="this.closest('.haber-kart').classList.add('gorselsiz'); this.remove();">
@@ -86,11 +96,15 @@
     </a>
     {% endfor %}
   </div>
-  <div class="haber-noktalar" aria-hidden="true">{% for h in haberler %}<span></span>{% endfor %}</div>
+  <div class="haber-noktalar" aria-hidden="true"></div>
 </section>
 <style>
 .haber-blok{margin:0 0 20px}
 .haber-blok .panel-bas{margin-bottom:10px}
+.haber-filtre{display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 0 10px; padding-bottom:2px}
+.haber-filtre::-webkit-scrollbar{display:none}
+.haber-filtre button{flex:none; font:600 13px/1 var(--yazi); padding:8px 12px; border-radius:999px; border:1px solid var(--cizgi); background:#fff; color:var(--murekkep); cursor:pointer}
+.haber-filtre button.aktif{background:var(--cim); border-color:var(--cim); color:#fff}
 .haber-serit{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px}
 .haber-serit::-webkit-scrollbar{display:none}
 .haber-kart{flex:0 0 82%; max-width:340px; scroll-snap-align:start; display:flex; flex-direction:column; background:#fff; border:1px solid var(--cizgi); border-radius:var(--r); overflow:hidden; color:var(--murekkep); text-decoration:none}
@@ -108,16 +122,33 @@
 <script>
 (function(){
   var serit = document.querySelector('[data-haber-serit]'); if (!serit) return;
-  var kartlar = serit.children, noktalar = serit.parentNode.querySelectorAll('.haber-noktalar span'), dur = false;
-  function aktif(){ var i = Math.round(serit.scrollLeft / (kartlar[0].offsetWidth + 12));
+  var blok = serit.parentNode, tum = Array.prototype.slice.call(serit.children),
+      noktaKap = blok.querySelector('.haber-noktalar'), dur = false, gorunen = tum, noktalar = [];
+  function adim(){ return gorunen.length ? gorunen[0].offsetWidth + 12 : 1; }
+  function aktif(){ var i = Math.round(serit.scrollLeft / adim());
     noktalar.forEach(function(n, k){ n.classList.toggle('aktif', k === i); }); return i; }
+  function noktalariKur(){
+    noktaKap.innerHTML = ''; noktalar = [];
+    gorunen.slice(0, 15).forEach(function(){ var s = document.createElement('span'); noktaKap.appendChild(s); noktalar.push(s); });
+    aktif();
+  }
+  function suz(kod){
+    gorunen = tum.filter(function(k){ return !kod || (' ' + k.dataset.takimlar + ' ').indexOf(' ' + kod + ' ') >= 0; });
+    tum.forEach(function(k){ k.style.display = gorunen.indexOf(k) >= 0 ? '' : 'none'; });
+    serit.scrollLeft = 0; noktalariKur();
+    blok.querySelectorAll('.haber-filtre button').forEach(function(b){ b.classList.toggle('aktif', b.dataset.takim === kod); });
+    try { localStorage.setItem('haber_takim', kod); } catch(e) {}
+  }
+  blok.querySelectorAll('.haber-filtre button').forEach(function(b){ b.addEventListener('click', function(){ dur = true; suz(b.dataset.takim); }); });
   serit.addEventListener('scroll', function(){ window.requestAnimationFrame(aktif); }, {passive:true});
   ['touchstart','mouseenter','focusin'].forEach(function(e){ serit.addEventListener(e, function(){ dur = true; }, {passive:true}); });
-  aktif();
+  var kayitli = ''; try { kayitli = localStorage.getItem('haber_takim') || ''; } catch(e) {}
+  if (kayitli && !blok.querySelector('.haber-filtre button[data-takim="' + kayitli + '"]')) kayitli = '';
+  suz(kayitli);
   setInterval(function(){
-    if (dur || document.hidden) return;
+    if (dur || document.hidden || gorunen.length < 2) return;
     var i = aktif() + 1, son = serit.scrollWidth - serit.clientWidth - 4;
-    serit.scrollTo({left: serit.scrollLeft >= son ? 0 : i * (kartlar[0].offsetWidth + 12)});
+    serit.scrollTo({left: serit.scrollLeft >= son ? 0 : i * adim()});
   }, 5000);
 })();
 </script>

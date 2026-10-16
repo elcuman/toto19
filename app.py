@@ -4283,7 +4283,15 @@ HABER_KAYNAKLARI = [
 ]
 HABER_YENILEME_DAKIKA = 30
 HABER_SAKLAMA_GUN = 4
-HABER_GOSTERILEN = 12
+HABER_GOSTERILEN = 40
+# Slider üstündeki takım filtresi: (kod, görünen ad, başlıkta aranacak kelimeler)
+HABER_TAKIM_FILTRELERI = [
+    ("gs", "Galatasaray", ["galatasaray", "cimbom", "aslan"]),
+    ("fb", "Fenerbahçe", ["fenerbahce", "kanarya"]),
+    ("bjk", "Beşiktaş", ["besiktas", "kara kartal"]),
+    ("ts", "Trabzonspor", ["trabzonspor", "firtina"]),
+    ("milli", "Milli Takım", ["milli takim", "a milli", "ay-yildizli", "ay yildizli", "montella"]),
+]
 HABER_OG_GORSEL_LIMIT = 20       # bir yenilemede fotoğrafı sayfadan çekilecek en fazla haber
 # Türk takımları / milli takım: başlık veya özet bunlardan birini içermeli
 HABER_ANAHTAR_KELIMELER = [
@@ -4428,6 +4436,16 @@ def haberleri_guncelle(zorla=False):
     db.session.commit()
     _senkron_zamani_yaz("haber")
     return {"tur": "haber", "eklenen": eklenen, "hatalar": hatalar[:5]}
+
+
+def haber_takim_kodlari(baslik):
+    """Haber başlığında geçen takımların filtre kodları (örn. ['gs', 'fb'])."""
+    sade = _haber_metin_sade(baslik)
+    return [kod for kod, _ad, kelimeler in HABER_TAKIM_FILTRELERI if any(k in sade for k in kelimeler)]
+
+
+app.jinja_env.globals["haber_takim_kodlari"] = haber_takim_kodlari
+app.jinja_env.globals["HABER_TAKIM_FILTRELERI"] = HABER_TAKIM_FILTRELERI
 
 
 def son_haberler(adet=HABER_GOSTERILEN):
