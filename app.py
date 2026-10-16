@@ -2039,6 +2039,23 @@ initialize_database()
 # ROUTES (Rotalar)
 # ============================================================
 
+# Kendi domain'in (örn. skorbilen.com) çalışınca Render'da ANA_DOMAIN=skorbilen.com
+# tanımlanırsa, eski *.onrender.com adresine gelenler kalıcı olarak yeni adrese
+# yönlendirilir. Cron adresi (/cron/...) yönlendirilmez ki zamanlayıcı bozulmasın.
+ANA_DOMAIN = os.getenv("ANA_DOMAIN", "").strip().lower()
+
+
+@app.before_request
+def ana_domaine_yonlendir():
+    if not ANA_DOMAIN:
+        return None
+    host = (request.host or "").split(":")[0].lower()
+    if host.endswith(".onrender.com") and not request.path.startswith("/cron"):
+        hedef = f"https://{ANA_DOMAIN}{request.full_path if request.query_string else request.path}"
+        return redirect(hedef, code=301)
+    return None
+
+
 @app.route("/ads.txt")
 def ads_txt():
     """Google AdSense siteyi onaylamak için bu dosyayı domain kökünde arar.
