@@ -308,7 +308,7 @@ tr:last-child td{border-bottom:0}
 
 {% set ep = request.endpoint or "" %}
 {% set sohbette = ep in ('sohbetler', 'grup_sohbet') %}
-<body class="{{ 'girisli' if current_user.is_authenticated else '' }}">
+<body class="{{ 'girisli' if current_user.is_authenticated else '' }}{{ ' sohbet-sayfasi' if ep == 'grup_sohbet' else '' }}">
 
 <header class="appbar">
   <div class="appbar-ic">

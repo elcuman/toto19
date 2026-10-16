@@ -4,72 +4,114 @@
 
 {% block content %}
 
-<a class="geri" href="{{ url_for('grup', grup_id=grup.id) }}">‹ {{ grup.ad }}</a>
-
-<div class="sayfa-bas">
-  <div>
-    <h1>Sohbet</h1>
-    <p class="alt">{{ uye_sayisi }} üye</p>
-  </div>
-</div>
-
-<section class="sohbet">
-  <div id="mesajListesi" class="mesaj-listesi" aria-live="polite">
-    <div id="bosMesaj" class="sohbet-bos" {% if mesajlar %}hidden{% endif %}>
-      <strong>Henüz mesaj yok.</strong>Maç yorumunu ilk sen yaz. Bir mesajı yanıtlamak için sağa kaydır.
+<section class="sohbet" id="sohbet">
+  <header class="sohbet-ust">
+    <a class="sohbet-geri" href="{{ url_for('grup', grup_id=grup.id) }}" aria-label="{{ grup.ad }} grubuna dön">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+    <div class="sohbet-baslik">
+      <h1>{{ grup.ad }}</h1>
+      <p>{{ uye_sayisi }} üye · Sohbet</p>
     </div>
+  </header>
+
+  <div class="liste-kap">
+    <div id="mesajListesi" class="mesaj-listesi" aria-live="polite">
+      <div id="bosMesaj" class="sohbet-bos" {% if mesajlar %}hidden{% endif %}>
+        <strong>Henüz mesaj yok.</strong>Maç yorumunu ilk sen yaz. Bir mesajı yanıtlamak için sağa kaydır.
+      </div>
+    </div>
+    <button type="button" id="yeniMesajBtn" class="yeni-mesaj-btn" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      <span id="yeniMesajSayi">Yeni mesaj</span>
+    </button>
   </div>
 
-  <div id="yanitCubugu" class="yanit-cubugu" hidden>
-    <div class="yanit-cubugu-ic">
-      <span class="yanit-cubugu-baslik">Yanıtlanıyor: <b id="yanitKime"></b></span>
-      <span id="yanitOnizleme" class="yanit-cubugu-metin"></span>
+  <div class="sohbet-alt">
+    <div id="yanitCubugu" class="yanit-cubugu" hidden>
+      <div class="yanit-cubugu-ic">
+        <span class="yanit-cubugu-baslik">Yanıtlanıyor: <b id="yanitKime"></b></span>
+        <span id="yanitOnizleme" class="yanit-cubugu-metin"></span>
+      </div>
+      <button type="button" id="yanitIptal" class="yanit-iptal" aria-label="Yanıtı iptal et">×</button>
     </div>
-    <button type="button" id="yanitIptal" class="yanit-iptal" aria-label="Yanıtı iptal et">×</button>
+    <ul id="etiketOneri" class="etiket-oneri" role="listbox" aria-label="Kişi etiketle" hidden></ul>
+    <p id="sohbetHata" class="sohbet-hata" role="alert" hidden></p>
+    <form id="mesajFormu" class="mesaj-formu" autocomplete="off">
+      <textarea id="mesajKutusu" rows="1" maxlength="{{ max_uzunluk }}" enterkeyhint="send"
+                placeholder="Mesaj yaz, @ ile etiketle" aria-label="Mesaj"></textarea>
+      <button type="submit" class="gonder-btn" id="gonderBtn" aria-label="Gönder" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </form>
   </div>
-  <ul id="etiketOneri" class="etiket-oneri" role="listbox" aria-label="Kişi etiketle" hidden></ul>
-  <form id="mesajFormu" class="mesaj-formu" autocomplete="off">
-    <textarea id="mesajKutusu" rows="1" maxlength="{{ max_uzunluk }}"
-              placeholder="Mesaj yaz, @ ile etiketle" aria-label="Mesaj"></textarea>
-    <button type="submit" class="btn" id="gonderBtn">Gönder</button>
-  </form>
-  <p id="sohbetHata" class="sohbet-hata" role="alert" hidden></p>
 </section>
 
 <style>
-.sohbet{background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); overflow:hidden}
-.mesaj-listesi{height:min(62vh, 600px); overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:6px; padding:16px; background:var(--zemin)}
-@media (max-width:640px){ .mesaj-listesi{height:calc(100vh - 320px); min-height:280px} }
-.sohbet-bos{margin:auto; color:var(--gri); text-align:center; font-size:15px}
+/* ---------- Kabuk ---------- */
+.sohbet{position:relative; display:flex; flex-direction:column; background:var(--kart); border:1px solid var(--cizgi);
+  border-radius:var(--r-buyuk); overflow:hidden; height:min(78vh, 760px)}
+.sohbet-ust{flex:none; display:flex; align-items:center; gap:6px; padding:8px 12px 8px 6px; background:#fff; border-bottom:1px solid var(--cizgi)}
+.sohbet-geri{flex:none; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; color:var(--murekkep)}
+.sohbet-geri:hover{background:var(--zemin); color:var(--murekkep)}
+.sohbet-geri svg{width:24px; height:24px}
+.sohbet-baslik{min-width:0}
+.sohbet-baslik h1{font-size:20px; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sohbet-baslik p{margin:0; font-size:13px; color:var(--gri)}
+.liste-kap{position:relative; flex:1; min-height:0; display:flex}
+.mesaj-listesi{flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  display:flex; flex-direction:column; gap:6px; padding:12px 14px 14px; background:var(--zemin)}
+.sohbet-alt{flex:none; background:#fff; border-top:1px solid var(--cizgi)}
+
+/* Telefonda sohbet tam ekran bir uygulama gibi: üst çubuk ile alt menü arasını doldurur */
+body.sohbet-sayfasi .altbilgi{display:none}
+@media (max-width:640px){
+  body.sohbet-sayfasi{padding-bottom:0; overflow:hidden; overscroll-behavior:none}
+  body.sohbet-sayfasi main.sayfa{padding:0}
+  .sohbet{position:fixed; left:0; right:0; top:56px; bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    height:auto; border:0; border-radius:0; z-index:15}
+  /* Klavye açıkken alt menüyü gizle; JS kabuğu görünen alana oturtur */
+  body.klavye .tabbar{display:none}
+  body.klavye .sohbet{top:0; bottom:auto; z-index:30}
+  body.klavye .sohbet-ust{padding-top:max(8px, env(safe-area-inset-top))}
+  .mesaj-listesi{padding:10px 10px 12px}
+  .mesaj{max-width:86%}
+}
+
+/* ---------- Mesajlar ---------- */
+.sohbet-bos{margin:auto; color:var(--gri); text-align:center; font-size:15px; padding:0 20px}
 .sohbet-bos strong{display:block; color:var(--murekkep)}
-.mesaj{max-width:82%; padding:8px 12px 9px; border-radius:16px 16px 16px 4px; background:#fff; border:1px solid var(--cizgi);
+.gun-ayrac{align-self:center; margin:10px 0 4px; padding:3px 12px; border-radius:999px; background:#fff; border:1px solid var(--cizgi);
+  font-size:12.5px; font-weight:600; color:var(--gri); position:sticky; top:0; z-index:2}
+.mesaj{max-width:80%; padding:7px 11px 6px; border-radius:16px 16px 16px 4px; background:#fff; border:1px solid var(--cizgi);
   align-self:flex-start; overflow-wrap:anywhere}
 .mesaj.benim{align-self:flex-end; background:var(--cim); color:#fff; border-color:var(--cim); border-radius:16px 16px 4px 16px}
-.mesaj-ust{display:flex; gap:8px; align-items:baseline; font-size:12.5px; margin-bottom:1px}
+.mesaj.devam{margin-top:-3px}
+.mesaj.devam:not(.benim){border-top-left-radius:6px}
+.mesaj.devam.benim{border-top-right-radius:6px}
+.mesaj.devam .mesaj-ad{display:none}
+.mesaj-ust{display:flex; gap:8px; align-items:baseline; font-size:12.5px}
+.mesaj-ust:empty{display:none}
 .mesaj-ad{font-weight:700; color:var(--cim)}
 .mesaj.benim .mesaj-ad{display:none}
+.mesaj-icerik{white-space:pre-wrap; font-size:16px; line-height:1.35}
+.mesaj-alt{display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:1px; font-size:11.5px; line-height:1.2}
 .mesaj-saat{color:var(--gri-acik)}
-.mesaj.benim .mesaj-saat{color:rgba(255,255,255,.75)}
-.mesaj-icerik{white-space:pre-wrap; font-size:15.5px; line-height:1.35}
-.mesaj-sil{background:none; border:0; padding:0 2px; margin-left:6px; cursor:pointer; color:inherit; opacity:.55; font-size:13px}
-.mesaj-sil:hover{opacity:1}
-.mesaj-formu{display:flex; gap:8px; padding:10px; align-items:flex-end; border-top:1px solid var(--cizgi); background:#fff}
-.mesaj-formu textarea{flex:1; resize:none; margin:0; max-height:120px; border-radius:var(--r)}
-.mesaj-yanitla{background:none; border:0; padding:0 2px; cursor:pointer; color:inherit; opacity:.6; font-size:13px; font-weight:600}
-.mesaj-yanitla:hover{opacity:1}
+.mesaj.benim .mesaj-saat{color:rgba(255,255,255,.8)}
+.mesaj-sil, .mesaj-yanitla{background:none; border:0; padding:0 2px; cursor:pointer; color:inherit; opacity:.6; font:600 12px/1.2 var(--yazi)}
+.mesaj-sil:hover, .mesaj-yanitla:hover{opacity:1}
 /* Sağa kaydırarak yanıtla */
-.mesaj{position:relative; touch-action:pan-y; transition:transform .2s ease}
+.mesaj{position:relative; touch-action:pan-y; transition:transform .2s ease; -webkit-touch-callout:none}
 .mesaj.surukleniyor{transition:none; user-select:none; -webkit-user-select:none}
 .mesaj .kaydir-ikon{position:absolute; left:-34px; top:50%; width:26px; height:26px; margin-top:-13px; border-radius:50%;
   background:var(--cim); color:#fff; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(.6);
   transition:opacity .1s, transform .1s; pointer-events:none}
 .mesaj .kaydir-ikon svg{width:15px; height:15px}
 .mesaj.esik .kaydir-ikon{transform:scale(1)}
-/* Dokunmatik ekranda yazılı düğme yok, kaydırma var; farede düğme üstüne gelince görünür */
-@media (hover:none){ .mesaj-yanitla{display:none} }
-@media (hover:hover){ .mesaj .mesaj-yanitla{opacity:0} .mesaj:hover .mesaj-yanitla, .mesaj-yanitla:focus-visible{opacity:.7} }
-.mesaj-ust .bosluk{margin-left:auto}
-.alinti{display:block; width:100%; text-align:left; margin:4px 0 6px; padding:5px 9px; border:0; border-left:3px solid var(--cim);
+/* Dokunmatikte "Yanıtla/Sil" düğmeleri mesaja dokununca açılır; farede üstüne gelince */
+@media (hover:none){ .mesaj .mesaj-eylem{display:none} .mesaj.secili .mesaj-eylem{display:inline-block} .mesaj.secili{box-shadow:0 0 0 2px var(--cim-acik)} }
+@media (hover:hover){ .mesaj .mesaj-eylem{opacity:0} .mesaj:hover .mesaj-eylem, .mesaj-eylem:focus-visible{opacity:.7} }
+.alinti{display:block; width:100%; text-align:left; margin:3px 0 5px; padding:5px 9px; border:0; border-left:3px solid var(--cim);
   background:var(--cim-acik); border-radius:6px; font:inherit; font-size:13.5px; line-height:1.3; color:var(--murekkep); cursor:pointer}
 .alinti b{display:block; font-size:12.5px; color:var(--cim-koyu)}
 .alinti span{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px; color:var(--gri)}
@@ -77,23 +119,39 @@
 .mesaj.benim .alinti b{color:#fff}
 .mesaj.benim .alinti span{color:rgba(255,255,255,.85)}
 .mesaj.vurgu{box-shadow:0 0 0 3px var(--sari)}
-.yanit-cubugu{display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--cim-acik); border-top:1px solid var(--cizgi); border-left:3px solid var(--cim)}
-.yanit-cubugu[hidden]{display:none}
-.yanit-cubugu-ic{flex:1; min-width:0; font-size:13.5px}
-.yanit-cubugu-baslik{display:block; color:var(--cim-koyu)}
-.yanit-cubugu-metin{display:block; color:var(--gri); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.yanit-iptal{flex:none; width:32px; height:32px; border:0; border-radius:50%; background:#fff; color:var(--gri); font-size:20px; line-height:1; cursor:pointer}
-.sohbet{position:relative}
-.etiket-oneri{list-style:none; margin:0; padding:4px; border-top:1px solid var(--cizgi); background:#fff; max-height:220px; overflow-y:auto}
-.etiket-oneri[hidden]{display:none}
-.etiket-oneri li{padding:9px 12px; border-radius:8px; cursor:pointer; font-weight:600; display:flex; gap:8px; align-items:center}
-.etiket-oneri li small{font-weight:400; color:var(--gri)}
-.etiket-oneri li[aria-selected="true"], .etiket-oneri li:hover{background:var(--cim-acik); color:var(--cim-koyu)}
 .kisi{font-weight:700; color:var(--cim-koyu); background:var(--cim-acik); border-radius:4px; padding:0 3px}
 .kisi.ben{background:var(--sari-acik); color:#6E5300}
 .mesaj.benim .kisi{background:rgba(255,255,255,.2); color:#fff}
 .mesaj.beni-etiketledi{border-color:var(--sari); box-shadow:inset 3px 0 0 var(--sari)}
-.sohbet-hata{color:var(--kirmizi); font-size:14px; margin:0; padding:0 12px 10px; background:#fff}
+
+/* Yukarıdayken gelen mesaj için "aşağı in" düğmesi */
+.yeni-mesaj-btn{position:absolute; right:12px; bottom:12px; display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px 0 10px;
+  border:0; border-radius:999px; background:var(--murekkep); color:#fff; font:600 14px/1 var(--yazi); cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.18); z-index:3}
+.yeni-mesaj-btn[hidden]{display:none}
+.yeni-mesaj-btn svg{width:18px; height:18px}
+
+/* ---------- Yazma alanı ---------- */
+.mesaj-formu{display:flex; gap:8px; padding:8px 10px; align-items:flex-end}
+@media (max-width:640px){ body.klavye .mesaj-formu{padding-bottom:max(8px, env(safe-area-inset-bottom))} }
+.mesaj-formu textarea{flex:1; resize:none; margin:0; min-height:44px; max-height:132px; padding:10px 14px; border-radius:22px; font-size:16px; line-height:1.4}
+.gonder-btn{flex:none; width:44px; height:44px; border:0; border-radius:50%; background:var(--cim); color:#fff; display:flex;
+  align-items:center; justify-content:center; cursor:pointer; transition:background .15s, opacity .15s}
+.gonder-btn svg{width:22px; height:22px}
+.gonder-btn:disabled{background:var(--cizgi-koyu); cursor:default}
+.yanit-cubugu{display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--cim-acik); border-left:3px solid var(--cim)}
+.yanit-cubugu[hidden]{display:none}
+.yanit-cubugu-ic{flex:1; min-width:0; font-size:13.5px}
+.yanit-cubugu-baslik{display:block; color:var(--cim-koyu)}
+.yanit-cubugu-metin{display:block; color:var(--gri); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.yanit-iptal{flex:none; width:36px; height:36px; border:0; border-radius:50%; background:#fff; color:var(--gri); font-size:22px; line-height:1; cursor:pointer}
+.etiket-oneri{list-style:none; margin:0; padding:4px; border-bottom:1px solid var(--cizgi); background:#fff; max-height:200px; overflow-y:auto}
+.etiket-oneri[hidden]{display:none}
+.etiket-oneri li{padding:11px 12px; border-radius:8px; cursor:pointer; font-weight:600; display:flex; gap:8px; align-items:center}
+.etiket-oneri li small{font-weight:400; color:var(--gri)}
+.etiket-oneri li[aria-selected="true"], .etiket-oneri li:hover{background:var(--cim-acik); color:var(--cim-koyu)}
+.sohbet-hata{color:var(--kirmizi); font-size:14px; margin:0; padding:8px 14px 0}
+.sohbet-hata[hidden]{display:none}
 </style>
 
 <script>
@@ -140,33 +198,44 @@
   function altaYakinMi(){ return liste.scrollHeight - liste.scrollTop - liste.clientHeight < 80; }
   function altaKaydir(){ liste.scrollTop = liste.scrollHeight; }
 
+  // Gün ayracı ve art arda mesaj gruplama için son eklenen mesajın bilgisi
+  var son = {gun: null, kid: null, ts: 0};
+  function bugunTR(farkGun){
+    var d = new Date(Date.now() + 3 * 3600 * 1000 - (farkGun || 0) * 86400000);
+    return d.toISOString().slice(0, 10);
+  }
+  var AYLAR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  function gunEtiketi(g){
+    if (g === bugunTR(0)) return 'Bugün';
+    if (g === bugunTR(1)) return 'Dün';
+    var p = g.split('-');
+    var etiket = (+p[2]) + ' ' + AYLAR[+p[1] - 1];
+    return p[0] === bugunTR(0).slice(0, 4) ? etiket : etiket + ' ' + p[0];
+  }
+
   function mesajEkle(m){
     if (gorulen[m.id]) return;
     gorulen[m.id] = true;
     sonId = Math.max(sonId, m.id);
     bos.hidden = true;
 
+    if (m.gun && m.gun !== son.gun) {
+      var ay = document.createElement('div'); ay.className = 'gun-ayrac'; ay.textContent = gunEtiketi(m.gun);
+      liste.appendChild(ay);
+      son.kid = null;
+    }
+    var devam = son.kid === m.kullanici_id && m.ts && son.ts && (m.ts - son.ts) < 300;
+    son.gun = m.gun || son.gun; son.kid = m.kullanici_id; son.ts = m.ts || 0;
+
     var d = document.createElement('div');
-    d.className = 'mesaj' + (m.kullanici_id === BEN ? ' benim' : '');
+    d.className = 'mesaj' + (m.kullanici_id === BEN ? ' benim' : '') + (devam ? ' devam' : '');
     d.dataset.id = m.id;
 
     var ust = document.createElement('div'); ust.className = 'mesaj-ust';
-    var ad = document.createElement('span'); ad.className = 'mesaj-ad'; ad.textContent = m.kullanici_adi;
-    var saat = document.createElement('span'); saat.className = 'mesaj-saat'; saat.textContent = m.saat;
-    ust.appendChild(ad); ust.appendChild(saat);
-    var bosluk = document.createElement('span'); bosluk.className = 'bosluk'; ust.appendChild(bosluk);
-    var yan = document.createElement('button'); yan.type = 'button'; yan.className = 'mesaj-yanitla';
-    yan.textContent = 'Yanıtla'; yan.setAttribute('aria-label', m.kullanici_adi + ' mesajını yanıtla');
-    yan.addEventListener('click', function(){ yanitBaslat(m); });
-    ust.appendChild(yan);
-    if (m.kullanici_id === BEN || YETKILI) {
-      var sil = document.createElement('button'); sil.type = 'button'; sil.className = 'mesaj-sil';
-      sil.title = 'Mesajı sil'; sil.setAttribute('aria-label','Mesajı sil'); sil.textContent = 'Sil';
-      sil.addEventListener('click', function(){ mesajSil(m.id, d); });
-      ust.appendChild(sil);
+    if (m.kullanici_id !== BEN) {
+      var ad = document.createElement('span'); ad.className = 'mesaj-ad'; ad.textContent = m.kullanici_adi;
+      ust.appendChild(ad);
     }
-    var ic = document.createElement('div'); ic.className = 'mesaj-icerik';
-    if (icerikYaz(ic, m.icerik) && m.kullanici_id !== BEN) d.classList.add('beni-etiketledi');
     d.appendChild(ust);
     if (m.yanit) {
       var al = document.createElement('button'); al.type = 'button'; al.className = 'alinti';
@@ -176,13 +245,40 @@
       al.addEventListener('click', function(){ mesajaGit(m.yanit.id); });
       d.appendChild(al);
     }
+    var ic = document.createElement('div'); ic.className = 'mesaj-icerik';
+    if (icerikYaz(ic, m.icerik) && m.kullanici_id !== BEN) d.classList.add('beni-etiketledi');
     d.appendChild(ic);
+
+    var alt = document.createElement('div'); alt.className = 'mesaj-alt';
+    var yan = document.createElement('button'); yan.type = 'button'; yan.className = 'mesaj-yanitla mesaj-eylem';
+    yan.textContent = 'Yanıtla'; yan.setAttribute('aria-label', m.kullanici_adi + ' mesajını yanıtla');
+    yan.addEventListener('click', function(){ seciliKaldir(); yanitBaslat(m); });
+    alt.appendChild(yan);
+    if (m.kullanici_id === BEN || YETKILI) {
+      var sil = document.createElement('button'); sil.type = 'button'; sil.className = 'mesaj-sil mesaj-eylem';
+      sil.title = 'Mesajı sil'; sil.setAttribute('aria-label','Mesajı sil'); sil.textContent = 'Sil';
+      sil.addEventListener('click', function(){ if (confirm('Bu mesaj silinsin mi?')) mesajSil(m.id, d); });
+      alt.appendChild(sil);
+    }
+    var saat = document.createElement('span'); saat.className = 'mesaj-saat'; saat.textContent = m.hm || m.saat;
+    saat.title = m.saat;
+    alt.appendChild(saat);
+    d.appendChild(alt);
+
     var ikon = document.createElement('span'); ikon.className = 'kaydir-ikon'; ikon.setAttribute('aria-hidden', 'true');
     ikon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/></svg>';
     d.appendChild(ikon);
+    // Dokunmatikte mesaja dokununca Yanıtla/Sil görünür
+    d.addEventListener('click', function(e){
+      if (e.target.closest('button') || d.dataset.yeniSuruklendi) return;
+      var acik = d.classList.contains('secili');
+      seciliKaldir();
+      if (!acik) d.classList.add('secili');
+    });
     kaydirmaBagla(d, m);
     liste.appendChild(d);
   }
+  function seciliKaldir(){ liste.querySelectorAll('.mesaj.secili').forEach(function(x){ x.classList.remove('secili'); }); }
 
   // Mesajı sağa kaydırınca yanıtla (dokunmatik ve fare sürükleme)
   var KAYDIR_ESIK = 56, KAYDIR_MAKS = 84;
@@ -271,7 +367,10 @@
           if (id >= enEski && !mevcut[id]) el.remove();
         });
         bos.hidden = !!liste.querySelector('.mesaj');
-        if (asagida && v.mesajlar.length) altaKaydir();
+        if (v.mesajlar.length) {
+          if (asagida) altaKaydir();
+          else { bekleyen += v.mesajlar.filter(function(x){ return x.kullanici_id !== BEN; }).length; yeniBtnGuncelle(); }
+        }
       })
       .catch(function(){});
   }
@@ -288,20 +387,63 @@
     }).then(function(r){ return r.json().then(function(v){ return {ok:r.ok, v:v}; }); })
       .then(function(s){
         if (!s.ok) { hataGoster(s.v.hata || 'Mesaj gönderilemedi.'); return; }
-        kutu.value = ''; kutu.style.height = ''; yanitBitir();
+        kutu.value = ''; boyutla(); yanitBitir();
         mesajEkle(s.v.mesaj); altaKaydir();
       })
       .catch(function(){ hataGoster('Bağlantı hatası, tekrar dene.'); })
-      .finally(function(){ btn.disabled = false; kutu.focus(); });
+      .finally(function(){ btn.disabled = !kutu.value.trim(); kutu.focus(); });
   });
 
   // Enter = gönder, Shift+Enter = yeni satır
   kutu.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.shiftKey && !oneriAcik()) { e.preventDefault(); form.requestSubmit(); }
+    if (e.key === 'Enter' && !e.shiftKey && !oneriAcik() && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
   });
-  kutu.addEventListener('input', function(){
-    kutu.style.height = 'auto'; kutu.style.height = Math.min(kutu.scrollHeight, 120) + 'px';
-  });
+  function boyutla(){
+    kutu.style.height = 'auto'; kutu.style.height = Math.min(kutu.scrollHeight, 132) + 'px';
+    btn.disabled = !kutu.value.trim();
+  }
+  kutu.addEventListener('input', boyutla);
+  // Gönder'e basınca kutu odağı kaybetmesin: telefonda klavye kapanıp açılmasın
+  btn.addEventListener('pointerdown', function(e){ e.preventDefault(); });
+  btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+
+  // ---- Yukarıdayken gelen yeni mesajlar
+  var yeniBtn = document.getElementById('yeniMesajBtn');
+  var yeniSayi = document.getElementById('yeniMesajSayi');
+  var bekleyen = 0;
+  function yeniBtnGuncelle(){
+    yeniBtn.hidden = bekleyen === 0;
+    yeniSayi.textContent = bekleyen === 1 ? '1 yeni mesaj' : bekleyen + ' yeni mesaj';
+  }
+  yeniBtn.addEventListener('click', function(){ liste.scrollTo({top: liste.scrollHeight, behavior: 'smooth'}); });
+  liste.addEventListener('scroll', function(){ if (bekleyen && altaYakinMi()) { bekleyen = 0; yeniBtnGuncelle(); } }, {passive: true});
+
+  // ---- Telefonda klavye: kabuğu görünen alana oturt, alt menüyü gizle
+  var kabuk = document.getElementById('sohbet');
+  var mobil = window.matchMedia('(max-width:640px)');
+  var vv = window.visualViewport;
+  function kabukOturt(){
+    if (!document.body.classList.contains('klavye') || !vv) return;
+    kabuk.style.top = vv.offsetTop + 'px';
+    kabuk.style.height = vv.height + 'px';
+  }
+  function klavyeAc(){
+    if (!mobil.matches) return;
+    var asagida = altaYakinMi();
+    document.body.classList.add('klavye');
+    kabukOturt();
+    if (asagida) setTimeout(altaKaydir, 60);
+  }
+  function klavyeKapat(){
+    document.body.classList.remove('klavye');
+    kabuk.style.top = ''; kabuk.style.height = '';
+  }
+  kutu.addEventListener('focus', klavyeAc);
+  kutu.addEventListener('blur', function(){ setTimeout(function(){ if (document.activeElement !== kutu) klavyeKapat(); }, 120); });
+  if (vv) {
+    vv.addEventListener('resize', function(){ var a = altaYakinMi(); kabukOturt(); if (a) altaKaydir(); });
+    vv.addEventListener('scroll', kabukOturt);
+  }
 
   // ---- @ etiketleme önerileri
   var oneri = document.getElementById('etiketOneri');

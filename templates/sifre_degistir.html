@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Şifre değiştir · Tahmin Ligi{% endblock %}
+
+{% block content %}
+{% if not zorunlu %}<a class="geri" href="{{ url_for('profil') }}">‹ Profil</a>{% endif %}
+
+<div class="sayfa-bas">
+  <div>
+    <h1>{{ 'Yeni şifreni belirle' if zorunlu else 'Şifre değiştir' }}</h1>
+    {% if zorunlu %}
+      <p class="alt">Geçici bir şifreyle giriş yaptın. Devam etmeden önce sadece senin bildiğin yeni bir şifre seç.</p>
+    {% endif %}
+  </div>
+</div>
+
+<section class="panel" style="max-width:440px">
+  <form method="POST" autocomplete="on">
+    <input type="text" name="username" value="{{ current_user.kullanici_adi }}" autocomplete="username" hidden>
+    {% if not zorunlu %}
+      <label for="mevcut_sifre">Mevcut şifre</label>
+      <input id="mevcut_sifre" type="password" name="mevcut_sifre" required autocomplete="current-password">
+    {% endif %}
+    <label for="yeni_sifre">Yeni şifre</label>
+    <input id="yeni_sifre" type="password" name="yeni_sifre" required minlength="6" autocomplete="new-password">
+    <p class="ipucu">En az 6 karakter.</p>
+    <label for="yeni_sifre_tekrar">Yeni şifre (tekrar)</label>
+    <input id="yeni_sifre_tekrar" type="password" name="yeni_sifre_tekrar" required minlength="6" autocomplete="new-password">
+    <button type="submit" class="btn btn-blok">Şifreyi kaydet</button>
+  </form>
+</section>
+
+{% if zorunlu %}
+<p class="sessiz kucuk"><a href="{{ url_for('cikis') }}">Çıkış yap</a></p>
+{% endif %}
+{% endblock %}

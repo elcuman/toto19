@@ -1,3 +1,4 @@
+import calendar
 import hashlib
 import threading
 import os
@@ -355,6 +356,9 @@ class Kullanici(UserMixin, db.Model):
         db.Boolean,
         default=False
     )
+
+    # Yönetici geçici şifre verdiyse True: kullanıcı ilk girişte yeni şifresini belirler
+    sifre_degismeli = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     olusturulma = db.Column(
         db.DateTime,
@@ -771,6 +775,9 @@ class Mesaj(db.Model):
             "kullanici_adi": self.kullanici.kullanici_adi if self.kullanici else "?",
             "icerik": self.icerik,
             "saat": tr_saat_filter(self.olusturulma, "%d.%m %H:%M"),
+            "gun": tr_saat_filter(self.olusturulma, "%Y-%m-%d"),
+            "hm": tr_saat_filter(self.olusturulma, "%H:%M"),
+            "ts": int(calendar.timegm(self.olusturulma.timetuple())) if self.olusturulma else 0,
             "yanit": None,
         }
         if self.yanit_id:
@@ -2008,6 +2015,14 @@ def initialize_database():
                 db.session.commit()
         except Exception:
             db.session.rollback()
+        try:
+            kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("kullanicilar")}
+            if "sifre_degismeli" not in kolonlar:
+                db.session.execute(db.text(
+                    "ALTER TABLE kullanicilar ADD COLUMN sifre_degismeli BOOLEAN NOT NULL DEFAULT FALSE"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
         if db.engine.dialect.name == "postgresql":
             try:
                 db.session.execute(db.text("ALTER TABLE mesajlar ENABLE ROW LEVEL SECURITY"))
@@ -2819,6 +2834,46 @@ def profil():
     return render_template("profil.html", toplam_puan=total_points, toplam_tahmin=prediction_count)
 
 
+@app.route("/profil/sifre", methods=["GET", "POST"])
+@login_required
+def sifre_degistir():
+    """Kullanıcı kendi şifresini değiştirir. Yönetici geçici şifre verdiyse
+    (sifre_degismeli) mevcut şifre sorulmaz; kullanıcı zaten onunla giriş yaptı."""
+    zorunlu = bool(current_user.sifre_degismeli)
+    if request.method == "POST":
+        mevcut = request.form.get("mevcut_sifre", "")
+        yeni = request.form.get("yeni_sifre", "")
+        tekrar = request.form.get("yeni_sifre_tekrar", "")
+        if not zorunlu and not current_user.check_password(mevcut):
+            flash("Mevcut şifren hatalı.", "danger")
+        elif len(yeni) < 6:
+            flash("Yeni şifre en az 6 karakter olmalı.", "danger")
+        elif yeni != tekrar:
+            flash("Yeni şifreler birbirini tutmuyor.", "danger")
+        elif current_user.check_password(yeni):
+            flash("Yeni şifre eskisiyle aynı olamaz.", "danger")
+        else:
+            current_user.set_password(yeni)
+            current_user.sifre_degismeli = False
+            db.session.commit()
+            flash("Şifren güncellendi.", "success")
+            return redirect(url_for("dashboard") if zorunlu else url_for("profil"))
+    return render_template("sifre_degistir.html", zorunlu=zorunlu)
+
+
+@app.before_request
+def gecici_sifreyi_degistirt():
+    """Geçici şifreyle giren kullanıcı yeni şifresini belirlemeden başka sayfaya geçemez."""
+    if not current_user.is_authenticated or not getattr(current_user, "sifre_degismeli", False):
+        return None
+    if request.endpoint in ("sifre_degistir", "cikis", "static", "ads_txt", "robots_txt") \
+            or (request.endpoint or "").startswith("cron"):
+        return None
+    if request.path.startswith("/cron"):
+        return None
+    return redirect(url_for("sifre_degistir"))
+
+
 @app.route("/admin")
 @admin_required
 def admin():
@@ -3465,10 +3520,11 @@ def admin_kullanici_sifre_sifirla(kullanici_id):
     chars = string.ascii_letters + string.digits
     yeni_sifre = "".join(secrets.choice(chars) for _ in range(10))
     kullanici.sifre_hash = generate_password_hash(yeni_sifre)
+    kullanici.sifre_degismeli = True
     db.session.commit()
     flash(
-        f"'{kullanici.kullanici_adi}' için yeni şifre: {yeni_sifre} — bunu kullanıcıya ilet, "
-        "bir daha gösterilmeyecek.",
+        f"'{kullanici.kullanici_adi}' için geçici şifre: {yeni_sifre} — bunu kullanıcıya ilet, "
+        "bir daha gösterilmeyecek. Kullanıcı bu şifreyle girince kendi yeni şifresini belirleyecek.",
         "success",
     )
     return redirect(url_for("admin_kullanicilar"))
