@@ -18,6 +18,7 @@ from flask import (
     jsonify,
     abort,
     Response,
+    session,
 )
 
 from flask_sqlalchemy import SQLAlchemy
@@ -2182,6 +2183,20 @@ def dashboard():
 @app.route("/gruplar")
 @login_required
 def gruplar():
+    """Alt menüdeki 'Gruplar': doğrudan kendi grubuna (en son baktığın) götürür.
+    Hiç grubun yoksa grup kur / katıl sayfası açılır."""
+    grup_idleri = [u.grup_id for u in GrupUyeligi.query.filter_by(kullanici_id=current_user.id)
+                   .order_by(GrupUyeligi.katilma_tarihi.asc()).all()]
+    if not grup_idleri:
+        return redirect(url_for("grup_yonet"))
+    son = session.get("son_grup")
+    return redirect(url_for("grup", grup_id=son if son in grup_idleri else grup_idleri[0]))
+
+
+@app.route("/gruplar/yonet")
+@login_required
+def grup_yonet():
+    """Gruplarım listesi + grup kur + gruba katıl."""
     uyelikler = GrupUyeligi.query.filter_by(kullanici_id=current_user.id).all()
     return render_template("gruplar.html", gruplar=[u.grup for u in uyelikler])
 
@@ -2193,7 +2208,7 @@ def grup_olustur():
     aciklama = request.form.get("aciklama", "").strip()
     if not ad:
         flash("Grup adı girin.", "danger")
-        return redirect(url_for("gruplar"))
+        return redirect(url_for("grup_yonet"))
 
     grup = Grup(ad=ad, aciklama=aciklama, davet_kodu=generate_invite_code(), sezon=2026, kurucu_id=current_user.id)
     db.session.add(grup)
@@ -2215,7 +2230,7 @@ def grup_katil():
     grup = Grup.query.filter_by(davet_kodu=davet_kodu).first()
     if not grup:
         flash("Geçersiz davet kodu.", "danger")
-        return redirect(url_for("gruplar"))
+        return redirect(url_for("grup_yonet"))
 
     if GrupUyeligi.query.filter_by(grup_id=grup.id, kullanici_id=current_user.id).first():
         flash("Zaten bu grubun üyesisiniz.", "warning")
@@ -2237,7 +2252,7 @@ def katil_link(davet_kodu):
     grup = Grup.query.filter_by(davet_kodu=davet_kodu).first()
     if not grup:
         flash("Geçersiz veya süresi dolmuş davet linki.", "danger")
-        return redirect(url_for("giris") if not current_user.is_authenticated else url_for("gruplar"))
+        return redirect(url_for("giris") if not current_user.is_authenticated else url_for("grup_yonet"))
 
     if not current_user.is_authenticated:
         hedef = url_for("katil_link", davet_kodu=davet_kodu)
@@ -2361,6 +2376,9 @@ def grup(grup_id):
     grup_obj = db.session.get(Grup, grup_id)
     if not grup_obj or not GrupUyeligi.query.filter_by(grup_id=grup_id, kullanici_id=current_user.id).first():
         abort(403)
+    session["son_grup"] = grup_id
+    gruplarim = [u.grup for u in GrupUyeligi.query.options(db.joinedload(GrupUyeligi.grup))
+                 .filter_by(kullanici_id=current_user.id).order_by(GrupUyeligi.katilma_tarihi.asc()).all() if u.grup]
 
     now = utc_now_naive()
 
@@ -2484,6 +2502,7 @@ def grup(grup_id):
     return render_template(
         "grup.html",
         grup=grup_obj,
+        gruplarim=gruplarim,
         maclar=maclar,
         lig_sekmeleri=lig_sekmeleri,
         mesaj_sayisi=okunmamis_mesaj_sayisi(grup_id, current_user.id),

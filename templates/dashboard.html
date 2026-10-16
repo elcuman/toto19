@@ -26,7 +26,7 @@
 <section class="panel">
   <div class="panel-bas">
     <h2>Gruplarım</h2>
-    <a class="kucuk" href="{{ url_for('gruplar') }}">Tümü</a>
+    <a class="kucuk" href="{{ url_for('grup_yonet') }}">Grup kur / katıl</a>
   </div>
   {% if gruplar %}
     <ul class="grup-listesi">
@@ -38,7 +38,7 @@
     <div class="bos">
       <strong>Henüz bir grupta değilsin.</strong>
       Bir grup kur ya da arkadaşının davet koduyla katıl.
-      <div style="margin-top:12px"><a class="btn" href="{{ url_for('gruplar') }}">Grup kur veya katıl</a></div>
+      <div style="margin-top:12px"><a class="btn" href="{{ url_for('grup_yonet') }}">Grup kur veya katıl</a></div>
     </div>
   {% endif %}
 </section>

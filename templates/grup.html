@@ -8,7 +8,17 @@
 {% set davet_linki = request.url_root ~ 'katil/' ~ grup.davet_kodu %}
 {% set davet_mesaji = "Tahmin Ligi'nde " ~ grup.ad ~ " grubuma katıl! Maç başlamadan tahminini gir, kazan ya da hesabını ver 😄 " ~ davet_linki %}
 
-<a class="geri" href="{{ url_for('gruplar') }}">‹ Gruplar</a>
+<div class="grup-ust">
+  {% if gruplarim and gruplarim|length > 1 %}
+  <label class="grup-degistir">
+    <span class="gizli-etiket">Grup değiştir</span>
+    <select onchange="if(this.value) location.href=this.value">
+      {% for g in gruplarim %}<option value="{{ url_for('grup', grup_id=g.id) }}" {% if g.id == grup.id %}selected{% endif %}>{{ g.ad }}</option>{% endfor %}
+    </select>
+  </label>
+  {% else %}<span></span>{% endif %}
+  <a class="kucuk" href="{{ url_for('grup_yonet') }}">+ Grup kur / katıl</a>
+</div>
 
 <div class="sayfa-bas">
   <div>
@@ -170,6 +180,9 @@
 .kural{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; margin-bottom:16px; background:var(--sari-acik); border:1px solid #F2E2A6; border-radius:var(--r)}
 .kural .kart-isaret{margin-top:5px; width:12px; height:16px}
 .kural p{margin:2px 0 0; white-space:pre-line; color:#5C4800}
+.grup-ust{display:flex; justify-content:space-between; align-items:center; gap:12px; margin:-4px 0 10px}
+.grup-degistir select{font:inherit; font-weight:600; padding:6px 10px; border:1px solid var(--cizgi); border-radius:var(--r-kucuk); background:#fff; max-width:62vw}
+.gizli-etiket{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
 .digerleri{margin-top:12px}
 .digerleri summary{cursor:pointer; font-size:14px; font-weight:600; color:var(--cim); list-style:none; padding:4px 0}
 .digerleri summary::-webkit-details-marker{display:none}
