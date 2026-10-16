@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Şifremi unuttum · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="giris-alani">
+  <div class="giris-bas">
+    <h1>Şifremi unuttum</h1>
+    <p class="alt sessiz">Kullanıcı adını yaz, talebin yöneticiye gitsin. Onaylanınca bu cihazda yeni şifreni belirlersin.</p>
+  </div>
+
+  <section class="panel">
+    <form method="POST">
+      <label for="kullanici_adi">Kullanıcı adı</label>
+      <input id="kullanici_adi" name="kullanici_adi" value="{{ kullanici_adi }}" required autocomplete="username" autocapitalize="none">
+      <label for="notu">Yöneticiye not <span class="sessiz" style="font-weight:400">(isteğe bağlı)</span></label>
+      <textarea id="notu" name="notu" rows="2" maxlength="300" placeholder="Örn. Ben Ahmet, Ofis grubundayım">{{ notu }}</textarea>
+      <p class="ipucu">Yönetici seni tanısın diye adını veya grubunu yazabilirsin.</p>
+      <button type="submit" class="btn btn-blok">Talebi gönder</button>
+    </form>
+  </section>
+
+  <p class="giris-alt"><a href="{{ url_for('giris') }}">‹ Girişe dön</a></p>
+</div>
+{% include "_giris_stil.html" %}
+{% endblock %}

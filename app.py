@@ -809,6 +809,21 @@ class Haber(db.Model):
     eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class SifreTalebi(db.Model):
+    """Şifresini unutan kullanıcının yöneticiye ilettiği sıfırlama talebi.
+    Talep eden tarayıcıya gizli bir anahtar verilir; yönetici onaylayınca
+    yeni şifre yalnızca o anahtarla açılan sayfadan belirlenebilir."""
+    __tablename__ = "sifre_talepleri"
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    anahtar_hash = db.Column(db.String(64), nullable=False, unique=True)
+    notu = db.Column(db.String(300))
+    durum = db.Column(db.String(20), nullable=False, default="bekliyor")  # bekliyor/onaylandi/reddedildi/kullanildi/iptal
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    karar_zamani = db.Column(db.DateTime)
+    kullanici = db.relationship("Kullanici")
+
+
 class SohbetOkuma(db.Model):
     """Kullanıcının bir grubun sohbetinde en son gördüğü mesaj (okunmamış sayacı için)."""
     __tablename__ = "sohbet_okumalari"
@@ -2030,6 +2045,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE senkron_kayitlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE yz_analizleri ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE haberler ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE sifre_talepleri ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -2127,7 +2143,7 @@ def robots_txt():
     satirlar = [
         "User-agent: *",
         "Allow: /$", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2182,6 +2198,136 @@ def giris():
             return redirect(request.args.get("next") or url_for("dashboard"))
         flash("Kullanıcı adı veya şifre hatalı.", "danger")
     return render_template("giris.html")
+
+
+# ------------------------------------------------------------
+# Şifremi unuttum: talep yöneticiye gider, onaylanınca kullanıcı
+# talebi açtığı sayfadan yeni şifresini belirler.
+# ------------------------------------------------------------
+SIFRE_TALEBI_GECERLILIK = timedelta(days=3)       # bekleyen talep bu sürede düşer
+SIFRE_ONAY_GECERLILIK = timedelta(hours=24)       # onaydan sonra şifre belirleme süresi
+
+
+def _anahtar_hash(anahtar):
+    return hashlib.sha256((anahtar or "").encode()).hexdigest()
+
+
+def _sifre_talebi_bul(anahtar):
+    if not anahtar or len(anahtar) > 100:
+        return None
+    return SifreTalebi.query.filter_by(anahtar_hash=_anahtar_hash(anahtar)).first()
+
+
+def _talep_suresi_doldu_mu(t):
+    simdi = datetime.utcnow()
+    if t.durum == "bekliyor":
+        return t.olusturulma and simdi - t.olusturulma > SIFRE_TALEBI_GECERLILIK
+    if t.durum == "onaylandi":
+        return t.karar_zamani and simdi - t.karar_zamani > SIFRE_ONAY_GECERLILIK
+    return False
+
+
+def bekleyen_sifre_talepleri():
+    sinir = datetime.utcnow() - SIFRE_TALEBI_GECERLILIK
+    return (SifreTalebi.query.options(db.joinedload(SifreTalebi.kullanici))
+            .filter(SifreTalebi.durum == "bekliyor", SifreTalebi.olusturulma > sinir)
+            .order_by(SifreTalebi.olusturulma.asc()).all())
+
+
+@app.route("/sifremi-unuttum", methods=["GET", "POST"])
+def sifremi_unuttum():
+    if current_user.is_authenticated:
+        return redirect(url_for("sifre_degistir"))
+    # Bu tarayıcıda açık bir talep varsa doğrudan durumuna götür
+    if request.method == "GET" and session.get("sifre_talebi"):
+        t = _sifre_talebi_bul(session["sifre_talebi"])
+        if t and t.durum in ("bekliyor", "onaylandi") and not _talep_suresi_doldu_mu(t):
+            return redirect(url_for("sifre_talebi_durum", anahtar=session["sifre_talebi"]))
+    if request.method == "POST":
+        kullanici_adi = request.form.get("kullanici_adi", "").strip()
+        notu = request.form.get("notu", "").strip()[:300]
+        user = Kullanici.query.filter(db.func.lower(Kullanici.kullanici_adi) == kullanici_adi.lower()).first() if kullanici_adi else None
+        if not user or yz_mi(user):
+            flash("Bu kullanıcı adıyla bir hesap bulunamadı. Büyük/küçük harfe dikkat ederek tekrar dene.", "danger")
+            return render_template("sifremi_unuttum.html", kullanici_adi=kullanici_adi, notu=notu)
+        # Aynı kullanıcının önceki bekleyen talepleri iptal; en fazla bir açık talep
+        son_saat = SifreTalebi.query.filter(SifreTalebi.kullanici_id == user.id,
+                                            SifreTalebi.olusturulma > datetime.utcnow() - timedelta(hours=1)).count()
+        if son_saat >= 3:
+            flash("Kısa sürede çok fazla talep gönderildi. Biraz sonra tekrar dene.", "danger")
+            return render_template("sifremi_unuttum.html", kullanici_adi=kullanici_adi, notu=notu)
+        SifreTalebi.query.filter(SifreTalebi.kullanici_id == user.id,
+                                 SifreTalebi.durum.in_(["bekliyor", "onaylandi"])).update(
+            {"durum": "iptal"}, synchronize_session=False)
+        import secrets
+        anahtar = secrets.token_urlsafe(24)
+        db.session.add(SifreTalebi(kullanici_id=user.id, anahtar_hash=_anahtar_hash(anahtar), notu=notu or None))
+        db.session.commit()
+        session["sifre_talebi"] = anahtar
+        session.permanent = True
+        return redirect(url_for("sifre_talebi_durum", anahtar=anahtar))
+    return render_template("sifremi_unuttum.html", kullanici_adi="", notu="")
+
+
+@app.route("/sifremi-unuttum/<anahtar>", methods=["GET", "POST"])
+def sifre_talebi_durum(anahtar):
+    t = _sifre_talebi_bul(anahtar)
+    if not t or t.durum == "iptal":
+        flash("Bu şifre talebi bulunamadı veya yerine yenisi açıldı.", "danger")
+        return redirect(url_for("sifremi_unuttum"))
+    if _talep_suresi_doldu_mu(t):
+        durum = "suresi_doldu"
+    else:
+        durum = t.durum
+    if request.method == "POST" and durum == "onaylandi":
+        yeni = request.form.get("yeni_sifre", "")
+        tekrar = request.form.get("yeni_sifre_tekrar", "")
+        if len(yeni) < 6:
+            flash("Yeni şifre en az 6 karakter olmalı.", "danger")
+        elif yeni != tekrar:
+            flash("Şifreler birbirini tutmuyor.", "danger")
+        else:
+            user = t.kullanici
+            user.set_password(yeni)
+            user.sifre_degismeli = False
+            t.durum = "kullanildi"
+            db.session.commit()
+            session.pop("sifre_talebi", None)
+            login_user(user)
+            flash("Yeni şifren kaydedildi, giriş yaptın. 🎉", "success")
+            return redirect(url_for("dashboard"))
+    if request.headers.get("Accept") == "application/json":
+        return jsonify({"durum": durum})
+    return render_template("sifre_talebi_durum.html", talep=t, durum=durum, anahtar=anahtar)
+
+
+@app.route("/admin/sifre-talebi/<int:talep_id>/<karar>", methods=["POST"])
+@admin_required
+def admin_sifre_talebi_karar(talep_id, karar):
+    t = db.session.get(SifreTalebi, talep_id)
+    if not t or t.durum != "bekliyor" or karar not in ("onayla", "reddet"):
+        flash("Talep bulunamadı ya da zaten karara bağlanmış.", "warning")
+        return redirect(url_for("admin"))
+    t.durum = "onaylandi" if karar == "onayla" else "reddedildi"
+    t.karar_zamani = datetime.utcnow()
+    db.session.commit()
+    ad = t.kullanici.kullanici_adi if t.kullanici else "?"
+    if karar == "onayla":
+        flash(f"'{ad}' için talep onaylandı. Kullanıcı talep sayfasından 24 saat içinde yeni şifresini belirleyebilir.", "success")
+    else:
+        flash(f"'{ad}' için talep reddedildi.", "success")
+    return redirect(url_for("admin"))
+
+
+@app.context_processor
+def admin_sifre_rozeti():
+    if not current_user.is_authenticated or not getattr(current_user, "admin", False):
+        return {}
+    try:
+        return {"bekleyen_sifre_sayisi": len(bekleyen_sifre_talepleri())}
+    except Exception:
+        db.session.rollback()
+        return {"bekleyen_sifre_sayisi": 0}
 
 
 @app.route("/cikis")
@@ -2975,6 +3121,7 @@ def admin():
         total_predictions=tahmin_sayisi,
         upcoming_matches=upcoming_matches,
         ziya=_ziya_admin_ozeti(),
+        sifre_talepleri=bekleyen_sifre_talepleri(),
     )
 
 

@@ -7,6 +7,35 @@
 Admin Panel
 </h1>
 
+{% if sifre_talepleri %}
+<section class="sifre-talepleri">
+  <h2>🔑 Şifre talepleri ({{ sifre_talepleri|length }})</h2>
+  <p class="kucuk sessiz">Onaylamadan önce talebin gerçekten o kişiden geldiğinden emin ol (gerekirse WhatsApp'tan sor). Onaylayınca kişi talep ettiği cihazdan 24 saat içinde yeni şifresini belirler.</p>
+  {% for t in sifre_talepleri %}
+  <div class="talep-satir">
+    <div class="talep-bilgi">
+      <strong>{{ t.kullanici.kullanici_adi if t.kullanici else '?' }}</strong>
+      <span class="sessiz kucuk">{{ t.olusturulma | tr_saat("%d.%m %H:%M") }}</span>
+      {% if t.notu %}<div class="talep-not">“{{ t.notu }}”</div>{% endif %}
+    </div>
+    <div class="talep-dugmeler">
+      <form method="POST" action="{{ url_for('admin_sifre_talebi_karar', talep_id=t.id, karar='onayla') }}"><button class="btn btn-kucuk">Onayla</button></form>
+      <form method="POST" action="{{ url_for('admin_sifre_talebi_karar', talep_id=t.id, karar='reddet') }}"><button class="btn btn-kucuk btn-ikincil">Reddet</button></form>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+<style>
+.sifre-talepleri{background:var(--sari-acik); border:1px solid var(--sari); border-radius:var(--r-buyuk); padding:16px 18px; margin:0 0 20px}
+.sifre-talepleri h2{margin-bottom:4px}
+.talep-satir{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; background:#fff; border-radius:var(--r); padding:10px 12px; margin-top:8px}
+.talep-bilgi{min-width:0}
+.talep-not{font-size:14px; color:var(--gri); margin-top:2px; overflow-wrap:anywhere}
+.talep-dugmeler{display:flex; gap:8px}
+.talep-dugmeler form{margin:0}
+</style>
+{% endif %}
+
 <div class="grid">
 
 <div class="card">

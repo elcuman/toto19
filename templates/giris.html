@@ -18,20 +18,14 @@
       <input id="sifre" type="password" name="sifre" required autocomplete="current-password">
       <button type="submit" class="btn btn-blok">Giriş yap</button>
     </form>
-    <details class="unuttum">
-      <summary>Şifremi unuttum</summary>
-      <p>E-posta istemediğimiz için otomatik sıfırlama yok. Grubunu kuran kişiye veya site yöneticisine <strong>kullanıcı adını</strong> yaz; sana geçici bir şifre verilir.</p>
-      <p style="margin:0">O şifreyle giriş yapınca kendi yeni şifreni belirlersin. Tahminlerin ve puanların olduğu gibi kalır.</p>
-    </details>
+    <p class="unuttum"><a href="{{ url_for('sifremi_unuttum') }}">Şifremi unuttum</a></p>
   </section>
 
   <p class="giris-alt">Hesabın yok mu? <a href="{{ url_for('kayit', next=request.args.get('next')) if request.args.get('next') else url_for('kayit') }}">Kayıt ol</a></p>
 </div>
 {% include "_giris_stil.html" %}
 <style>
-.unuttum{margin-top:14px; font-size:14.5px; color:var(--gri)}
-.unuttum summary{cursor:pointer; color:var(--cim); font-weight:600; text-align:center; list-style:none; padding:4px}
-.unuttum summary::-webkit-details-marker{display:none}
-.unuttum[open] summary{margin-bottom:8px}
+.unuttum{margin:14px 0 0; text-align:center; font-size:14.5px}
+.unuttum a{font-weight:600; text-decoration:none}
 </style>
 {% endblock %}
