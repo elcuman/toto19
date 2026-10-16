@@ -159,6 +159,9 @@ LIG_KISA_ADLARI = {
 # Grup sayfasında "bu hafta" sayılan süre: bir ligin sıradaki maçı bu kadar
 # gün içinde değilse o lig için maç listelenmez.
 HAFTA_PENCERESI_GUN = 7
+# Haftalık puan tablosu Türkiye saatiyle bu gün ve saatte sıfırlanır (Cuma 15:00).
+HAFTA_BASLANGIC_GUNU = 4      # Pazartesi=0 ... Cuma=4
+HAFTA_BASLANGIC_SAATI = 15
 # Başlamış ama sonucu gelmemiş bir maç, haftayı en fazla bu kadar saat açık tutar
 # (API hiç güncellemezse grup sayfası eski haftada takılı kalmasın diye).
 AKTIF_HAFTA_BEKLEME_SAAT = 12
@@ -2256,10 +2259,14 @@ def hafta_anahtari(tarih):
     aynı haftada oynanıyorsa TEK bir haftalık tabloda birleşsin."""
     if not tarih:
         return None
-    # weekday(): Pazartesi=0 ... Cuma=4 ... Pazar=6.
-    # Haftanın başlangıcını Cuma 00:00 kabul ediyoruz (Cuma-Perşembe haftası).
-    cumaya_kadar_gecen_gun = (tarih.weekday() - 4) % 7
-    return (tarih - timedelta(days=cumaya_kadar_gecen_gun)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Hafta, Türkiye saatiyle Cuma 15:00'te başlar (Cuma 15:00 → sonraki Cuma 15:00).
+    # tarih UTC (naive); dönüş de UTC (naive).
+    tr = tarih + TURKIYE_UTC_OFFSET
+    gun = (tr.weekday() - HAFTA_BASLANGIC_GUNU) % 7
+    bas = (tr - timedelta(days=gun)).replace(hour=HAFTA_BASLANGIC_SAATI, minute=0, second=0, microsecond=0)
+    if bas > tr:
+        bas -= timedelta(days=7)
+    return bas - TURKIYE_UTC_OFFSET
 
 
 def haftalik_liderlik_hesapla(grup_id):
@@ -2297,7 +2304,7 @@ def haftalik_liderlik_hesapla(grup_id):
         )
         sonuc.append({
             "hafta_basi": hafta_basi,
-            "hafta_sonu": (hafta_basi + timedelta(days=6)) if hafta_basi else None,
+            "hafta_sonu": (hafta_basi + timedelta(days=7)) if hafta_basi else None,
             "siralama": siralama,
             "lider": siralama[0] if siralama else None
         })
@@ -2464,9 +2471,7 @@ def grup(grup_id):
     # Süper Lig birlikte, ayrı ayrı DEĞİL), gerçek takvim haftasındaki (Pazartesi–
     # Pazar) maçların puanları TEK bir tabloda. Yeni hafta başladığında (o
     # haftanın maçları henüz oynanmamış olsa bile) herkes gerçekten 0'dan başlar.
-    cumaya_kadar_gecen_gun = (now.weekday() - 4) % 7
-    hafta_basi = (now - timedelta(days=cumaya_kadar_gecen_gun)).replace(hour=0, minute=0, second=0, microsecond=0)
-    hafta_sonu = hafta_basi + timedelta(days=7)
+    hafta_basi, hafta_sonu = bu_haftanin_araligi(now)
     su_anki_hafta_siralamasi = su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu)
     oynanabilir_mac_var = any(m.oynanabilir_mi() for m in maclar)
 
@@ -3630,10 +3635,8 @@ def grup_sezon_siralamasi(grup_id):
 
 
 def bu_haftanin_araligi(now=None):
-    """Grup haftası Cuma 00:00'da başlar (grup sayfasıyla aynı)."""
-    now = now or utc_now_naive()
-    gun = (now.weekday() - 4) % 7
-    bas = (now - timedelta(days=gun)).replace(hour=0, minute=0, second=0, microsecond=0)
+    """Grup haftası Türkiye saatiyle Cuma 15:00'te başlar (UTC naive döner)."""
+    bas = hafta_anahtari(now or utc_now_naive())
     return bas, bas + timedelta(days=7)
 
 
@@ -3682,7 +3685,7 @@ def puan_durumu():
              "siralama": su_anki_hafta_liderligi_hesapla(secili_grup.id, hafta_basi, hafta_sonu),
              "kral": "Haftanın kralı", "cenabet": "Haftanın cenabeti",
              "not": f"{secili_grup.ad}: {to_turkiye_saati(hafta_basi).strftime('%d.%m')} – "
-                    f"{to_turkiye_saati(hafta_sonu - timedelta(days=1)).strftime('%d.%m')} arası, her hafta sıfırdan başlar."},
+                    f"{to_turkiye_saati(hafta_sonu).strftime('%d.%m')} (Cuma 15:00) arası, her hafta sıfırdan başlar."},
         ] + sekmeler
 
     gecerli = {s["kod"] for s in sekmeler}

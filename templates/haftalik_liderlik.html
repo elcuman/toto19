@@ -18,7 +18,7 @@
   <section class="panel">
     <div class="panel-bas">
       <h2>
-        {% if hafta_verisi.hafta_basi %}{{ hafta_verisi.hafta_basi | tr_saat("%d.%m") }} – {{ hafta_verisi.hafta_sonu | tr_saat("%d.%m.%Y") }}{% else %}Tarihsiz maçlar{% endif %}
+        {% if hafta_verisi.hafta_basi %}{{ hafta_verisi.hafta_basi | tr_saat("%d.%m %H:%M") }} – {{ hafta_verisi.hafta_sonu | tr_saat("%d.%m.%Y %H:%M") }}{% else %}Tarihsiz maçlar{% endif %}
       </h2>
       {% if hafta_verisi.lider %}<span class="yan">Lider: <strong>{{ hafta_verisi.lider.user.kullanici_adi }}</strong></span>{% endif %}
     </div>

@@ -154,7 +154,7 @@
     <a class="kucuk" href="{{ url_for('grup_haftalik_liderlik', grup_id=grup.id) }}">Tüm haftalar</a>
   </div>
   {% if hafta_basi and hafta_sonu %}
-  <p class="sessiz kucuk" style="margin-top:-6px">{{ hafta_basi | tr_saat("%d.%m") }} – {{ hafta_sonu | tr_saat("%d.%m") }} arası, tüm ligler birlikte. Her hafta sıfırdan başlar.</p>
+  <p class="sessiz kucuk" style="margin-top:-6px">{{ hafta_basi | tr_saat("%d.%m %H:%M") }} – {{ hafta_sonu | tr_saat("%d.%m %H:%M") }} arası, tüm ligler birlikte. Her hafta sıfırdan başlar.</p>
   {% endif %}
   {{ p.siralama(su_anki_hafta_siralamasi, "Haftanın kralı", "Haftanın cenabeti", "Bu hafta") }}
 </section>
