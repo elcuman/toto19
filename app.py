@@ -2265,8 +2265,88 @@ def grup_olustur():
     except Exception:
         pass
     db.session.commit()
+    _tahminleri_esitle_guvenli(current_user.id)
     flash("Grup oluşturuldu.", "success")
     return redirect(url_for("grup", grup_id=grup.id))
+
+
+# ------------------------------------------------------------
+# Tahminler tüm gruplarda ortak: kullanıcı bir maça tek tahmin girer,
+# üyesi olduğu her grupta aynı tahmin geçerli olur. Tablo grup bazlı
+# kalıyor (puan/sıralama sorguları değişmesin diye), kayıt her gruba yazılır.
+# ------------------------------------------------------------
+def kullanicinin_grup_idleri(kullanici_id):
+    return [gid for (gid,) in db.session.query(GrupUyeligi.grup_id)
+            .filter(GrupUyeligi.kullanici_id == kullanici_id).all()]
+
+
+def tahmini_tum_gruplara_yaz(kullanici_id, mac_id, ev_skor, deplasman_skor, grup_idleri=None):
+    """Bir maçın tahminini kullanıcının tüm gruplarına yazar (yoksa ekler, varsa günceller)."""
+    if grup_idleri is None:
+        grup_idleri = kullanicinin_grup_idleri(kullanici_id)
+    mevcut = {t.grup_id: t for t in Tahmin.query.filter(
+        Tahmin.kullanici_id == kullanici_id, Tahmin.mac_id == mac_id,
+        Tahmin.grup_id.in_(grup_idleri or [-1])).all()}
+    simdi = datetime.utcnow()
+    for gid in grup_idleri:
+        t = mevcut.get(gid)
+        if t:
+            t.ev_skor = ev_skor
+            t.deplasman_skor = deplasman_skor
+            t.guncellenme = simdi
+        else:
+            db.session.add(Tahmin(grup_id=gid, mac_id=mac_id, kullanici_id=kullanici_id,
+                                  ev_skor=ev_skor, deplasman_skor=deplasman_skor, puan=0))
+
+
+def tahminleri_gruplara_esitle(kullanici_id=None):
+    """Henüz başlamamış maçlarda, kullanıcının en son girdiği tahmini tüm gruplarına
+    kopyalar. Yeni gruba katılınca ve uygulama açılışında (eski veriler için) çalışır.
+    Başlamış/bitmiş maçlara dokunmaz. Robot Ziya zaten her gruba ayrı tahmin girer."""
+    simdi = utc_now_naive()
+    q = (db.session.query(Tahmin).join(Mac, Mac.id == Tahmin.mac_id)
+         .filter(Mac.baslangic.isnot(None), Mac.baslangic > simdi,
+                 ~Mac.durum.in_(["bitti", "iptal", "ertelendi"])))
+    if kullanici_id is not None:
+        q = q.filter(Tahmin.kullanici_id == kullanici_id)
+    en_son = {}
+    for t in q.all():
+        anahtar = (t.kullanici_id, t.mac_id)
+        z = t.guncellenme or t.olusturulma or datetime.min
+        if anahtar not in en_son or z > en_son[anahtar][0]:
+            en_son[anahtar] = (z, t.ev_skor, t.deplasman_skor)
+    if not en_son:
+        return 0
+    yz = yz_kullanici_getir(olustur=False)
+    yz_id = yz.id if yz else None
+    gruplar = {}
+    degisen = 0
+    for (kid, mid), (_, ev, dep) in en_son.items():
+        if kid == yz_id:
+            continue
+        if kid not in gruplar:
+            gruplar[kid] = kullanicinin_grup_idleri(kid)
+        once = {(t.grup_id, t.ev_skor, t.deplasman_skor) for t in Tahmin.query.filter_by(kullanici_id=kid, mac_id=mid)}
+        if all((gid, ev, dep) in once for gid in gruplar[kid]):
+            continue
+        tahmini_tum_gruplara_yaz(kid, mid, ev, dep, gruplar[kid])
+        degisen += 1
+    db.session.commit()
+    return degisen
+
+
+def _tahminleri_esitle_guvenli(kullanici_id=None):
+    try:
+        return tahminleri_gruplara_esitle(kullanici_id)
+    except Exception as e:
+        db.session.rollback()
+        print("[tahmin-esitle] hata:", e)
+        return 0
+
+
+# Eski veriler: açılışta bir kez, başlamamış maçlardaki tahminleri tüm gruplara eşitle
+with app.app_context():
+    _tahminleri_esitle_guvenli()
 
 
 @app.route("/grup-katil", methods=["POST"])
@@ -2283,7 +2363,8 @@ def grup_katil():
     else:
         db.session.add(GrupUyeligi(grup_id=grup.id, kullanici_id=current_user.id))
         db.session.commit()
-        flash("Gruba katıldınız.", "success")
+        _tahminleri_esitle_guvenli(current_user.id)
+        flash("Gruba katıldınız. Diğer gruplarındaki tahminlerin bu gruba da geçti.", "success")
     return redirect(url_for("grup", grup_id=grup.id))
 
 
@@ -2308,6 +2389,7 @@ def katil_link(davet_kodu):
     if not GrupUyeligi.query.filter_by(grup_id=grup.id, kullanici_id=current_user.id).first():
         db.session.add(GrupUyeligi(grup_id=grup.id, kullanici_id=current_user.id))
         db.session.commit()
+        _tahminleri_esitle_guvenli(current_user.id)
         flash(f"'{grup.ad}' grubuna katıldınız. 🎉", "success")
 
     return redirect(url_for("grup", grup_id=grup.id))
@@ -2678,6 +2760,8 @@ def tahminleri_kaydet(grup_id):
 
     kaydedilen = 0
     atlanan = 0
+    grup_idleri = kullanicinin_grup_idleri(current_user.id)
+    coklu = len(grup_idleri) > 1
 
     for key in list(request.form.keys()):
         if not key.startswith("ev_skor_"):
@@ -2712,16 +2796,7 @@ def tahminleri_kaydet(grup_id):
             atlanan += 1
             continue
 
-        existing = Tahmin.query.filter_by(grup_id=grup_id, mac_id=mac_id, kullanici_id=current_user.id).first()
-        if existing:
-            existing.ev_skor = ev_skor
-            existing.deplasman_skor = deplasman_skor
-            existing.guncellenme = datetime.utcnow()
-        else:
-            db.session.add(Tahmin(
-                grup_id=grup_id, mac_id=mac_id, kullanici_id=current_user.id,
-                ev_skor=ev_skor, deplasman_skor=deplasman_skor, puan=0
-            ))
+        tahmini_tum_gruplara_yaz(current_user.id, mac_id, ev_skor, deplasman_skor, grup_idleri)
         kaydedilen += 1
 
     db.session.commit()
@@ -2729,7 +2804,8 @@ def tahminleri_kaydet(grup_id):
     if kaydedilen and atlanan:
         flash(f"{kaydedilen} maç için tahmininiz kaydedildi, {atlanan} maç atlandı (başlamış olabilir).", "success")
     elif kaydedilen:
-        flash(f"{kaydedilen} maç için tahmininiz kaydedildi. 🎯", "success")
+        ek = f" Tüm gruplarına ({len(grup_idleri)}) yansıdı." if coklu else ""
+        flash(f"{kaydedilen} maç için tahmininiz kaydedildi. 🎯{ek}", "success")
     else:
         flash("Kaydedilecek yeni bir tahmin bulunamadı.", "warning")
 
@@ -2763,13 +2839,7 @@ def tahmin(grup_id, mac_id):
             flash("Skor negatif olamaz.", "danger")
             return redirect(url_for("tahmin", grup_id=grup_id, mac_id=mac_id))
 
-        if existing:
-            existing.ev_skor = ev_skor
-            existing.deplasman_skor = deplasman_skor
-            existing.guncellenme = datetime.utcnow()
-        else:
-            db.session.add(Tahmin(grup_id=grup_id, mac_id=mac_id, kullanici_id=current_user.id, ev_skor=ev_skor, deplasman_skor=deplasman_skor, puan=0))
-
+        tahmini_tum_gruplara_yaz(current_user.id, mac_id, ev_skor, deplasman_skor)
         db.session.commit()
         flash("Tahmininiz kaydedildi.", "success")
         return redirect(url_for("grup", grup_id=grup_id))
