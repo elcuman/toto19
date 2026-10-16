@@ -2269,6 +2269,12 @@ def hafta_anahtari(tarih):
     return bas - TURKIYE_UTC_OFFSET
 
 
+def _haftalik_sira_anahtari(satir):
+    """Puana göre sırala; eşit puanda Robot Ziya hep insanların arkasında kalsın
+    (hafta sıfırlanınca herkes 0'dayken sonuncu Ziya olur)."""
+    return (satir["points"], not yz_mi(satir.get("user")))
+
+
 def haftalik_liderlik_hesapla(grup_id):
     """
     Grubun daha önce oynanmış TÜM maçlarını (Şampiyonlar Ligi + Süper Lig
@@ -2299,7 +2305,7 @@ def haftalik_liderlik_hesapla(grup_id):
                 {"user": kullanici_map.get(uid), "points": puan}
                 for uid, puan in veri["puanlar"].items() if kullanici_map.get(uid)
             ],
-            key=lambda x: x["points"],
+            key=_haftalik_sira_anahtari,
             reverse=True
         )
         sonuc.append({
@@ -2344,7 +2350,7 @@ def su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu):
 
     return sorted(
         [{"user": kullanici_map[uid], "points": puan} for uid, puan in puanlar.items()],
-        key=lambda x: x["points"],
+        key=_haftalik_sira_anahtari,
         reverse=True,
     )
 
