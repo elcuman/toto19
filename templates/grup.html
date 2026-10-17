@@ -43,6 +43,30 @@
 </div>
 {% endif %}
 
+{% set gecen_kral = (paylas_haftalar or []) | selectattr('devam', 'equalto', False) | first %}
+{% if gecen_kral and gecen_kral.kral_ad %}
+<details class="kral-afis" {% if gecen_kral_acik %}open{% endif %}>
+  <summary>
+    <span class="kral-afis-tac" aria-hidden="true">👑</span>
+    <span class="kral-afis-metin">
+      <span class="kral-afis-ust">{{ (gecen_kral.baslik_metin or "haftanın kralı") | capitalize }} · {{ gecen_kral.tarih }}</span>
+      <strong>{{ gecen_kral.kral_ad }}</strong> <span class="kral-afis-puan">{{ gecen_kral.puan }} puan</span>
+    </span>
+    <span class="kral-afis-ac">Kartı gör</span>
+  </summary>
+  <div class="kral-afis-ic">
+    <img src="{{ gecen_kral.gorsel }}" width="1080" height="1350" loading="lazy"
+         alt="{{ grup.ad }} haftanın kralı kartı: {{ gecen_kral.kral_ad }}, {{ gecen_kral.puan }} puan">
+    <div class="kral-paylas" style="justify-content:center">
+      <button type="button" class="btn kral-paylas-btn" data-gorsel="{{ gecen_kral.gorsel }}" data-sayfa="{{ gecen_kral.sayfa }}" data-devam="0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
+        Paylaş
+      </button>
+    </div>
+  </div>
+</details>
+{% endif %}
+
 <section class="panel">
   <div class="panel-bas">
     <h2>Bu haftanın maçları</h2>
@@ -237,6 +261,21 @@
   });
 })();
 </script>
+<style>
+.kral-afis{margin-bottom:16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg, var(--cim) 0%, var(--cim-koyu) 100%); color:#fff; overflow:hidden}
+.kral-afis summary{display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; list-style:none}
+.kral-afis summary::-webkit-details-marker{display:none}
+.kral-afis-tac{flex:none; width:44px; height:44px; border-radius:50%; background:var(--sari); display:flex; align-items:center; justify-content:center; font-size:24px}
+.kral-afis-metin{flex:1; min-width:0; line-height:1.25}
+.kral-afis-ust{display:block; font-size:13px; opacity:.85}
+.kral-afis-metin strong{font:700 24px/1.1 var(--baslik)}
+.kral-afis-puan{color:var(--sari); font:600 18px var(--baslik); margin-left:4px; white-space:nowrap}
+.kral-afis-ac{flex:none; font-size:14px; font-weight:600; padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.16)}
+.kral-afis[open] .kral-afis-ac{display:none}
+.kral-afis-ic{padding:0 16px 16px; text-align:center}
+.kral-afis-ic img{display:block; width:100%; max-width:380px; height:auto; margin:0 auto 12px; border-radius:var(--r)}
+.kral-afis .btn{background:var(--sari); color:var(--murekkep); border-color:var(--sari)}
+</style>
 <style>
 .kral-paylas{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px}
 .kral-paylas-btn{display:inline-flex; align-items:center; gap:8px}
