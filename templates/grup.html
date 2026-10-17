@@ -45,26 +45,30 @@
 
 {% set gecen_kral = (paylas_haftalar or []) | selectattr('devam', 'equalto', False) | first %}
 {% if gecen_kral and gecen_kral.kral_ad %}
-<details class="kral-afis" {% if gecen_kral_acik %}open{% endif %}>
-  <summary>
-    <span class="kral-afis-tac" aria-hidden="true">👑</span>
-    <span class="kral-afis-metin">
-      <span class="kral-afis-ust">{{ (gecen_kral.baslik_metin or "haftanın kralı") | capitalize }} · {{ gecen_kral.tarih }}</span>
-      <strong>{{ gecen_kral.kral_ad }}</strong> <span class="kral-afis-puan">{{ gecen_kral.puan }} puan</span>
-    </span>
-    <span class="kral-afis-ac">Kartı gör</span>
-  </summary>
-  <div class="kral-afis-ic">
-    <img src="{{ gecen_kral.gorsel }}" width="1080" height="1350" loading="lazy"
+<button type="button" class="kral-afis" id="kralAfisBtn" aria-haspopup="dialog">
+  <span class="kral-afis-tac" aria-hidden="true">👑</span>
+  <span class="kral-afis-metin">
+    <span class="kral-afis-ust">{{ (gecen_kral.baslik_metin or "haftanın kralı") | capitalize }} · {{ gecen_kral.tarih }}</span>
+    <strong>{{ gecen_kral.kral_ad }}</strong> <span class="kral-afis-puan">{{ gecen_kral.puan }} puan</span>
+  </span>
+  <span class="kral-afis-ac">Kartı gör</span>
+</button>
+
+<dialog class="kral-popup" id="kralPopup" aria-labelledby="kralPopupBaslik" data-anahtar="kral_popup_{{ grup.id }}_{{ gecen_kral.gorsel.split('/')[-2] }}" data-otomatik="{{ 1 if gecen_kral.gecen_hafta else 0 }}">
+  <div class="kral-popup-ic">
+    <button type="button" class="kral-popup-kapat" data-kapat aria-label="Kapat">×</button>
+    <h2 id="kralPopupBaslik">👑 {{ (gecen_kral.baslik_metin or "haftanın kralı") | capitalize }}!</h2>
+    <img src="{{ gecen_kral.gorsel }}" width="1080" height="1350"
          alt="{{ grup.ad }} haftanın kralı kartı: {{ gecen_kral.kral_ad }}, {{ gecen_kral.puan }} puan">
-    <div class="kral-paylas" style="justify-content:center">
+    <div class="kral-popup-dugmeler">
       <button type="button" class="btn kral-paylas-btn" data-gorsel="{{ gecen_kral.gorsel }}" data-sayfa="{{ gecen_kral.sayfa }}" data-devam="0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
         Paylaş
       </button>
+      <button type="button" class="btn btn-ikincil" data-kapat>Kapat</button>
     </div>
   </div>
-</details>
+</dialog>
 {% endif %}
 
 <section class="panel">
@@ -262,20 +266,45 @@
 })();
 </script>
 <style>
-.kral-afis{margin-bottom:16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg, var(--cim) 0%, var(--cim-koyu) 100%); color:#fff; overflow:hidden}
-.kral-afis summary{display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; list-style:none}
-.kral-afis summary::-webkit-details-marker{display:none}
+.kral-afis{display:flex; width:100%; align-items:center; gap:12px; margin:0 0 16px; padding:12px 16px; border:0; text-align:left; cursor:pointer;
+  border-radius:var(--r-buyuk); background:linear-gradient(135deg, var(--cim) 0%, var(--cim-koyu) 100%); color:#fff; font:inherit}
 .kral-afis-tac{flex:none; width:44px; height:44px; border-radius:50%; background:var(--sari); display:flex; align-items:center; justify-content:center; font-size:24px}
 .kral-afis-metin{flex:1; min-width:0; line-height:1.25}
 .kral-afis-ust{display:block; font-size:13px; opacity:.85}
 .kral-afis-metin strong{font:700 24px/1.1 var(--baslik)}
 .kral-afis-puan{color:var(--sari); font:600 18px var(--baslik); margin-left:4px; white-space:nowrap}
 .kral-afis-ac{flex:none; font-size:14px; font-weight:600; padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.16)}
-.kral-afis[open] .kral-afis-ac{display:none}
-.kral-afis-ic{padding:0 16px 16px; text-align:center}
-.kral-afis-ic img{display:block; width:100%; max-width:380px; height:auto; margin:0 auto 12px; border-radius:var(--r)}
-.kral-afis .btn{background:var(--sari); color:var(--murekkep); border-color:var(--sari)}
+.kral-popup{border:0; padding:0; background:transparent; max-width:min(420px, calc(100vw - 32px)); width:100%; max-height:calc(100dvh - 32px); overflow:visible}
+.kral-popup::backdrop{background:rgba(10,20,15,.72); backdrop-filter:blur(2px)}
+.kral-popup[open]{animation:kralGir .28s ease-out}
+@keyframes kralGir{from{opacity:0; transform:translateY(16px) scale(.97)} to{opacity:1; transform:none}}
+.kral-popup-ic{position:relative; background:var(--cim-koyu); color:#fff; border-radius:20px; padding:18px 16px 16px; text-align:center;
+  max-height:calc(100dvh - 32px); overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.kral-popup h2{font-size:24px; margin:0 36px 12px}
+.kral-popup img{display:block; width:100%; height:auto; max-height:calc(100dvh - 200px); object-fit:contain; border-radius:12px; margin:0 auto 14px}
+.kral-popup-kapat{position:absolute; top:10px; right:10px; width:40px; height:40px; border:0; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:26px; line-height:1; cursor:pointer}
+.kral-popup-dugmeler{display:flex; gap:10px; justify-content:center}
+.kral-popup-dugmeler .btn{flex:1; max-width:180px; display:inline-flex; align-items:center; justify-content:center; gap:8px}
+.kral-popup-dugmeler .kral-paylas-btn{background:var(--sari); color:var(--murekkep); border-color:var(--sari)}
+.kral-popup-dugmeler .kral-paylas-btn svg{width:18px; height:18px}
+.kral-popup-dugmeler .btn-ikincil{background:transparent; color:#fff; border-color:rgba(255,255,255,.4)}
 </style>
+<script>
+(function(){
+  var dlg = document.getElementById('kralPopup'), ac = document.getElementById('kralAfisBtn');
+  if (!dlg || !dlg.showModal) return;
+  var anahtar = dlg.dataset.anahtar;
+  function gorulduMu(){ try { return localStorage.getItem(anahtar) === '1'; } catch (e) { return false; } }
+  function gorulduYap(){ try { localStorage.setItem(anahtar, '1'); } catch (e) {} }
+  function kapat(){ gorulduYap(); dlg.close(); }
+  ac.addEventListener('click', function(){ dlg.showModal(); });
+  dlg.querySelectorAll('[data-kapat]').forEach(function(b){ b.addEventListener('click', kapat); });
+  dlg.addEventListener('click', function(e){ if (e.target === dlg) kapat(); });   // karartılmış alana dokununca
+  dlg.addEventListener('cancel', gorulduYap);                                      // Esc / geri tuşu
+  // Bu hafta için daha önce kapatılmadıysa sayfa açılınca kendiliğinden göster
+  if (dlg.dataset.otomatik === '1' && !gorulduMu()) setTimeout(function(){ dlg.showModal(); }, 400);
+})();
+</script>
 <style>
 .kral-paylas{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px}
 .kral-paylas-btn{display:inline-flex; align-items:center; gap:8px}

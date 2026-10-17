@@ -2885,8 +2885,6 @@ def grup(grup_id):
         hafta_sonu=hafta_sonu,
         oynanabilir_mac_var=oynanabilir_mac_var,
         paylas_haftalar=_guvenli_paylas_haftalar(grup_id),
-        # Yeni hafta başladıktan sonraki ilk 2 gün kral kartı açık gelir, sonra kapanır
-        gecen_kral_acik=(utc_now_naive() - bu_haftanin_araligi()[0]) < timedelta(hours=48),
     )
 
 
@@ -4168,7 +4166,8 @@ def paylasilabilir_haftalar(grup_id):
     for i in range(1, 5):
         b = simdi_bas - timedelta(days=7 * i)
         if _haftada_biten_mac_sayisi(b, b + timedelta(days=7)):
-            sonuc.append({"bas": b, "etiket": "Haftanın kralını paylaş" if i == 1 else "Son haftanın kralını paylaş", "devam": False})
+            sonuc.append({"bas": b, "etiket": "Haftanın kralını paylaş" if i == 1 else "Son haftanın kralını paylaş",
+                          "devam": False, "gecen_hafta": i == 1})
             break
     for h in sonuc:
         veri = kral_karti_verisi(grup_id, h["bas"]) or {}
