@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ veri.kral.ad }}, {{ veri.baslik_metin }} · {{ veri.grup_ad }}{% endblock %}
+{% block head %}
+<meta name="robots" content="noindex">
+<meta property="og:type" content="website">
+<meta property="og:title" content="👑 {{ veri.kral.ad }} — {{ veri.baslik_metin }} ({{ veri.grup_ad }})">
+<meta property="og:description" content="{{ veri.tarih }} · {{ veri.kral.puan }} puan. Arkadaşlarınla parasız skor tahmini oyna, kralı tahtından indir!">
+<meta property="og:image" content="{{ gorsel }}">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
+<meta property="og:url" content="{{ sayfa }}">
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
+{% block content %}
+<div class="kart-sayfa">
+  <img class="kart-gorsel" src="{{ gorsel }}" width="1080" height="1350"
+       alt="{{ veri.grup_ad }} — {{ veri.baslik_metin }}: {{ veri.kral.ad }}, {{ veri.kral.puan }} puan">
+  <section class="panel kart-cta">
+    <h2>Sen de oyna</h2>
+    <p>Tahmin Ligi arkadaş grupları için parasız bir skor tahmin oyunu. Maç başlamadan skoru yaz, her hafta kral ol.</p>
+    <div class="btn-dizi">
+      {% if current_user.is_authenticated %}
+        <a class="btn" href="{{ url_for('gruplar') }}">Gruplarıma git</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('kayit') }}">Ücretsiz hesap aç</a>
+        <a class="btn btn-ikincil" href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır?</a>
+      {% endif %}
+    </div>
+  </section>
+</div>
+<style>
+.kart-sayfa{max-width:480px; margin:0 auto}
+.kart-gorsel{display:block; width:100%; height:auto; border-radius:var(--r-buyuk); box-shadow:0 10px 30px rgba(0,0,0,.15); margin-bottom:16px}
+.kart-cta{text-align:center}
+.kart-cta .btn-dizi{justify-content:center}
+</style>
+{% endblock %}

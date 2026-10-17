@@ -154,3 +154,17 @@
 </script>
 {% endif %}
 {%- endmacro %}
+
+
+{% macro paylas_dugmeleri(haftalar) -%}
+<div class="kral-paylas">
+  {% for h in haftalar %}
+  <button type="button" class="btn {{ 'btn-ikincil' if h.devam else '' }} kral-paylas-btn"
+          data-gorsel="{{ h.gorsel }}" data-sayfa="{{ h.sayfa }}" data-devam="{{ 1 if h.devam else 0 }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
+    {{ h.etiket }}
+  </button>
+  {% endfor %}
+  <a class="kucuk kral-onizle" href="{{ haftalar[-1].sayfa }}" target="_blank" rel="noopener">Kartı gör</a>
+</div>
+{%- endmacro %}

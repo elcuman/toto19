@@ -3,6 +3,7 @@
 
 {% block title %}{{ grup.ad }} · Tahmin Ligi{% endblock %}
 
+
 {% block content %}
 
 {% set davet_linki = request.url_root ~ 'katil/' ~ grup.davet_kodu %}
@@ -167,7 +168,10 @@
   <p class="sessiz kucuk" style="margin-top:-6px">{{ hafta_basi | tr_saat("%d.%m %H:%M") }} – {{ hafta_sonu | tr_saat("%d.%m %H:%M") }} arası, tüm ligler birlikte. Her hafta sıfırdan başlar.</p>
   {% endif %}
   {{ p.siralama(su_anki_hafta_siralamasi, "Haftanın kralı", "Haftanın cenabeti", "Bu hafta") }}
+  {% if paylas_haftalar %}{{ p.paylas_dugmeleri(paylas_haftalar) }}{% endif %}
 </section>
+{% elif paylas_haftalar %}
+<section class="panel">{{ p.paylas_dugmeleri(paylas_haftalar) }}</section>
 {% endif %}
 
 <section class="panel">
@@ -230,6 +234,38 @@
     var yaz = function(){ kopya.textContent = 'Link kopyalandı'; setTimeout(function(){ kopya.textContent = 'Davet linkini kopyala'; }, 2000); };
     if (navigator.clipboard) navigator.clipboard.writeText(kopya.dataset.link).then(yaz, function(){ prompt('Davet linki:', kopya.dataset.link); });
     else prompt('Davet linki:', kopya.dataset.link);
+  });
+})();
+</script>
+<style>
+.kral-paylas{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px}
+.kral-paylas-btn{display:inline-flex; align-items:center; gap:8px}
+.kral-paylas-btn svg{width:18px; height:18px}
+.kral-onizle{margin-left:auto; color:var(--gri)}
+</style>
+<script>
+(function(){
+  var grupAd = {{ grup.ad | tojson }};
+  document.querySelectorAll('.kral-paylas-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var devam = b.dataset.devam === '1';
+      var metin = (devam ? '👑 ' + grupAd + ' grubunda bu haftanın zirvesi belli oluyor!'
+                         : '👑 ' + grupAd + ' grubunda haftanın kralı belli oldu!') + ' Sen de tahminini gir:';
+      var sayfa = b.dataset.sayfa;
+      function whatsapp(){ location.href = 'https://wa.me/?text=' + encodeURIComponent(metin + ' ' + sayfa); }
+      if (!navigator.share) { whatsapp(); return; }
+      b.disabled = true;
+      fetch(b.dataset.gorsel, {credentials:'same-origin'})
+        .then(function(r){ if (!r.ok) throw 0; return r.blob(); })
+        .then(function(blob){
+          var dosya = new File([blob], 'haftanin-krali.png', {type:'image/png'});
+          var veri = {files:[dosya], text: metin + ' ' + sayfa};
+          if (navigator.canShare && navigator.canShare(veri)) return navigator.share(veri);
+          return navigator.share({text: metin, url: sayfa});
+        })
+        .catch(function(e){ if (!e || e.name !== 'AbortError') whatsapp(); })
+        .finally(function(){ b.disabled = false; });
+    });
   });
 })();
 </script>

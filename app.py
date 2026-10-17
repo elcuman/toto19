@@ -2158,7 +2158,7 @@ def robots_txt():
     satirlar = [
         "User-agent: *",
         "Allow: /$", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2883,8 +2883,18 @@ def grup(grup_id):
         su_anki_hafta_siralamasi=su_anki_hafta_siralamasi,
         hafta_basi=hafta_basi,
         hafta_sonu=hafta_sonu,
-        oynanabilir_mac_var=oynanabilir_mac_var
+        oynanabilir_mac_var=oynanabilir_mac_var,
+        paylas_haftalar=_guvenli_paylas_haftalar(grup_id),
     )
+
+
+def _guvenli_paylas_haftalar(grup_id):
+    try:
+        return paylasilabilir_haftalar(grup_id)
+    except Exception as e:
+        db.session.rollback()
+        print("[kral-karti] hata:", e)
+        return []
 
 
 def _grup_uyesi_mi(grup_id):
@@ -4072,6 +4082,128 @@ def bu_haftanin_araligi(now=None):
     """Grup haftası Türkiye saatiyle Cuma 15:00'te başlar (UTC naive döner)."""
     bas = hafta_anahtari(now or utc_now_naive())
     return bas, bas + timedelta(days=7)
+
+
+# ------------------------------------------------------------
+# Haftanın Kralı paylaşım kartı
+# Grup sayfaları gizli; kart ise imzalı (tahmin edilemeyen) bir linkle
+# herkese açılır ki WhatsApp önizlemesi ve görsel çalışsın. Linkte davet
+# kodu yok: kartı gören biri gruba katılamaz, sadece siteye yönlendirilir.
+# ------------------------------------------------------------
+import hmac as _hmac
+from flask import make_response
+
+TR_AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
+            "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+
+
+def _kart_imza(grup_id, ts):
+    anahtar = (app.config.get("SECRET_KEY") or "").encode()
+    return _hmac.new(anahtar, f"kral:{grup_id}:{ts}".encode(), hashlib.sha256).hexdigest()[:16]
+
+
+def _tr_tarih_araligi(bas, son):
+    b = bas + TURKIYE_UTC_OFFSET
+    e = son + TURKIYE_UTC_OFFSET
+    if b.month == e.month:
+        return f"{b.day} – {e.day} {TR_AYLAR[e.month - 1]}"
+    return f"{b.day} {TR_AYLAR[b.month - 1]} – {e.day} {TR_AYLAR[e.month - 1]}"
+
+
+def _haftada_biten_mac_sayisi(bas, son):
+    return Mac.query.filter(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.durum == "bitti",
+                            Mac.baslangic >= bas, Mac.baslangic < son).count()
+
+
+def kral_karti_verisi(grup_id, bas):
+    grup_obj = db.session.get(Grup, grup_id)
+    if not grup_obj:
+        return None
+    son = bas + timedelta(days=7)
+    if _haftada_biten_mac_sayisi(bas, son) == 0:
+        return None
+    siralama = su_anki_hafta_liderligi_hesapla(grup_id, bas, son)
+    if not siralama:
+        return None
+    devam = utc_now_naive() < son
+    lider = siralama[0]
+    krallar = [r["user"].kullanici_adi for r in siralama if r["points"] == lider["points"]]
+    if len(krallar) == 1:
+        kral_ad = krallar[0]
+    elif len(krallar) == 2:
+        kral_ad = f"{krallar[0]} & {krallar[1]}"
+    else:
+        kral_ad = f"{krallar[0]} +{len(krallar) - 1}"
+    liste, onceki_puan, sira = [], None, 0
+    for i, r in enumerate(siralama[:5]):
+        if r["points"] != onceki_puan:
+            sira, onceki_puan = i + 1, r["points"]
+        liste.append({"sira": sira, "ad": r["user"].kullanici_adi, "puan": r["points"], "bot": yz_mi(r["user"])})
+    cenabet = None
+    if len(siralama) > 1 and siralama[-1]["points"] < lider["points"]:
+        cenabet = {"ad": siralama[-1]["user"].kullanici_adi, "puan": siralama[-1]["points"]}
+    return {
+        "grup_ad": grup_obj.ad,
+        "ust_baslik": ("ŞU AN ZİRVEDE" if devam else ("HAFTANIN KRALLARI" if len(krallar) > 1 else "HAFTANIN KRALI")),
+        "tarih": _tr_tarih_araligi(bas, son),
+        "baslik_metin": ("şu an zirvede" if devam else ("haftanın kralları" if len(krallar) > 1 else "haftanın kralı")),
+        "kral": {"ad": kral_ad, "puan": lider["points"]},
+        "ortak_kral": 0,
+        "liste": liste,
+        "cenabet": None if devam else cenabet,
+        "alt_yazi": (ANA_DOMAIN or "skorbilen.com"),
+        "devam": devam,
+    }
+
+
+def paylasilabilir_haftalar(grup_id):
+    """Grup sayfasındaki paylaş düğmeleri: devam eden hafta (maç oynandıysa)
+    ve son tamamlanan hafta (son 4 hafta içinde maç oynanmış olan)."""
+    simdi_bas, _ = bu_haftanin_araligi()
+    sonuc = []
+    if _haftada_biten_mac_sayisi(simdi_bas, simdi_bas + timedelta(days=7)):
+        sonuc.append({"bas": simdi_bas, "etiket": "Şu anki lideri paylaş", "devam": True})
+    for i in range(1, 5):
+        b = simdi_bas - timedelta(days=7 * i)
+        if _haftada_biten_mac_sayisi(b, b + timedelta(days=7)):
+            sonuc.append({"bas": b, "etiket": "Haftanın kralını paylaş" if i == 1 else "Son haftanın kralını paylaş", "devam": False})
+            break
+    for h in sonuc:
+        ts = int(calendar.timegm(h["bas"].timetuple()))
+        imza = _kart_imza(grup_id, ts)
+        h["sayfa"] = url_for("kral_karti_sayfa", grup_id=grup_id, ts=ts, imza=imza, _external=True)
+        h["gorsel"] = url_for("kral_karti_png", grup_id=grup_id, ts=ts, imza=imza)
+    return sonuc
+
+
+def _kart_dogrula(grup_id, ts, imza):
+    if not _hmac.compare_digest(_kart_imza(grup_id, ts), imza or ""):
+        abort(404)
+    bas = datetime.utcfromtimestamp(ts)
+    if hafta_anahtari(bas) != bas:
+        abort(404)
+    veri = kral_karti_verisi(grup_id, bas)
+    if not veri:
+        abort(404)
+    return veri
+
+
+@app.route("/paylas/kral/<int:grup_id>/<int:ts>/<imza>.png")
+def kral_karti_png(grup_id, ts, imza):
+    veri = _kart_dogrula(grup_id, ts, imza)
+    from kral_karti import kart_ciz
+    yanit = make_response(kart_ciz(veri))
+    yanit.headers["Content-Type"] = "image/png"
+    yanit.headers["Cache-Control"] = "public, max-age=600"
+    return yanit
+
+
+@app.route("/paylas/kral/<int:grup_id>/<int:ts>/<imza>")
+def kral_karti_sayfa(grup_id, ts, imza):
+    veri = _kart_dogrula(grup_id, ts, imza)
+    gorsel = url_for("kral_karti_png", grup_id=grup_id, ts=ts, imza=imza, _external=True)
+    return render_template("kral_karti.html", veri=veri, gorsel=gorsel,
+                           sayfa=url_for("kral_karti_sayfa", grup_id=grup_id, ts=ts, imza=imza, _external=True))
 
 
 @app.route("/puan-durumu")
