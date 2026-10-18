@@ -7,7 +7,7 @@
 <div class="sayfa-bas">
   <div>
     <h1>Ziyaretçiler</h1>
-    <p class="alt">Türkiye saatine göre günlük tekil ziyaretçi. Botlar ve admin sayfaları sayılmaz.</p>
+    <p class="alt">Türkiye saatine göre günlük tekil ziyaretçi. Botlar ve senin gezintilerin sayılmaz.</p>
   </div>
 </div>
 
@@ -58,7 +58,28 @@
   </section>
 </div>
 
-<p class="sessiz kucuk">Ziyaretçiler çerez kullanılmadan, günlük değişen anonim bir kimlikle sayılır; aynı kişi farklı cihazdan girerse ayrı sayılır.</p>
+<section class="panel">
+  <h2>Bugünkü ziyaretler <span class="kucuk sessiz">({{ o.bugunkuler|length }})</span></h2>
+  {% if o.bugunkuler %}
+  <div class="zy-tablo"><table>
+    <thead><tr><th>Kim</th><th>Saat</th><th>Sayfa</th><th>İlk sayfa</th><th>Cihaz</th><th>Kaynak</th></tr></thead>
+    <tbody>
+    {% for z in o.bugunkuler %}
+      <tr>
+        <td>{% if z.aktif %}<span class="zy-canli" title="Son 5 dakikada aktif"></span>{% endif %}{{ z.kim or 'Misafir' }}</td>
+        <td class="nowrap">{{ z.ilk | tr_saat("%H:%M") }}{% if z.son and z.son != z.ilk %}–{{ z.son | tr_saat("%H:%M") }}{% endif %}</td>
+        <td>{{ z.sayfa }}</td>
+        <td>{{ z.giris }}</td>
+        <td class="nowrap">{{ z.tarayici or z.cihaz }}</td>
+        <td>{{ z.kaynak or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="sessiz">Bugün henüz ziyaret yok.</p>{% endif %}
+</section>
+
+<p class="sessiz kucuk">Sayım sayfa tarayıcıda gerçekten açılınca yapılır (botlar sayılmaz). Girişli kullanıcı adıyla, misafir tarayıcıdaki anonim bir kimlikle tek sayılır. Senin (admin) gezintilerin sayılmaz. Aynı kişi farklı cihazdan girerse ayrı sayılır.</p>
 
 <style>
 .zy-ozet{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:16px}
@@ -82,5 +103,10 @@
 .zy-iki table td{padding:7px 4px}
 .zy-iki .sag{text-align:right; font:700 17px var(--baslik)}
 .panel:has(.zy-grafik){padding-bottom:30px}
+.zy-tablo{overflow-x:auto}
+.zy-tablo th{font-size:13px; color:var(--gri); text-align:left; white-space:nowrap}
+.zy-tablo td{font-size:14.5px; padding:7px 6px}
+.nowrap{white-space:nowrap}
+.zy-canli{display:inline-block; width:8px; height:8px; border-radius:50%; background:#2EBD6B; margin-right:6px; box-shadow:0 0 0 3px rgba(46,189,107,.2)}
 </style>
 {% endblock %}

@@ -810,6 +810,7 @@ class ZiyaretGunluk(db.Model):
     ilk_sayfa = db.Column(db.String(120))
     kaynak = db.Column(db.String(100))
     cihaz = db.Column(db.String(10))
+    tarayici = db.Column(db.String(40))
     ilk_saat = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     son_saat = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     __table_args__ = (db.UniqueConstraint("gun", "ziyaretci", name="uq_ziyaret_gun_ziyaretci"),)
@@ -2073,6 +2074,16 @@ def initialize_database():
         except Exception:
             db.session.rollback()
         try:
+            kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("ziyaret_gunluk")}
+            if "tarayici" not in kolonlar:
+                db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ADD COLUMN tarayici VARCHAR(40)"))
+                # İlk sayaç sürümü aynı kişiyi IP değişince tekrar sayıyordu; o veriler atılır
+                db.session.execute(db.text("DELETE FROM ziyaret_gunluk"))
+                db.session.execute(db.text("DELETE FROM sayfa_gunluk"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
             kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("kullanicilar")}
             if "sifre_degismeli" not in kolonlar:
                 db.session.execute(db.text(
@@ -2188,7 +2199,7 @@ def robots_txt():
     satirlar = [
         "User-agent: *",
         "Allow: /$", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2448,50 +2459,88 @@ def _istemci_ip():
             or request.remote_addr or "")
 
 
-@app.after_request
-def ziyaret_say(yanit):
+def _tarayici_ozeti(ua):
+    ua = ua or ""
+    os_ = ("iPhone" if "iPhone" in ua else "iPad" if "iPad" in ua else "Android" if "Android" in ua
+           else "Windows" if "Windows" in ua else "Mac" if "Mac OS" in ua else "Linux" if "Linux" in ua else "?")
+    tr = ("Samsung" if "SamsungBrowser" in ua else "Edge" if "Edg/" in ua else "Opera" if "OPR/" in ua
+          else "Instagram" if "Instagram" in ua else "Chrome" if ("Chrome/" in ua or "CriOS" in ua)
+          else "Firefox" if ("Firefox/" in ua or "FxiOS" in ua) else "Safari" if "Safari/" in ua else "?")
+    return f"{tr} · {os_}"[:40]
+
+
+_BOT_RE2 = _re.compile(r"mediapartners|adsbot|-google|google-|googleother|inspectiontool|yandex|bingpreview|"
+                       r"ahrefs|semrush|petal|bytespider|gptbot|chatgpt|claude|perplexity|applebot|"
+                       r"amazonbot|duckduck|baidu|mj12|dotbot|seznam|qwant", _re.I)
+
+
+@app.route("/z", methods=["POST"])
+def ziyaret_isareti():
+    """Sayfa tarayıcıda gerçekten açılınca küçük bir JS işaretiyle sayılır.
+    JS çalıştırmayan botlar, önizleme robotları ve ön yüklemeler böylece sayılmaz.
+    Kimlik: girişliyse kullanıcı; değilse tarayıcıda tutulan rastgele anonim kimliğin
+    o güne özel tuzla alınmış özeti (IP değişse de aynı kişi tek sayılır)."""
     try:
-        if (request.method != "GET" or yanit.status_code != 200
-                or not (yanit.mimetype or "").startswith("text/html")
-                or request.path.startswith(_SAYAC_HARIC)):
-            return yanit
+        if current_user.is_authenticated and getattr(current_user, "admin", False):
+            return ("", 204)   # yöneticinin kendi gezintisi sayılmaz
         ua = request.headers.get("User-Agent", "")
-        if not ua or _BOT_RE.search(ua):
-            return yanit
+        if not ua or _BOT_RE.search(ua) or _BOT_RE2.search(ua):
+            return ("", 204)
+        import json as _json
+        try:
+            veri = _json.loads(request.get_data(as_text=True) or "{}")
+        except ValueError:
+            veri = {}
+        yol_ham = str(veri.get("yol") or "/")[:300]
+        if not yol_ham.startswith("/") or yol_ham.startswith(_SAYAC_HARIC):
+            return ("", 204)
+        vid = str(veri.get("vid") or "")[:64]
         simdi = utc_now_naive()
         gun = (simdi + TURKIYE_UTC_OFFSET).date()
         tuz = (app.config.get("SECRET_KEY") or "") + gun.isoformat()
-        ziyaretci = hashlib.sha256(f"{tuz}|{_istemci_ip()}|{ua}".encode()).hexdigest()[:16]
-        yol = _yol_normallestir(request.path)
+        anon_kimlik = vid or f"{_istemci_ip()}|{ua}"
+        anon = hashlib.sha256(f"{tuz}|{anon_kimlik}".encode()).hexdigest()[:16]
         kid = current_user.id if current_user.is_authenticated else None
+        anahtar = f"u{kid}" if kid else anon
+        yol = _yol_normallestir(yol_ham)
 
-        k = ZiyaretGunluk.query.filter_by(gun=gun, ziyaretci=ziyaretci).first()
+        k = ZiyaretGunluk.query.filter_by(gun=gun, ziyaretci=anahtar).first()
+        if kid:
+            # Aynı gün önce girişsiz gezip sonra giriş yaptıysa iki kişi sayılmasın
+            eski = ZiyaretGunluk.query.filter_by(gun=gun, ziyaretci=anon).first()
+            if eski and not k:
+                eski.ziyaretci, eski.kullanici_id = anahtar, kid
+                k = eski
+            elif eski and k:
+                k.sayfa_sayisi = (k.sayfa_sayisi or 0) + (eski.sayfa_sayisi or 0)
+                k.ilk_saat = min(k.ilk_saat or simdi, eski.ilk_saat or simdi)
+                k.kaynak = k.kaynak or eski.kaynak
+                db.session.delete(eski)
         if k:
             k.sayfa_sayisi = (k.sayfa_sayisi or 0) + 1
             k.son_saat = simdi
-            if kid and not k.kullanici_id:
-                k.kullanici_id = kid
         else:
             kaynak = None
-            ref = request.referrer or ""
+            ref = str(veri.get("ref") or "")
             if ref:
                 from urllib.parse import urlparse
                 h = (urlparse(ref).netloc or "").lower()
-                if h and h != request.host.lower() and not h.endswith((ANA_DOMAIN or "skorbilen.com")):
+                if h and h != request.host.lower() and not h.endswith((ANA_DOMAIN or "skorbilen.com")) \
+                        and not h.endswith(".onrender.com"):
                     kaynak = h[:100]
             mobil = _re.search(r"Mobi|Android|iPhone|iPad", ua) is not None
-            db.session.add(ZiyaretGunluk(gun=gun, ziyaretci=ziyaretci, kullanici_id=kid, ilk_sayfa=yol,
+            db.session.add(ZiyaretGunluk(gun=gun, ziyaretci=anahtar, kullanici_id=kid, ilk_sayfa=yol,
                                          kaynak=kaynak, cihaz="mobil" if mobil else "masaüstü",
-                                         ilk_saat=simdi, son_saat=simdi))
+                                         tarayici=_tarayici_ozeti(ua), ilk_saat=simdi, son_saat=simdi))
         sg = SayfaGunluk.query.filter_by(gun=gun, yol=yol).first()
         if sg:
             sg.sayi = (sg.sayi or 0) + 1
         else:
             db.session.add(SayfaGunluk(gun=gun, yol=yol, sayi=1))
         db.session.commit()
-    except Exception as e:
-        db.session.rollback()   # aynı anda gelen iki istek çakışırsa sayım bir eksik olur, sorun değil
-    return yanit
+    except Exception:
+        db.session.rollback()
+    return ("", 204)
 
 
 SAYFA_ADLARI = {
@@ -2538,6 +2587,9 @@ def ziyaret_ozeti(gun_sayisi=30):
                     .filter(ZiyaretGunluk.gun >= hafta_bas).group_by(ZiyaretGunluk.cihaz).all())
     simdi = utc_now_naive()
     su_an = ZiyaretGunluk.query.filter(ZiyaretGunluk.son_saat >= simdi - timedelta(minutes=5)).count()
+    bugunkuler = ZiyaretGunluk.query.filter_by(gun=bugun).order_by(ZiyaretGunluk.son_saat.desc()).limit(100).all()
+    adlar = {u.id: u.kullanici_adi for u in Kullanici.query.filter(
+        Kullanici.id.in_([z.kullanici_id for z in bugunkuler if z.kullanici_id] or [-1])).all()}
     yeni_uye = Kullanici.query.filter(Kullanici.olusturulma >= simdi - timedelta(days=7)).count()
     return {
         "bugun": gunluk.get(bugun, {"ziyaretci": 0, "uye": 0, "sayfa": 0}),
@@ -2547,6 +2599,11 @@ def ziyaret_ozeti(gun_sayisi=30):
         "sayfalar": [(SAYFA_ADLARI.get(y, y), int(t)) for y, t in sayfalar],
         "kaynaklar": [(k, int(t)) for k, t in kaynaklar],
         "cihazlar": cihazlar,
+        "bugunkuler": [{"kim": adlar.get(z.kullanici_id) if z.kullanici_id else None,
+                        "ilk": z.ilk_saat, "son": z.son_saat, "sayfa": z.sayfa_sayisi,
+                        "giris": SAYFA_ADLARI.get(z.ilk_sayfa, z.ilk_sayfa), "cihaz": z.cihaz,
+                        "tarayici": z.tarayici, "kaynak": z.kaynak,
+                        "aktif": z.son_saat and z.son_saat >= simdi - timedelta(minutes=5)} for z in bugunkuler],
     }
 
 

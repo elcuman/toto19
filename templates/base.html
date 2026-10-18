@@ -387,5 +387,25 @@ tr:last-child td{border-bottom:0}
 {% endif %}
 
 {% block scripts %}{% endblock %}
+{% if not (ep.startswith('admin') or ep in ('static',)) %}
+<script>
+/* Ziyaretçi sayacı: çerez yok; tarayıcıda rastgele anonim bir kimlik tutulur. Yönetici cihazı sayılmaz. */
+(function(){
+  try {
+    {% if current_user.is_authenticated and current_user.admin %}localStorage.setItem('zadmin', '1'); return;{% endif %}
+    if (localStorage.getItem('zadmin') === '1') return;
+    var vid = localStorage.getItem('zid');
+    if (!vid) { vid = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); localStorage.setItem('zid', vid); }
+  } catch (e) { var vid = ''; }
+  var veri = JSON.stringify({yol: location.pathname, ref: document.referrer || '', vid: vid});
+  function gonder(){
+    if (document.visibilityState === 'prerender') return;
+    try { if (navigator.sendBeacon && navigator.sendBeacon('/z', veri)) return; } catch (e) {}
+    try { fetch('/z', {method: 'POST', body: veri, keepalive: true, credentials: 'same-origin'}); } catch (e) {}
+  }
+  if (document.readyState === 'complete') gonder(); else addEventListener('load', gonder);
+})();
+</script>
+{% endif %}
 </body>
 </html>
