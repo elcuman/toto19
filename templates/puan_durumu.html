@@ -66,7 +66,7 @@
           <td>
             <div class="takim-hucre">
               {% set yedek = takim_logo_url(t.takim) %}
-              {% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ t.logo or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}
+              {% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ logo_src(t.logo) or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}
               <span>{{ t.takim }}</span>
             </div>
             {% if t.form %}

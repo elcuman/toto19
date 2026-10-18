@@ -55,7 +55,7 @@
     {% for t in ozet %}
       <tr>
         <td class="s">{{ t.sira }}</td>
-        <td><div class="takim-hucre">{% set yedek = takim_logo_url(t.takim) %}{% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ t.logo or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}<span>{{ t.takim }}</span></div></td>
+        <td><div class="takim-hucre">{% set yedek = takim_logo_url(t.takim) %}{% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ logo_src(t.logo) or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}<span>{{ t.takim }}</span></div></td>
         <td class="n">{{ t.o }}</td>
         <td class="n">{{ '+' if t.av > 0 else '' }}{{ t.av }}</td>
         <td class="n p">{{ t.p }}</td>

@@ -1,3 +1,4 @@
+import io
 import calendar
 import hashlib
 import threading
@@ -2199,7 +2200,7 @@ def robots_txt():
     satirlar = [
         "User-agent: *",
         "Allow: /$", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /z", "Disallow: /tlogo", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -4446,6 +4447,77 @@ def kral_karti_sayfa(grup_id, ts, imza):
     gorsel = url_for("kral_karti_png", grup_id=grup_id, ts=ts, imza=imza, _external=True)
     return render_template("kral_karti.html", veri=veri, gorsel=gorsel,
                            sayfa=url_for("kral_karti_sayfa", grup_id=grup_id, ts=ts, imza=imza, _external=True))
+
+
+# ------------------------------------------------------------
+# Takım logoları kendi sunucumuz üzerinden: bazı operatörler/ağlar ESPN'in
+# görsel sunucusunu (a.espncdn.com) engelleyebiliyor; o zaman logolar
+# yerine baş harf rozetleri görünüyordu. Logo sunucuda indirilip küçültülür
+# (500px PNG yerine 96px) ve uzun süre önbellekte tutulur; Cloudflare de .png
+# uzantısı sayesinde kendi önbelleğinde saklar. Yalnızca bilinen iki kaynak
+# kabul edilir, açık bir vekil (proxy) değildir.
+# ------------------------------------------------------------
+_LOGO_KAYNAKLARI = {
+    "espn": ("https://a.espncdn.com/i/teamlogos/", _re.compile(r"^[a-z]+/\d{2,4}/[A-Za-z0-9_-]+\.png$")),
+    "fd": ("https://crests.football-data.org/", _re.compile(r"^[A-Za-z0-9_-]+\.(png|svg)$")),
+}
+_LOGO_ONBELLEK = {}
+_LOGO_ONBELLEK_MAX = 400
+
+
+def logo_src(url):
+    """Şablonlarda: dış logo adresini kendi /tlogo/ adresimize çevirir."""
+    if not url or not isinstance(url, str):
+        return url
+    for anahtar, (kok, desen) in _LOGO_KAYNAKLARI.items():
+        if url.startswith(kok):
+            yol = url[len(kok):].split("?")[0]
+            if desen.match(yol):
+                if yol.endswith(".svg"):
+                    return url          # SVG'yi küçültemeyiz; doğrudan bırak
+                return f"/tlogo/{anahtar}/{yol}"
+    if url.startswith("http://a.espncdn.com/"):
+        return logo_src("https://" + url[len("http://"):])
+    return url
+
+
+app.jinja_env.globals["logo_src"] = logo_src
+
+
+@app.route("/tlogo/<kaynak>/<path:yol>")
+def takim_logo_vekil(kaynak, yol):
+    k = _LOGO_KAYNAKLARI.get(kaynak)
+    if not k or not k[1].match(yol):
+        abort(404)
+    anahtar = f"{kaynak}/{yol}"
+    veri = _LOGO_ONBELLEK.get(anahtar)
+    if veri is None:
+        try:
+            r = requests.get(k[0] + yol, timeout=8, headers={"User-Agent": "Mozilla/5.0 (TahminLigi logo)"})
+            if r.status_code != 200 or not r.content:
+                abort(404)
+            veri = r.content
+            try:
+                from PIL import Image
+                im = Image.open(io.BytesIO(veri))
+                im.load()
+                if max(im.size) > 96:
+                    im = im.convert("RGBA")
+                    im.thumbnail((96, 96), Image.LANCZOS)
+                    cikti = io.BytesIO()
+                    im.save(cikti, "PNG", optimize=True)
+                    veri = cikti.getvalue()
+            except Exception:
+                pass     # küçültülemezse orijinali ver
+            if len(_LOGO_ONBELLEK) >= _LOGO_ONBELLEK_MAX:
+                _LOGO_ONBELLEK.pop(next(iter(_LOGO_ONBELLEK)))
+            _LOGO_ONBELLEK[anahtar] = veri
+        except requests.RequestException:
+            abort(404)
+    yanit = make_response(veri)
+    yanit.headers["Content-Type"] = "image/png"
+    yanit.headers["Cache-Control"] = "public, max-age=604800, immutable"
+    return yanit
 
 
 @app.route("/puan-durumu")

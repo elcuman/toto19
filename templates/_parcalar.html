@@ -2,7 +2,7 @@
 
 {% macro logo(ad, url) -%}
   {%- set yedek = takim_logo_url(ad) -%}
-  {%- set src = url or yedek -%}
+  {%- set src = logo_src(url) or yedek -%}
   {%- if src -%}
   <img loading="lazy" class="logo" src="{{ src }}" alt=""{% if yedek and yedek != src %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>
   {%- endif -%}
