@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Ziyaretçiler · Admin{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('admin') }}">‹ Admin</a>
+<div class="sayfa-bas">
+  <div>
+    <h1>Ziyaretçiler</h1>
+    <p class="alt">Türkiye saatine göre günlük tekil ziyaretçi. Botlar ve admin sayfaları sayılmaz.</p>
+  </div>
+</div>
+
+<div class="zy-ozet">
+  <div class="zy-kutu vurgulu"><span>Şu an</span><strong>{{ o.su_an }}</strong><small>son 5 dk</small></div>
+  <div class="zy-kutu"><span>Bugün</span><strong>{{ o.bugun.ziyaretci }}</strong><small>{{ o.bugun.uye }} giriş yapmış · {{ o.bugun.sayfa }} sayfa</small></div>
+  <div class="zy-kutu"><span>Dün</span><strong>{{ o.dun.ziyaretci }}</strong><small>{{ o.dun.uye }} giriş yapmış · {{ o.dun.sayfa }} sayfa</small></div>
+  <div class="zy-kutu"><span>Son 7 gün</span><strong>{{ o.hafta.ziyaretci }}</strong><small>{{ o.hafta.uye }} farklı üye · {{ o.hafta.sayfa }} sayfa</small></div>
+  <div class="zy-kutu"><span>Son 30 gün</span><strong>{{ o.ay.ziyaretci }}</strong><small>{{ o.ay.uye }} farklı üye · {{ o.ay.sayfa }} sayfa</small></div>
+  <div class="zy-kutu"><span>Yeni üye</span><strong>{{ o.yeni_uye }}</strong><small>son 7 gün</small></div>
+</div>
+
+<section class="panel">
+  <div class="panel-bas"><h2>Son 30 gün</h2><span class="kucuk sessiz"><span class="zy-lejant zy-l1"></span>ziyaretçi &nbsp;<span class="zy-lejant zy-l2"></span>giriş yapmış</span></div>
+  <div class="zy-grafik" role="img" aria-label="Son 30 günün günlük ziyaretçi sayıları">
+    {% for g in o.seri %}
+    <div class="zy-sutun" title="{{ g.etiket }}: {{ g.ziyaretci }} ziyaretçi, {{ g.uye }} giriş yapmış, {{ g.sayfa }} sayfa">
+      <span class="zy-deger">{{ g.ziyaretci if g.ziyaretci else '' }}</span>
+      <div class="zy-cubuk" style="height:{{ (g.ziyaretci / o.enfazla * 100) | round(1) }}%">
+        <div class="zy-uye" style="height:{{ ((g.uye / g.ziyaretci * 100) if g.ziyaretci else 0) | round(1) }}%"></div>
+      </div>
+      <span class="zy-etiket">{{ g.etiket if loop.index0 % 5 == 4 or loop.last else '' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="zy-iki">
+  <section class="panel">
+    <h2>En çok açılan sayfalar <span class="kucuk sessiz">(7 gün)</span></h2>
+    {% if o.sayfalar %}
+    <table><tbody>
+      {% for ad, n in o.sayfalar %}<tr><td>{{ ad }}</td><td class="sag">{{ n }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p class="sessiz">Henüz veri yok.</p>{% endif %}
+  </section>
+  <section class="panel">
+    <h2>Nereden geldiler <span class="kucuk sessiz">(7 gün)</span></h2>
+    {% if o.kaynaklar %}
+    <table><tbody>
+      {% for k, n in o.kaynaklar %}<tr><td>{{ k }}</td><td class="sag">{{ n }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p class="sessiz">Henüz başka siteden gelen yok (WhatsApp'tan açılan linkler genelde "doğrudan" sayılır).</p>{% endif %}
+    {% if o.cihazlar %}
+    <h3 style="margin-top:16px">Cihaz</h3>
+    <p style="margin:0">{% for c, n in o.cihazlar.items() %}{{ c }}: <strong>{{ n }}</strong>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {% endif %}
+  </section>
+</div>
+
+<p class="sessiz kucuk">Ziyaretçiler çerez kullanılmadan, günlük değişen anonim bir kimlikle sayılır; aynı kişi farklı cihazdan girerse ayrı sayılır.</p>
+
+<style>
+.zy-ozet{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:16px}
+.zy-kutu{background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r); padding:12px 14px}
+.zy-kutu span{display:block; font-size:13px; color:var(--gri); font-weight:600}
+.zy-kutu strong{display:block; font:700 34px/1.1 var(--baslik)}
+.zy-kutu small{display:block; color:var(--gri); font-size:12.5px}
+.zy-kutu.vurgulu{background:var(--cim); border-color:var(--cim); color:#fff}
+.zy-kutu.vurgulu span, .zy-kutu.vurgulu small{color:rgba(255,255,255,.85)}
+.zy-grafik{display:flex; align-items:flex-end; gap:3px; height:200px; padding-top:18px}
+.zy-sutun{flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; min-width:0; position:relative}
+.zy-cubuk{width:100%; max-width:22px; background:var(--cim-acik); border-radius:4px 4px 0 0; display:flex; align-items:flex-end; min-height:1px}
+.zy-uye{width:100%; background:var(--cim); border-radius:4px 4px 0 0}
+.zy-deger{font-size:10.5px; color:var(--gri); line-height:1; margin-bottom:2px}
+.zy-etiket{position:absolute; bottom:-18px; font-size:11px; color:var(--gri); white-space:nowrap}
+.zy-grafik + *{margin-top:24px}
+.zy-lejant{display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:middle; margin-right:3px}
+.zy-l1{background:var(--cim-acik); border:1px solid var(--cizgi-koyu)} .zy-l2{background:var(--cim)}
+.zy-iki{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media (max-width:700px){ .zy-iki{grid-template-columns:1fr} .zy-deger{display:none} }
+.zy-iki table td{padding:7px 4px}
+.zy-iki .sag{text-align:right; font:700 17px var(--baslik)}
+.panel:has(.zy-grafik){padding-bottom:30px}
+</style>
+{% endblock %}

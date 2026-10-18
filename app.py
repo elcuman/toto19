@@ -797,6 +797,34 @@ class YzAnaliz(db.Model):
     olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class ZiyaretGunluk(db.Model):
+    """Günlük tekil ziyaretçi kaydı. Çerez kullanılmaz: ziyaretçi kimliği,
+    o güne özel tuzla IP + tarayıcı bilgisinden üretilen geri çevrilemez bir özettir
+    (ertesi gün aynı kişi farklı bir özet alır, kimse geriye doğru izlenemez)."""
+    __tablename__ = "ziyaret_gunluk"
+    id = db.Column(db.Integer, primary_key=True)
+    gun = db.Column(db.Date, nullable=False, index=True)
+    ziyaretci = db.Column(db.String(16), nullable=False)
+    kullanici_id = db.Column(db.Integer, nullable=True)
+    sayfa_sayisi = db.Column(db.Integer, nullable=False, default=1)
+    ilk_sayfa = db.Column(db.String(120))
+    kaynak = db.Column(db.String(100))
+    cihaz = db.Column(db.String(10))
+    ilk_saat = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    son_saat = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    __table_args__ = (db.UniqueConstraint("gun", "ziyaretci", name="uq_ziyaret_gun_ziyaretci"),)
+
+
+class SayfaGunluk(db.Model):
+    """Gün bazında sayfa görüntülenme sayıları."""
+    __tablename__ = "sayfa_gunluk"
+    id = db.Column(db.Integer, primary_key=True)
+    gun = db.Column(db.Date, nullable=False, index=True)
+    yol = db.Column(db.String(120), nullable=False)
+    sayi = db.Column(db.Integer, nullable=False, default=0)
+    __table_args__ = (db.UniqueConstraint("gun", "yol", name="uq_sayfa_gun_yol"),)
+
+
 class Haber(db.Model):
     """Türk spor sitelerinin RSS akışlarından gelen, Türk takımlarıyla ilgili haber başlıkları."""
     __tablename__ = "haberler"
@@ -2061,6 +2089,8 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE haberler ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sifre_talepleri ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE geri_bildirimler ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -2387,6 +2417,143 @@ def geri_bildirim():
     return render_template("geri_bildirim.html", turler=GERI_BILDIRIM_TURLERI, metin="",
                            secili_tur=request.args.get("tur", "oneri"), ad="", sayfa=onceki,
                            tamam=request.args.get("tamam") == "1")
+
+
+# ------------------------------------------------------------
+# Ziyaretçi sayacı (admin için). Harici servis ve çerez yok.
+# Sadece başarılı HTML sayfa açılışları sayılır; botlar, statik dosyalar,
+# cron, admin sayfaları ve sohbet yoklamaları sayılmaz.
+# ------------------------------------------------------------
+import re as _re
+
+_BOT_RE = _re.compile(r"bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|"
+                      r"curl|wget|python|go-http|java/|okhttp|headless|lighthouse|render|uptime|cron-job|monitor", _re.I)
+_SAYAC_HARIC = ("/static", "/cron", "/admin", "/favicon", "/ads.txt", "/robots.txt", "/sitemap", "/api")
+
+
+def _yol_normallestir(yol):
+    if yol.startswith("/paylas/"):
+        return "/paylas/kral"
+    if yol.startswith("/katil/"):
+        return "/katil"
+    if yol.startswith("/sifremi-unuttum/"):
+        return "/sifremi-unuttum/durum"
+    parcalar = ["<id>" if p.isdigit() else p for p in yol.split("/")]
+    return ("/".join(parcalar) or "/")[:120]
+
+
+def _istemci_ip():
+    return (request.headers.get("CF-Connecting-IP")
+            or (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+            or request.remote_addr or "")
+
+
+@app.after_request
+def ziyaret_say(yanit):
+    try:
+        if (request.method != "GET" or yanit.status_code != 200
+                or not (yanit.mimetype or "").startswith("text/html")
+                or request.path.startswith(_SAYAC_HARIC)):
+            return yanit
+        ua = request.headers.get("User-Agent", "")
+        if not ua or _BOT_RE.search(ua):
+            return yanit
+        simdi = utc_now_naive()
+        gun = (simdi + TURKIYE_UTC_OFFSET).date()
+        tuz = (app.config.get("SECRET_KEY") or "") + gun.isoformat()
+        ziyaretci = hashlib.sha256(f"{tuz}|{_istemci_ip()}|{ua}".encode()).hexdigest()[:16]
+        yol = _yol_normallestir(request.path)
+        kid = current_user.id if current_user.is_authenticated else None
+
+        k = ZiyaretGunluk.query.filter_by(gun=gun, ziyaretci=ziyaretci).first()
+        if k:
+            k.sayfa_sayisi = (k.sayfa_sayisi or 0) + 1
+            k.son_saat = simdi
+            if kid and not k.kullanici_id:
+                k.kullanici_id = kid
+        else:
+            kaynak = None
+            ref = request.referrer or ""
+            if ref:
+                from urllib.parse import urlparse
+                h = (urlparse(ref).netloc or "").lower()
+                if h and h != request.host.lower() and not h.endswith((ANA_DOMAIN or "skorbilen.com")):
+                    kaynak = h[:100]
+            mobil = _re.search(r"Mobi|Android|iPhone|iPad", ua) is not None
+            db.session.add(ZiyaretGunluk(gun=gun, ziyaretci=ziyaretci, kullanici_id=kid, ilk_sayfa=yol,
+                                         kaynak=kaynak, cihaz="mobil" if mobil else "masaüstü",
+                                         ilk_saat=simdi, son_saat=simdi))
+        sg = SayfaGunluk.query.filter_by(gun=gun, yol=yol).first()
+        if sg:
+            sg.sayi = (sg.sayi or 0) + 1
+        else:
+            db.session.add(SayfaGunluk(gun=gun, yol=yol, sayi=1))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()   # aynı anda gelen iki istek çakışırsa sayım bir eksik olur, sorun değil
+    return yanit
+
+
+SAYFA_ADLARI = {
+    "/": "Ana sayfa (tanıtım)", "/dashboard": "Ana sayfa (girişli)", "/giris": "Giriş", "/kayit": "Kayıt",
+    "/puan-durumu": "Puan durumu", "/nasil-oynanir": "Nasıl oynanır", "/gizlilik": "Gizlilik",
+    "/iletisim": "İletişim", "/grup/<id>": "Grup sayfası", "/grup/<id>/sohbet": "Sohbet",
+    "/profil": "Profil", "/paylas/kral": "Kral kartı (paylaşılan)", "/katil": "Davet linki",
+    "/gruplar/yonet": "Grup kur / katıl", "/geri-bildirim": "Geri bildirim", "/sohbet": "Sohbet listesi",
+}
+
+
+def ziyaret_ozeti(gun_sayisi=30):
+    bugun = (utc_now_naive() + TURKIYE_UTC_OFFSET).date()
+    bas = bugun - timedelta(days=gun_sayisi - 1)
+    satirlar = (db.session.query(ZiyaretGunluk.gun,
+                                 db.func.count(ZiyaretGunluk.id),
+                                 db.func.count(ZiyaretGunluk.kullanici_id),
+                                 db.func.coalesce(db.func.sum(ZiyaretGunluk.sayfa_sayisi), 0))
+                .filter(ZiyaretGunluk.gun >= bas).group_by(ZiyaretGunluk.gun).all())
+    gunluk = {g: {"ziyaretci": z, "uye": u, "sayfa": int(sy)} for g, z, u, sy in satirlar}
+    seri = []
+    for i in range(gun_sayisi):
+        g = bas + timedelta(days=i)
+        v = gunluk.get(g, {"ziyaretci": 0, "uye": 0, "sayfa": 0})
+        seri.append({"gun": g, "etiket": f"{g.day:02d}.{g.month:02d}", **v})
+    enfazla = max([x["ziyaretci"] for x in seri] + [1])
+
+    def toplam(gunden):
+        q = ZiyaretGunluk.query.filter(ZiyaretGunluk.gun >= gunden)
+        return {"ziyaretci": q.count(),
+                "uye": db.session.query(db.func.count(db.distinct(ZiyaretGunluk.kullanici_id)))
+                         .filter(ZiyaretGunluk.gun >= gunden).scalar() or 0,
+                "sayfa": int(db.session.query(db.func.coalesce(db.func.sum(ZiyaretGunluk.sayfa_sayisi), 0))
+                             .filter(ZiyaretGunluk.gun >= gunden).scalar() or 0)}
+
+    hafta_bas = bugun - timedelta(days=6)
+    sayfalar = (db.session.query(SayfaGunluk.yol, db.func.sum(SayfaGunluk.sayi).label("t"))
+                .filter(SayfaGunluk.gun >= hafta_bas).group_by(SayfaGunluk.yol)
+                .order_by(db.desc("t")).limit(12).all())
+    kaynaklar = (db.session.query(ZiyaretGunluk.kaynak, db.func.count(ZiyaretGunluk.id).label("t"))
+                 .filter(ZiyaretGunluk.gun >= hafta_bas, ZiyaretGunluk.kaynak.isnot(None))
+                 .group_by(ZiyaretGunluk.kaynak).order_by(db.desc("t")).limit(10).all())
+    cihazlar = dict(db.session.query(ZiyaretGunluk.cihaz, db.func.count(ZiyaretGunluk.id))
+                    .filter(ZiyaretGunluk.gun >= hafta_bas).group_by(ZiyaretGunluk.cihaz).all())
+    simdi = utc_now_naive()
+    su_an = ZiyaretGunluk.query.filter(ZiyaretGunluk.son_saat >= simdi - timedelta(minutes=5)).count()
+    yeni_uye = Kullanici.query.filter(Kullanici.olusturulma >= simdi - timedelta(days=7)).count()
+    return {
+        "bugun": gunluk.get(bugun, {"ziyaretci": 0, "uye": 0, "sayfa": 0}),
+        "dun": gunluk.get(bugun - timedelta(days=1), {"ziyaretci": 0, "uye": 0, "sayfa": 0}),
+        "hafta": toplam(hafta_bas), "ay": toplam(bas),
+        "seri": seri, "enfazla": enfazla, "su_an": su_an, "yeni_uye": yeni_uye,
+        "sayfalar": [(SAYFA_ADLARI.get(y, y), int(t)) for y, t in sayfalar],
+        "kaynaklar": [(k, int(t)) for k, t in kaynaklar],
+        "cihazlar": cihazlar,
+    }
+
+
+@app.route("/admin/ziyaretler")
+@admin_required
+def admin_ziyaretler():
+    return render_template("admin_ziyaretler.html", o=ziyaret_ozeti(30))
 
 
 @app.route("/admin/geri-bildirimler")
@@ -3225,7 +3392,18 @@ def admin():
         upcoming_matches=upcoming_matches,
         ziya=_ziya_admin_ozeti(),
         sifre_talepleri=bekleyen_sifre_talepleri(),
+        ziyaret=_guvenli_ziyaret_ozeti(),
     )
+
+
+def _guvenli_ziyaret_ozeti():
+    try:
+        bugun = (utc_now_naive() + TURKIYE_UTC_OFFSET).date()
+        return {"bugun": ZiyaretGunluk.query.filter_by(gun=bugun).count(),
+                "su_an": ZiyaretGunluk.query.filter(ZiyaretGunluk.son_saat >= utc_now_naive() - timedelta(minutes=5)).count()}
+    except Exception:
+        db.session.rollback()
+        return None
 
 
 def _ziya_admin_ozeti():
