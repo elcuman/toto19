@@ -230,7 +230,15 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--cim);
 .takim-ad{display:flex; flex-direction:column; gap:4px; min-width:0}
 .takim.ev .takim-ad{align-items:flex-end}
 .mini-form{display:inline-flex; gap:2px}
-.mini-form span{width:15px; height:15px; border-radius:4px; font:700 9.5px/15px var(--yazi); text-align:center; color:#fff; cursor:default}
+.mini-form span{width:15px; height:15px; border-radius:4px; font:700 9.5px/15px var(--yazi); text-align:center; color:#fff; cursor:pointer; position:relative}
+.mini-form span::before{content:""; position:absolute; inset:-6px -2px}   /* parmakla dokunmayı kolaylaştıran görünmez alan */
+.mini-form span.secili{outline:2px solid var(--murekkep); outline-offset:1px}
+.form-balon{position:fixed; z-index:60; max-width:260px; padding:8px 11px; border-radius:10px; background:var(--murekkep); color:#fff;
+  font:600 13.5px/1.3 var(--yazi); box-shadow:0 6px 20px rgba(0,0,0,.22); pointer-events:none; opacity:0; transform:translateY(4px); transition:opacity .12s, transform .12s}
+.form-balon.acik{opacity:1; transform:none}
+.form-balon small{display:block; font-weight:500; font-size:12px; opacity:.75; margin-top:2px}
+.form-balon i{position:absolute; left:var(--ok-x, 50%); width:10px; height:10px; margin-left:-5px; background:var(--murekkep); transform:rotate(45deg)}
+.form-balon.ustte i{bottom:-4px} .form-balon.altta i{top:-4px}
 .mini-form .f-G{background:var(--cim)} .mini-form .f-B{background:var(--gri-acik)} .mini-form .f-M{background:var(--kirmizi)}
 .logo{width:30px; height:30px; object-fit:contain; flex:none; margin:0}
 .skor{display:flex; align-items:center; gap:6px}
@@ -393,6 +401,49 @@ tr:last-child td{border-bottom:0}
 {% endif %}
 
 {% block scripts %}{% endblock %}
+<script>
+/* Son 5 maç kutuları: üzerine gelince (fare) ya da dokununca (telefon) maç skorunu gösteren balon */
+(function(){
+  var balon = null, aktif = null, acilis = 0;
+  function goster(el){
+    if (aktif !== el) acilis = Date.now();
+    if (!balon) { balon = document.createElement('div'); balon.className = 'form-balon'; balon.setAttribute('role', 'tooltip'); document.body.appendChild(balon); }
+    if (aktif) aktif.classList.remove('secili');
+    aktif = el; el.classList.add('secili');
+    balon.innerHTML = '';
+    balon.appendChild(document.createTextNode(el.dataset.mac || ''));
+    var alt = document.createElement('small'); alt.textContent = el.dataset.alt || ''; balon.appendChild(alt);
+    balon.appendChild(document.createElement('i'));
+    var r = el.getBoundingClientRect();
+    balon.style.left = '0px'; balon.style.top = '0px'; balon.className = 'form-balon';
+    var b = balon.getBoundingClientRect();
+    var x = Math.min(Math.max(8, r.left + r.width / 2 - b.width / 2), innerWidth - b.width - 8);
+    var ustte = r.top - b.height - 10 > 8;
+    var y = ustte ? r.top - b.height - 10 : r.bottom + 10;
+    balon.style.left = x + 'px'; balon.style.top = y + 'px';
+    balon.style.setProperty('--ok-x', (r.left + r.width / 2 - x) + 'px');
+    balon.className = 'form-balon acik ' + (ustte ? 'ustte' : 'altta');
+  }
+  function gizle(){ if (balon) balon.className = 'form-balon'; if (aktif) { aktif.classList.remove('secili'); aktif = null; } }
+  document.addEventListener('click', function(e){
+    var el = e.target.closest && e.target.closest('.mini-form [data-mac]');
+    if (el) { e.preventDefault(); if (aktif === el && balon && balon.classList.contains('acik') && Date.now() - acilis > 400) gizle(); else goster(el); }
+    else gizle();
+  });
+  document.addEventListener('mouseover', function(e){
+    var el = e.target.closest && e.target.closest('.mini-form [data-mac]');
+    if (el && matchMedia('(hover:hover)').matches) goster(el);
+  });
+  document.addEventListener('mouseout', function(e){
+    var el = e.target.closest && e.target.closest('.mini-form [data-mac]');
+    if (el && matchMedia('(hover:hover)').matches) gizle();
+  });
+  document.addEventListener('focusin', function(e){ if (e.target.matches && e.target.matches('.mini-form [data-mac]')) goster(e.target); });
+  document.addEventListener('focusout', function(e){ if (e.target.matches && e.target.matches('.mini-form [data-mac]')) gizle(); });
+  addEventListener('scroll', gizle, {passive: true});
+  addEventListener('resize', gizle);
+})();
+</script>
 {% if not (ep.startswith('admin') or ep in ('static',)) %}
 <script>
 /* Ziyaretçi sayacı: çerez yok; tarayıcıda rastgele anonim bir kimlik tutulur. Yönetici cihazı sayılmaz. */

@@ -12,7 +12,7 @@
   {%- set fm = takim_formu(ad) -%}
   {%- if fm -%}
   <span class="mini-form" aria-label="Son {{ fm|length }} maç: {% for f in fm %}{{ {'G':'galibiyet','B':'beraberlik','M':'mağlubiyet'}[f.harf] }}{% if not loop.last %}, {% endif %}{% endfor %}">
-    {%- for f in fm %}<span class="f-{{ f.harf }}" title="{{ f.aciklama }}">{{ f.harf }}</span>{% endfor -%}
+    {%- for f in fm %}<span class="f-{{ f.harf }}" tabindex="0" role="button" data-mac="{{ f.mac }}" data-alt="{{ f.alt }}" aria-label="{{ f.aciklama }}">{{ f.harf }}</span>{% endfor -%}
   </span>
   {%- endif -%}
 {%- endmacro %}

@@ -4555,7 +4555,10 @@ def _tum_takim_formlari():
                 if len(liste) >= 5:
                     continue
                 harf = "G" if atti > yedi else ("M" if atti < yedi else "B")
-                liste.append({"harf": harf, "aciklama": f"{tarih} {rakip} ({'iç saha' if yer == 'E' else 'deplasman'}) {atti}-{yedi} · {lig}"})
+                skor = f"{m.ev_skor}-{m.deplasman_skor}"
+                mac_metni = f"{m.ev_sahibi} {skor} {m.deplasman}"
+                liste.append({"harf": harf, "mac": mac_metni, "alt": f"{tarih} · {lig}",
+                              "aciklama": f"{tarih} {mac_metni} · {lig}"})
         for k in sonuc:
             sonuc[k].reverse()   # en eski solda, en yeni sağda (puan durumundaki gibi)
     except Exception as e:
