@@ -4531,32 +4531,32 @@ from flask import g as _g
 
 
 def _tum_takim_formlari():
+    """{(lig_id, normalize_takim_adi): [son 5 maç]} — her lig kendi maçlarıyla."""
     if getattr(_g, "takim_formlari", None) is not None:
         return _g.takim_formlari
     sonuc = {}
     try:
-        sinir = utc_now_naive() - timedelta(days=240)
+        sinir = utc_now_naive() - timedelta(days=365)
         maclar = (Mac.query.filter(Mac.durum == "bitti", Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
                                    Mac.baslangic.isnot(None), Mac.baslangic >= sinir)
-                  .order_by(Mac.baslangic.desc()).limit(1500).all())
+                  .order_by(Mac.baslangic.desc()).limit(3000).all())
         gorulen = set()
         for m in maclar:
             ev, dep = takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman)
             # Aynı maçın farklı kaynaklardan gelen kopyası iki kez sayılmasın
-            imza = (m.baslangic.date(), frozenset((ev, dep)))
+            imza = (m.lig_id, m.baslangic.date(), frozenset((ev, dep)))
             if imza in gorulen:
                 continue
             gorulen.add(imza)
             tarih = tr_saat_filter(m.baslangic, "%d.%m")
-            lig = LIG_KISA_ADLARI.get(m.lig_id, m.lig or "") if "LIG_KISA_ADLARI" in globals() else (m.lig or "")
-            for k, rakip, atti, yedi, yer in ((ev, m.deplasman, m.ev_skor, m.deplasman_skor, "E"),
-                                               (dep, m.ev_sahibi, m.deplasman_skor, m.ev_skor, "D")):
-                liste = sonuc.setdefault(k, [])
+            lig = LIG_KISA_ADLARI.get(m.lig_id, m.lig or "")
+            skor = f"{m.ev_skor}-{m.deplasman_skor}"
+            mac_metni = f"{m.ev_sahibi} {skor} {m.deplasman}"
+            for k, atti, yedi in ((ev, m.ev_skor, m.deplasman_skor), (dep, m.deplasman_skor, m.ev_skor)):
+                liste = sonuc.setdefault((m.lig_id, k), [])
                 if len(liste) >= 5:
                     continue
                 harf = "G" if atti > yedi else ("M" if atti < yedi else "B")
-                skor = f"{m.ev_skor}-{m.deplasman_skor}"
-                mac_metni = f"{m.ev_sahibi} {skor} {m.deplasman}"
                 liste.append({"harf": harf, "mac": mac_metni, "alt": f"{tarih} · {lig}",
                               "aciklama": f"{tarih} {mac_metni} · {lig}"})
         for k in sonuc:
@@ -4568,8 +4568,9 @@ def _tum_takim_formlari():
     return sonuc
 
 
-def takim_formu(takim_adi):
-    return _tum_takim_formlari().get(takim_adi_normalize(takim_adi), [])
+def takim_formu(takim_adi, lig_id=None):
+    """Takımın verilen ligdeki son 5 maçı."""
+    return _tum_takim_formlari().get((lig_id, takim_adi_normalize(takim_adi)), [])
 
 
 app.jinja_env.globals["takim_formu"] = takim_formu
