@@ -4530,8 +4530,26 @@ def takim_logo_vekil(kaynak, yol):
 from flask import g as _g
 
 
+FORM_MAC_SAYISI = 3
+
+
+def _lig_kisaltmasi(m):
+    ad = (m.lig or "").lower()
+    if m.lig_id == SUPER_LIG_ID or "süper" in ad:
+        return "SL", "Süper Lig"
+    if m.lig_id == CHAMPIONS_LEAGUE_ID or "şampiyon" in ad or "champions" in ad:
+        return "ŞL", "Şampiyonlar Ligi"
+    if "konferans" in ad or "conference" in ad:
+        return "KL", "Konferans Ligi"
+    if "avrupa" in ad or "europa" in ad:
+        return "AL", "Avrupa Ligi"
+    if "uluslar" in ad or "nations" in ad:
+        return "UL", "Uluslar Ligi"
+    return (m.lig or "?")[:2].upper(), (m.lig or "")
+
+
 def _tum_takim_formlari():
-    """{(lig_id, normalize_takim_adi): [son 5 maç]} — her lig kendi maçlarıyla."""
+    """{normalize_takim_adi: [son 3 maç]} — tüm turnuvalar, her maçın ligi işaretli."""
     if getattr(_g, "takim_formlari", None) is not None:
         return _g.takim_formlari
     sonuc = {}
@@ -4544,23 +4562,22 @@ def _tum_takim_formlari():
         for m in maclar:
             ev, dep = takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman)
             # Aynı maçın farklı kaynaklardan gelen kopyası iki kez sayılmasın
-            imza = (m.lig_id, m.baslangic.date(), frozenset((ev, dep)))
+            imza = (m.baslangic.date(), frozenset((ev, dep)))
             if imza in gorulen:
                 continue
             gorulen.add(imza)
             tarih = tr_saat_filter(m.baslangic, "%d.%m")
-            lig = LIG_KISA_ADLARI.get(m.lig_id, m.lig or "")
-            skor = f"{m.ev_skor}-{m.deplasman_skor}"
-            mac_metni = f"{m.ev_sahibi} {skor} {m.deplasman}"
+            kisa, lig = _lig_kisaltmasi(m)
+            mac_metni = f"{m.ev_sahibi} {m.ev_skor}-{m.deplasman_skor} {m.deplasman}"
             for k, atti, yedi in ((ev, m.ev_skor, m.deplasman_skor), (dep, m.deplasman_skor, m.ev_skor)):
-                liste = sonuc.setdefault((m.lig_id, k), [])
-                if len(liste) >= 5:
+                liste = sonuc.setdefault(k, [])
+                if len(liste) >= FORM_MAC_SAYISI:
                     continue
                 harf = "G" if atti > yedi else ("M" if atti < yedi else "B")
-                liste.append({"harf": harf, "mac": mac_metni, "alt": f"{tarih} · {lig}",
+                liste.append({"harf": harf, "lig": kisa, "mac": mac_metni, "alt": f"{tarih} · {lig}",
                               "aciklama": f"{tarih} {mac_metni} · {lig}"})
         for k in sonuc:
-            sonuc[k].reverse()   # en eski solda, en yeni sağda (puan durumundaki gibi)
+            sonuc[k].reverse()   # en eski solda, en yeni sağda
     except Exception as e:
         db.session.rollback()
         print("[takim-formu] hata:", e)
@@ -4569,8 +4586,8 @@ def _tum_takim_formlari():
 
 
 def takim_formu(takim_adi, lig_id=None):
-    """Takımın verilen ligdeki son 5 maçı."""
-    return _tum_takim_formlari().get((lig_id, takim_adi_normalize(takim_adi)), [])
+    """Takımın tüm turnuvalardaki son 3 maçı (lig_id geriye uyumluluk için, kullanılmıyor)."""
+    return _tum_takim_formlari().get(takim_adi_normalize(takim_adi), [])
 
 
 app.jinja_env.globals["takim_formu"] = takim_formu

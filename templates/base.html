@@ -229,10 +229,12 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--cim);
 .takim.ev{justify-content:flex-end; text-align:right}
 .takim-ad{display:flex; flex-direction:column; gap:4px; min-width:0}
 .takim.ev .takim-ad{align-items:flex-end}
-.mini-form{display:inline-flex; gap:2px}
-.mini-form span{width:15px; height:15px; border-radius:4px; font:700 9.5px/15px var(--yazi); text-align:center; color:#fff; cursor:pointer; position:relative}
-.mini-form span::before{content:""; position:absolute; inset:-6px -2px}   /* parmakla dokunmayı kolaylaştıran görünmez alan */
-.mini-form span.secili{outline:2px solid var(--murekkep); outline-offset:1px}
+.mini-form{display:inline-flex; gap:4px}
+.mf-kutu{display:flex; flex-direction:column; align-items:center; gap:1px}
+.mf-kutu small{font:700 8.5px/1 var(--yazi); color:var(--gri-acik); letter-spacing:.2px}
+.mini-form [data-mac]{width:18px; height:18px; border-radius:4px; font:700 10.5px/18px var(--yazi); text-align:center; color:#fff; cursor:pointer; position:relative}
+.mini-form [data-mac]::before{content:""; position:absolute; inset:-6px -3px}   /* parmakla dokunmayı kolaylaştıran görünmez alan */
+.mini-form [data-mac].secili{outline:2px solid var(--murekkep); outline-offset:1px}
 .form-balon{position:fixed; z-index:60; max-width:260px; padding:8px 11px; border-radius:10px; background:var(--murekkep); color:#fff;
   font:600 13.5px/1.3 var(--yazi); box-shadow:0 6px 20px rgba(0,0,0,.22); pointer-events:none; opacity:0; transform:translateY(4px); transition:opacity .12s, transform .12s}
 .form-balon.acik{opacity:1; transform:none}
