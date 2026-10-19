@@ -4549,7 +4549,7 @@ def _lig_kisaltmasi(m):
 
 
 def _tum_takim_formlari():
-    """{normalize_takim_adi: [son 3 maç]} — tüm turnuvalar, her maçın ligi işaretli."""
+    """{(lig_id, normalize_takim_adi): [son 3 maç]} — her lig kendi maçlarıyla."""
     if getattr(_g, "takim_formlari", None) is not None:
         return _g.takim_formlari
     sonuc = {}
@@ -4562,7 +4562,7 @@ def _tum_takim_formlari():
         for m in maclar:
             ev, dep = takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman)
             # Aynı maçın farklı kaynaklardan gelen kopyası iki kez sayılmasın
-            imza = (m.baslangic.date(), frozenset((ev, dep)))
+            imza = (m.lig_id, m.baslangic.date(), frozenset((ev, dep)))
             if imza in gorulen:
                 continue
             gorulen.add(imza)
@@ -4570,7 +4570,7 @@ def _tum_takim_formlari():
             kisa, lig = _lig_kisaltmasi(m)
             mac_metni = f"{m.ev_sahibi} {m.ev_skor}-{m.deplasman_skor} {m.deplasman}"
             for k, atti, yedi in ((ev, m.ev_skor, m.deplasman_skor), (dep, m.deplasman_skor, m.ev_skor)):
-                liste = sonuc.setdefault(k, [])
+                liste = sonuc.setdefault((m.lig_id, k), [])
                 if len(liste) >= FORM_MAC_SAYISI:
                     continue
                 harf = "G" if atti > yedi else ("M" if atti < yedi else "B")
@@ -4586,8 +4586,8 @@ def _tum_takim_formlari():
 
 
 def takim_formu(takim_adi, lig_id=None):
-    """Takımın tüm turnuvalardaki son 3 maçı (lig_id geriye uyumluluk için, kullanılmıyor)."""
-    return _tum_takim_formlari().get(takim_adi_normalize(takim_adi), [])
+    """Takımın o ligdeki son 3 maçı (Şampiyonlar Ligi maçında ŞL, lig maçında lig sonuçları)."""
+    return _tum_takim_formlari().get((lig_id, takim_adi_normalize(takim_adi)), [])
 
 
 app.jinja_env.globals["takim_formu"] = takim_formu
