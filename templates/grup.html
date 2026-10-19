@@ -111,7 +111,7 @@
 
         {% if mac.oynanabilir_mi() %}
           <div class="fikstur">
-            {{ p.takim_ev(mac) }}
+            {{ p.takim_ev(mac, form=True) }}
             <div class="skor">
               <input class="skor-girdi {{ 'dolu' if t else '' }}" type="number" min="0" max="20" inputmode="numeric"
                      name="ev_skor_{{ mac.id }}" value="{{ t.ev_skor if t else '' }}"
@@ -121,7 +121,7 @@
                      name="deplasman_skor_{{ mac.id }}" value="{{ t.deplasman_skor if t else '' }}"
                      aria-label="{{ mac.deplasman }} golü">
             </div>
-            {{ p.takim_dep(mac) }}
+            {{ p.takim_dep(mac, form=True) }}
           </div>
         {% else %}
           {{ p.fikstur(mac) }}

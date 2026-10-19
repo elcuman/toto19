@@ -13,7 +13,7 @@
   </div>
   <form method="POST">
     <div class="fikstur" style="margin:18px 0 22px">
-      {{ p.takim_ev(mac) }}
+      {{ p.takim_ev(mac, form=True) }}
       <div class="skor">
         <input class="skor-girdi {{ 'dolu' if tahmin else '' }}" type="number" min="0" max="20" inputmode="numeric" required
                name="ev_skor" value="{{ tahmin.ev_skor if tahmin else '' }}" aria-label="{{ mac.ev_sahibi }} golü">
@@ -21,7 +21,7 @@
         <input class="skor-girdi {{ 'dolu' if tahmin else '' }}" type="number" min="0" max="20" inputmode="numeric" required
                name="deplasman_skor" value="{{ tahmin.deplasman_skor if tahmin else '' }}" aria-label="{{ mac.deplasman }} golü">
       </div>
-      {{ p.takim_dep(mac) }}
+      {{ p.takim_dep(mac, form=True) }}
     </div>
     <button type="submit" class="btn btn-blok">{% if tahmin %}Tahmini güncelle{% else %}Tahmini kaydet{% endif %}</button>
     <p class="ipucu" style="margin:8px 0 0; text-align:center">Maç başlayınca tahminler kapanır.</p>

@@ -8,12 +8,21 @@
   {%- endif -%}
 {%- endmacro %}
 
-{% macro takim_ev(mac) -%}
-  <div class="takim ev"><span>{{ mac.ev_sahibi }}</span>{{ logo(mac.ev_sahibi, mac.ev_logo) }}</div>
+{% macro mini_form(ad) -%}
+  {%- set fm = takim_formu(ad) -%}
+  {%- if fm -%}
+  <span class="mini-form" aria-label="Son {{ fm|length }} maç: {% for f in fm %}{{ {'G':'galibiyet','B':'beraberlik','M':'mağlubiyet'}[f.harf] }}{% if not loop.last %}, {% endif %}{% endfor %}">
+    {%- for f in fm %}<span class="f-{{ f.harf }}" title="{{ f.aciklama }}">{{ f.harf }}</span>{% endfor -%}
+  </span>
+  {%- endif -%}
 {%- endmacro %}
 
-{% macro takim_dep(mac) -%}
-  <div class="takim dep">{{ logo(mac.deplasman, mac.deplasman_logo) }}<span>{{ mac.deplasman }}</span></div>
+{% macro takim_ev(mac, form=False) -%}
+  <div class="takim ev"><span class="takim-ad"><span>{{ mac.ev_sahibi }}</span>{% if form %}{{ mini_form(mac.ev_sahibi) }}{% endif %}</span>{{ logo(mac.ev_sahibi, mac.ev_logo) }}</div>
+{%- endmacro %}
+
+{% macro takim_dep(mac, form=False) -%}
+  <div class="takim dep">{{ logo(mac.deplasman, mac.deplasman_logo) }}<span class="takim-ad"><span>{{ mac.deplasman }}</span>{% if form %}{{ mini_form(mac.deplasman) }}{% endif %}</span></div>
 {%- endmacro %}
 
 {# Skoru belli olan / oynanmamış maç için salt-okunur fikstür #}

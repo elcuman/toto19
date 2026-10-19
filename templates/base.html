@@ -227,6 +227,11 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--cim);
 .takim{display:flex; align-items:center; gap:10px; font-weight:600; font-size:16px; line-height:1.2; min-width:0}
 .takim span{overflow-wrap:anywhere}
 .takim.ev{justify-content:flex-end; text-align:right}
+.takim-ad{display:flex; flex-direction:column; gap:4px; min-width:0}
+.takim.ev .takim-ad{align-items:flex-end}
+.mini-form{display:inline-flex; gap:2px}
+.mini-form span{width:15px; height:15px; border-radius:4px; font:700 9.5px/15px var(--yazi); text-align:center; color:#fff; cursor:default}
+.mini-form .f-G{background:var(--cim)} .mini-form .f-B{background:var(--gri-acik)} .mini-form .f-M{background:var(--kirmizi)}
 .logo{width:30px; height:30px; object-fit:contain; flex:none; margin:0}
 .skor{display:flex; align-items:center; gap:6px}
 .skor-kutu, .skor-girdi{
@@ -248,6 +253,7 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--cim);
   .takim{flex-direction:column; gap:6px; font-size:14px; text-align:center}
   .takim.ev{flex-direction:column-reverse; text-align:center}
   .takim.ev, .takim.dep{justify-content:center}
+  .takim .takim-ad, .takim.ev .takim-ad{align-items:center}
   .skor-kutu, .skor-girdi{width:44px; height:48px; font-size:28px}
 }
 

@@ -4363,6 +4363,8 @@ def kral_karti_verisi(grup_id, bas):
         return None
     devam = utc_now_naive() < son
     lider = siralama[0]
+    if not lider["points"]:
+        return None   # kimse puan almadıysa kral yok
     krallar = [r["user"].kullanici_adi for r in siralama if r["points"] == lider["points"]]
     if len(krallar) == 1:
         kral_ad = krallar[0]
@@ -4518,6 +4520,56 @@ def takim_logo_vekil(kaynak, yol):
     yanit.headers["Content-Type"] = "image/png"
     yanit.headers["Cache-Control"] = "public, max-age=604800, immutable"
     return yanit
+
+
+# ------------------------------------------------------------
+# Tahmin ekranında takımların son 5 maçı (G/B/M). Tüm turnuvalardaki
+# (Süper Lig, Şampiyonlar Ligi, Avrupa kupaları) biten maçlardan, en yenisi
+# sağda olacak şekilde. İstek başına bir kez hesaplanır.
+# ------------------------------------------------------------
+from flask import g as _g
+
+
+def _tum_takim_formlari():
+    if getattr(_g, "takim_formlari", None) is not None:
+        return _g.takim_formlari
+    sonuc = {}
+    try:
+        sinir = utc_now_naive() - timedelta(days=240)
+        maclar = (Mac.query.filter(Mac.durum == "bitti", Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
+                                   Mac.baslangic.isnot(None), Mac.baslangic >= sinir)
+                  .order_by(Mac.baslangic.desc()).limit(1500).all())
+        gorulen = set()
+        for m in maclar:
+            ev, dep = takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman)
+            # Aynı maçın farklı kaynaklardan gelen kopyası iki kez sayılmasın
+            imza = (m.baslangic.date(), frozenset((ev, dep)))
+            if imza in gorulen:
+                continue
+            gorulen.add(imza)
+            tarih = tr_saat_filter(m.baslangic, "%d.%m")
+            lig = LIG_KISA_ADLARI.get(m.lig_id, m.lig or "") if "LIG_KISA_ADLARI" in globals() else (m.lig or "")
+            for k, rakip, atti, yedi, yer in ((ev, m.deplasman, m.ev_skor, m.deplasman_skor, "E"),
+                                               (dep, m.ev_sahibi, m.deplasman_skor, m.ev_skor, "D")):
+                liste = sonuc.setdefault(k, [])
+                if len(liste) >= 5:
+                    continue
+                harf = "G" if atti > yedi else ("M" if atti < yedi else "B")
+                liste.append({"harf": harf, "aciklama": f"{tarih} {rakip} ({'iç saha' if yer == 'E' else 'deplasman'}) {atti}-{yedi} · {lig}"})
+        for k in sonuc:
+            sonuc[k].reverse()   # en eski solda, en yeni sağda (puan durumundaki gibi)
+    except Exception as e:
+        db.session.rollback()
+        print("[takim-formu] hata:", e)
+    _g.takim_formlari = sonuc
+    return sonuc
+
+
+def takim_formu(takim_adi):
+    return _tum_takim_formlari().get(takim_adi_normalize(takim_adi), [])
+
+
+app.jinja_env.globals["takim_formu"] = takim_formu
 
 
 @app.route("/puan-durumu")
