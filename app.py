@@ -2204,6 +2204,24 @@ def ceza_var(grup_id, mac_id, kullanici_id):
 app.jinja_env.globals["ceza_var"] = ceza_var
 
 
+def kullanici_ceza_maclari(kullanici_id):
+    """Kullanıcının herhangi bir grubunda ceza yediği maç id'leri (istek başına bir kez)."""
+    onbellek = getattr(_g, "kullanici_ceza_maclari", None)
+    if onbellek is None:
+        onbellek = _g.kullanici_ceza_maclari = {}
+    if kullanici_id not in onbellek:
+        try:
+            onbellek[kullanici_id] = {m for (m,) in db.session.query(TahminCezasi.mac_id)
+                                      .filter(TahminCezasi.kullanici_id == kullanici_id).distinct()}
+        except Exception:
+            db.session.rollback()
+            onbellek[kullanici_id] = set()
+    return onbellek[kullanici_id]
+
+
+app.jinja_env.globals["kullanici_ceza_maclari"] = kullanici_ceza_maclari
+
+
 def ceza_toplamlari(grup_id=None, kullanici_id=None, bas=None, son=None, sadece_biten=False):
     """{kullanici_id: toplam ceza} — puan toplamlarına eklenir."""
     q = db.session.query(TahminCezasi.kullanici_id, db.func.coalesce(db.func.sum(TahminCezasi.puan), 0))
