@@ -31,7 +31,7 @@
             {% if mt %}
               <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong> {{ p.puan_etiketi(mt.puan) }}</span>
             {% else %}
-              <span class="sessiz">Girmedi</span>
+              <span class="sessiz">Girmedi{% if ceza_var(grup.id, mac.id, member.kullanici_id) %} <span class="etiket etiket-ceza">−1</span>{% endif %}</span>
             {% endif %}
           </li>
         {% endfor %}

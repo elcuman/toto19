@@ -2179,6 +2179,31 @@ def tahmin_cezalarini_guncelle(tahminler=None, yz_id=None):
         db.session.commit()
 
 
+from flask import g as _g
+
+
+def ceza_kumesi(grup_id):
+    """Şablonlar için: bu gruptaki (mac_id, kullanici_id) ceza çiftleri (istek başına bir kez)."""
+    onbellek = getattr(_g, "ceza_kumeleri", None)
+    if onbellek is None:
+        onbellek = _g.ceza_kumeleri = {}
+    if grup_id not in onbellek:
+        try:
+            onbellek[grup_id] = {(m, k) for m, k in db.session.query(TahminCezasi.mac_id, TahminCezasi.kullanici_id)
+                                 .filter(TahminCezasi.grup_id == grup_id).all()}
+        except Exception:
+            db.session.rollback()
+            onbellek[grup_id] = set()
+    return onbellek[grup_id]
+
+
+def ceza_var(grup_id, mac_id, kullanici_id):
+    return (mac_id, kullanici_id) in ceza_kumesi(grup_id)
+
+
+app.jinja_env.globals["ceza_var"] = ceza_var
+
+
 def ceza_toplamlari(grup_id=None, kullanici_id=None, bas=None, son=None, sadece_biten=False):
     """{kullanici_id: toplam ceza} — puan toplamlarına eklenir."""
     q = db.session.query(TahminCezasi.kullanici_id, db.func.coalesce(db.func.sum(TahminCezasi.puan), 0))
