@@ -45,6 +45,7 @@
 {# Puan etiketi (5 = tam isabet, 3 = sonuç) #}
 {% macro puan_etiketi(puan) -%}
   {%- if puan == 10 -%}<span class="etiket etiket-tam">Tek bilen 🎯 +10</span>
+  {%- elif puan == 7 -%}<span class="etiket etiket-sonuc">Sonucu tek bilen 🎯 +7</span>
   {%- elif puan == 5 -%}<span class="etiket etiket-tam">Tam isabet, +5</span>
   {%- elif puan == 3 -%}<span class="etiket etiket-sonuc">Sonuç tuttu, +3</span>
   {%- elif puan -%}<span class="etiket etiket-sonuc">+{{ puan }}</span>

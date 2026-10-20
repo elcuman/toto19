@@ -1999,6 +1999,10 @@ SONUC_PUANI = 3
 # Robot Ziya hariç yalnızca bir kişi tam bilirse o kişi 5 yerine 10 puan alır.
 TEK_BILEN_PUANI = 10
 TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)    # 20.10.2026 12:00 Türkiye saati
+# Tek sonuç bilen kuralı: bir grupta maçın sonucunu (kazanan / beraberlik) Robot Ziya hariç
+# yalnızca bir kişi bildiyse ve skoru tam tutmadıysa 3 yerine 7 puan alır.
+TEK_SONUC_PUANI = 7
+TEK_SONUC_BASLANGIC_UTC = datetime(2026, 10, 20, 16, 0)   # 20.10.2026 19:00 Türkiye saati
 # Tahmin girmeme cezası: bu tarihten sonra başlayan ve biten maçlarda tahmini olmayan
 # üyeden (Robot Ziya hariç, maçtan önce gruba katılmış olanlar) 1 puan düşülür.
 TAHMIN_YOK_CEZASI = -1
@@ -2058,7 +2062,7 @@ def recalculate_all_points():
 
     predictions = Tahmin.query.all()
     changed = False
-    yeni_puanlar, tam_bilenler = {}, {}
+    yeni_puanlar, tam_bilenler, sonuc_bilenler = {}, {}, {}
     for tahmin in predictions:
         mac = tahmin.mac
         if not mac or not mac.bitti_mi() or mac.ev_skor is None or mac.deplasman_skor is None:
@@ -2080,6 +2084,8 @@ def recalculate_all_points():
         yeni_puanlar[tahmin.id] = new_points
         if new_points == TAM_SKOR_PUANI and mac.baslangic and mac.baslangic >= TEK_BILEN_BASLANGIC_UTC:
             tam_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
+        if new_points in (TAM_SKOR_PUANI, SONUC_PUANI) and mac.baslangic and mac.baslangic >= TEK_SONUC_BASLANGIC_UTC:
+            sonuc_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
 
     # Tek bilen kuralı: bir grupta skoru Robot Ziya dışında yalnızca bir kişi tam bildiyse 10 puan
     yz = yz_kullanici_getir(olustur=False)
@@ -2088,6 +2094,12 @@ def recalculate_all_points():
         insanlar = [t for t in liste if t.kullanici_id != yz_id]
         if len(insanlar) == 1:
             yeni_puanlar[insanlar[0].id] = TEK_BILEN_PUANI
+    # Tek sonuç bilen: sonucu (tam skor dahil) Ziya hariç tek kişi bildiyse ve o kişi
+    # skoru tam tutmadıysa 7 puan (tam tutturduysa zaten yukarıda 10 aldı)
+    for liste in sonuc_bilenler.values():
+        insanlar = [t for t in liste if t.kullanici_id != yz_id]
+        if len(insanlar) == 1 and yeni_puanlar.get(insanlar[0].id) == SONUC_PUANI:
+            yeni_puanlar[insanlar[0].id] = TEK_SONUC_PUANI
 
     for tahmin in predictions:
         if tahmin.id in yeni_puanlar and tahmin.puan != yeni_puanlar[tahmin.id]:
