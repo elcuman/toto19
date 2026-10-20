@@ -404,7 +404,7 @@ tr:last-child td{border-bottom:0}
 
 {% block scripts %}{% endblock %}
 {% if current_user.is_authenticated and ep in ('dashboard', 'grup') %}
-<dialog class="duyuru-popup" id="duyuruTekBilen" aria-labelledby="duyuruBaslik">
+<dialog class="duyuru-popup" id="duyuruTekBilen" data-anahtar="duyuru_tek_bilen_10" aria-labelledby="duyuruBaslik">
   <div class="duyuru-ic">
     <div class="duyuru-rozet" aria-hidden="true">10</div>
     <h2 id="duyuruBaslik">Yeni kural: Tek bilen 10 puan alır! 🎯</h2>
@@ -418,6 +418,21 @@ tr:last-child td{border-bottom:0}
     <button type="button" class="btn btn-blok" data-kapat>Anladım</button>
   </div>
 </dialog>
+<dialog class="duyuru-popup" id="duyuruCeza" data-anahtar="duyuru_tahmin_yok_ceza" aria-labelledby="duyuruCezaBaslik">
+  <div class="duyuru-ic">
+    <div class="duyuru-rozet kirmizi" aria-hidden="true">−1</div>
+    <h2 id="duyuruCezaBaslik">Yeni kural: Tahmin girmeyene −1 puan! ⏰</h2>
+    <p>Bundan sonra tahmin girmediğin her maç için puanından <strong>1 puan düşülür</strong>.</p>
+    <ul>
+      <li>Ceza, maç bitip sonuç geldiğinde yazılır.</li>
+      <li>20 Ekim 12:00'dan sonra başlayan maçlarda geçerli.</li>
+      <li>Gruba maç başladıktan sonra katıldıysan o maç için ceza yok.</li>
+      <li>Robot Ziya zaten her maça tahmin giriyor 🤖</li>
+    </ul>
+    <p class="duyuru-alt">Yani tahmin girmeyi unutma; en kötü ihtimalle 0 alırsın, −1 değil 😉</p>
+    <button type="button" class="btn btn-blok" data-kapat>Anladım</button>
+  </div>
+</dialog>
 <style>
 .duyuru-popup{border:0; padding:0; background:transparent; width:100%; max-width:min(400px, calc(100vw - 32px))}
 .duyuru-popup::backdrop{background:rgba(10,20,15,.65)}
@@ -425,6 +440,7 @@ tr:last-child td{border-bottom:0}
 @keyframes duyuruGir{from{opacity:0; transform:translateY(16px) scale(.97)} to{opacity:1; transform:none}}
 .duyuru-ic{background:#fff; border-radius:20px; padding:22px 20px 18px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.3)}
 .duyuru-rozet{width:64px; height:64px; margin:0 auto 10px; border-radius:50%; background:var(--sari); color:var(--murekkep); font:700 32px/64px var(--baslik)}
+.duyuru-rozet.kirmizi{background:var(--kirmizi); color:#fff}
 .duyuru-ic h2{font-size:24px; margin-bottom:8px}
 .duyuru-ic ul{text-align:left; margin:10px 0; padding-left:20px; color:var(--gri); font-size:14.5px}
 .duyuru-ic li{margin-bottom:4px}
@@ -432,17 +448,26 @@ tr:last-child td{border-bottom:0}
 </style>
 <script>
 (function(){
-  var d = document.getElementById('duyuruTekBilen'); if (!d || !d.showModal) return;
-  var anahtar = 'duyuru_tek_bilen_10';
-  try { if (localStorage.getItem(anahtar) === '1') return; } catch (e) { return; }
-  function kapat(){ try { localStorage.setItem(anahtar, '1'); } catch (e) {} d.close(); }
-  d.querySelectorAll('[data-kapat]').forEach(function(b){ b.addEventListener('click', kapat); });
-  d.addEventListener('click', function(e){ if (e.target === d) kapat(); });
-  d.addEventListener('cancel', function(){ try { localStorage.setItem(anahtar, '1'); } catch (e) {} });
+  /* Duyurular sırayla, her biri kişi başına bir kez gösterilir (kral kartı açıksa o kapanınca) */
+  var kuyruk = [].slice.call(document.querySelectorAll('dialog.duyuru-popup')).filter(function(d){
+    if (!d.showModal) return false;
+    try { return localStorage.getItem(d.dataset.anahtar) !== '1'; } catch (e) { return false; }
+  });
+  if (!kuyruk.length) return;
+  function sonraki(){
+    var d = kuyruk.shift(); if (!d) return;
+    function isaretle(){ try { localStorage.setItem(d.dataset.anahtar, '1'); } catch (e) {} }
+    function kapat(){ isaretle(); d.close(); }
+    d.querySelectorAll('[data-kapat]').forEach(function(b){ b.addEventListener('click', kapat); });
+    d.addEventListener('click', function(e){ if (e.target === d) kapat(); });
+    d.addEventListener('cancel', isaretle);
+    d.addEventListener('close', function(){ setTimeout(sonraki, 250); }, {once: true});
+    d.showModal();
+  }
   setTimeout(function(){
     var kral = document.getElementById('kralPopup');
-    if (kral && kral.open) kral.addEventListener('close', function(){ setTimeout(function(){ d.showModal(); }, 250); }, {once: true});
-    else d.showModal();
+    if (kral && kral.open) kral.addEventListener('close', function(){ setTimeout(sonraki, 250); }, {once: true});
+    else sonraki();
   }, 900);
 })();
 </script>

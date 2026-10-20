@@ -839,6 +839,18 @@ class Haber(db.Model):
     eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class TahminCezasi(db.Model):
+    """Tahmin girilmeyen maç için ceza puanı (grup bazında, Robot Ziya hariç)."""
+    __tablename__ = "tahmin_cezalari"
+    id = db.Column(db.Integer, primary_key=True)
+    grup_id = db.Column(db.Integer, db.ForeignKey("gruplar.id", ondelete="CASCADE"), nullable=False, index=True)
+    mac_id = db.Column(db.Integer, db.ForeignKey("maclar.id", ondelete="CASCADE"), nullable=False, index=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    puan = db.Column(db.Integer, nullable=False, default=-1)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    __table_args__ = (db.UniqueConstraint("grup_id", "mac_id", "kullanici_id", name="uq_ceza_grup_mac_kullanici"),)
+
+
 class GeriBildirim(db.Model):
     """Kullanıcıların yöneticiye ilettiği fikir, öneri ve hata bildirimleri."""
     __tablename__ = "geri_bildirimler"
@@ -1987,6 +1999,10 @@ SONUC_PUANI = 3
 # Robot Ziya hariç yalnızca bir kişi tam bilirse o kişi 5 yerine 10 puan alır.
 TEK_BILEN_PUANI = 10
 TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)    # 20.10.2026 12:00 Türkiye saati
+# Tahmin girmeme cezası: bu tarihten sonra başlayan ve biten maçlarda tahmini olmayan
+# üyeden (Robot Ziya hariç, maçtan önce gruba katılmış olanlar) 1 puan düşülür.
+TAHMIN_YOK_CEZASI = -1
+TAHMIN_YOK_CEZA_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)   # 20.10.2026 12:00 Türkiye saati
 
 
 def calculate_points(prediction_home, prediction_away, actual_home, actual_away):
@@ -2079,6 +2095,68 @@ def recalculate_all_points():
             changed = True
     if changed:
         db.session.commit()
+    try:
+        tahmin_cezalarini_guncelle(predictions, yz_id)
+    except Exception as e:
+        db.session.rollback()
+        print("[ceza] hata:", e)
+
+
+def tahmin_cezalarini_guncelle(tahminler=None, yz_id=None):
+    """Biten maçlarda tahmin girmeyen üyelere -1 ceza yazar; sonradan tahmini
+    bulunan (ya da maçı artık bitmiş sayılmayan) kayıtların cezasını kaldırır."""
+    maclar = Mac.query.filter(
+        Mac.durum == "bitti", Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
+        Mac.baslangic.isnot(None), Mac.baslangic >= TAHMIN_YOK_CEZA_BASLANGIC_UTC,
+        Mac.lig_id.in_(gosterilecek_lig_id_listesi()), super_lig_takim_filtresi(),
+    ).all()
+    mac_map = {m.id: m for m in maclar}
+    if tahminler is None:
+        tahminler = Tahmin.query.filter(Tahmin.mac_id.in_(list(mac_map) or [-1])).all()
+    var_olan = {(t.grup_id, t.mac_id, t.kullanici_id) for t in tahminler if t.mac_id in mac_map}
+    gerekli = set()
+    if mac_map:
+        uyelikler = GrupUyeligi.query.all()
+        for m in maclar:
+            for u in uyelikler:
+                if u.kullanici_id == yz_id:
+                    continue
+                if u.katilma_tarihi and u.katilma_tarihi > m.baslangic:
+                    continue   # maçtan sonra katılan cezalandırılmaz
+                if (u.grup_id, m.id, u.kullanici_id) not in var_olan:
+                    gerekli.add((u.grup_id, m.id, u.kullanici_id))
+    mevcut = {(c.grup_id, c.mac_id, c.kullanici_id): c for c in TahminCezasi.query.all()}
+    degisti = False
+    for anahtar in gerekli - set(mevcut):
+        g, mid, kid = anahtar
+        db.session.add(TahminCezasi(grup_id=g, mac_id=mid, kullanici_id=kid, puan=TAHMIN_YOK_CEZASI))
+        degisti = True
+    for anahtar, c in mevcut.items():
+        if anahtar not in gerekli:
+            db.session.delete(c)
+            degisti = True
+    if degisti:
+        db.session.commit()
+
+
+def ceza_toplamlari(grup_id=None, kullanici_id=None, bas=None, son=None, sadece_biten=False):
+    """{kullanici_id: toplam ceza} — puan toplamlarına eklenir."""
+    q = db.session.query(TahminCezasi.kullanici_id, db.func.coalesce(db.func.sum(TahminCezasi.puan), 0))
+    if bas is not None or son is not None:
+        q = q.join(Mac, Mac.id == TahminCezasi.mac_id)
+        if bas is not None:
+            q = q.filter(Mac.baslangic >= bas)
+        if son is not None:
+            q = q.filter(Mac.baslangic < son)
+    if grup_id is not None:
+        q = q.filter(TahminCezasi.grup_id == grup_id)
+    if kullanici_id is not None:
+        q = q.filter(TahminCezasi.kullanici_id == kullanici_id)
+    try:
+        return {k: int(v) for k, v in q.group_by(TahminCezasi.kullanici_id).all()}
+    except Exception:
+        db.session.rollback()
+        return {}
 
 
 # ============================================================
@@ -2123,6 +2201,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE haberler ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sifre_talepleri ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE geri_bildirimler ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE tahmin_cezalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
@@ -2696,7 +2775,8 @@ def dashboard():
 
     tahminler = {t.mac_id: t for t in Tahmin.query.filter_by(kullanici_id=current_user.id).all()}
     gruplar = [u.grup for u in GrupUyeligi.query.filter_by(kullanici_id=current_user.id).all()]
-    toplam_puan = db.session.query(db.func.coalesce(db.func.sum(Tahmin.puan), 0)).filter(Tahmin.kullanici_id == current_user.id).scalar() or 0
+    toplam_puan = (db.session.query(db.func.coalesce(db.func.sum(Tahmin.puan), 0)).filter(Tahmin.kullanici_id == current_user.id).scalar() or 0) \
+        + ceza_toplamlari(kullanici_id=current_user.id).get(current_user.id, 0)
     toplam_tahmin = Tahmin.query.filter_by(kullanici_id=current_user.id).count()
 
     return render_template(
@@ -2919,6 +2999,10 @@ def haftalik_liderlik_hesapla(grup_id):
         .all()
     )
 
+    cezalar = (db.session.query(Mac.baslangic, TahminCezasi.kullanici_id, TahminCezasi.puan)
+               .join(Mac, TahminCezasi.mac_id == Mac.id)
+               .filter(TahminCezasi.grup_id == grup_id, Mac.baslangic.isnot(None)).all())
+    kayitlar = list(kayitlar) + list(cezalar)
     haftalar = {}
     for baslangic, kullanici_id, puan in kayitlar:
         anahtar = hafta_anahtari(baslangic)
@@ -2976,6 +3060,9 @@ def su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu):
     for uid, puan in kayitlar:
         if uid in puanlar:
             puanlar[uid] += (puan or 0)
+    for uid, ceza in ceza_toplamlari(grup_id=grup_id, bas=hafta_basi, son=hafta_sonu).items():
+        if uid in puanlar:
+            puanlar[uid] += ceza
 
     return sorted(
         [{"user": kullanici_map[uid], "points": puan} for uid, puan in puanlar.items()],
@@ -3098,6 +3185,9 @@ def grup(grup_id):
         toplam_puanlar[t.kullanici_id] = toplam_puanlar.get(t.kullanici_id, 0) + (t.puan or 0)
         if t.kullanici_id == current_user.id:
             tahmin_dict[t.mac_id] = t
+
+    for uid, ceza in ceza_toplamlari(grup_id=grup_id).items():
+        toplam_puanlar[uid] = toplam_puanlar.get(uid, 0) + ceza
 
     # Sezonluk / tüm zamanlar genel sıralama (kümülatif toplam puan)
     leaderboard = sorted([
@@ -3395,7 +3485,8 @@ def grup_gecmis_maclar(grup_id):
 @app.route("/profil")
 @login_required
 def profil():
-    total_points = db.session.query(db.func.coalesce(db.func.sum(Tahmin.puan), 0)).filter(Tahmin.kullanici_id == current_user.id).scalar() or 0
+    total_points = (db.session.query(db.func.coalesce(db.func.sum(Tahmin.puan), 0)).filter(Tahmin.kullanici_id == current_user.id).scalar() or 0) \
+        + ceza_toplamlari(kullanici_id=current_user.id).get(current_user.id, 0)
     prediction_count = Tahmin.query.filter_by(kullanici_id=current_user.id).count()
     return render_template("profil.html", toplam_puan=total_points, toplam_tahmin=prediction_count)
 
@@ -4075,6 +4166,7 @@ def admin_kullanici_sil(kullanici_id):
         return redirect(url_for("admin_kullanicilar"))
 
     Tahmin.query.filter_by(kullanici_id=kullanici.id).delete()
+    TahminCezasi.query.filter_by(kullanici_id=kullanici.id).delete()
     Mesaj.query.filter_by(kullanici_id=kullanici.id).delete()
     SohbetOkuma.query.filter_by(kullanici_id=kullanici.id).delete()
     GrupUyeligi.query.filter_by(kullanici_id=kullanici.id).delete()
@@ -4330,6 +4422,8 @@ def grup_sezon_siralamasi(grup_id):
         db.session.query(Tahmin.kullanici_id, db.func.coalesce(db.func.sum(Tahmin.puan), 0))
         .filter(Tahmin.grup_id == grup_id).group_by(Tahmin.kullanici_id).all()
     )
+    for uid, ceza in ceza_toplamlari(grup_id=grup_id).items():
+        toplam[uid] = toplam.get(uid, 0) + ceza
     return sorted(
         [{"user": m.kullanici, "points": int(toplam.get(m.kullanici_id, 0))} for m in members],
         key=lambda x: x["points"], reverse=True,
