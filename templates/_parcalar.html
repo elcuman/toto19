@@ -212,11 +212,11 @@
   <div class="anket-ust"><span class="anket-etiket">📊 Anket</span>
     <span class="kucuk sessiz">{% if a.acik %}{{ a.bitis | tr_saat("%d.%m %H:%M") }}'e kadar{% else %}Sona erdi{% endif %} · {{ a.toplam }} oy</span></div>
   <h3>{{ a.soru }}</h3>
-  {% if a.acik and a.benim is none %}
-  <div class="anket-secenekler">
-    {% for sec in a.secenekler %}<button type="button" class="btn btn-ikincil" data-secenek="{{ loop.index0 }}">{{ sec }}</button>{% endfor %}
+  {% if a.acik %}
+  <div class="anket-secenekler" {% if a.benim is not none %}hidden{% endif %}>
+    {% for sec in a.secenekler %}<button type="button" class="btn btn-ikincil {{ 'secili' if a.benim == loop.index0 else '' }}" data-secenek="{{ loop.index0 }}">{{ sec }}</button>{% endfor %}
   </div>
-  <p class="kucuk sessiz anket-not">Açık oylama: oyun ve adın gruptakilere görünür, sonradan değiştirilemez.</p>
+  <p class="kucuk sessiz anket-not" {% if a.benim is not none %}hidden{% endif %}>Açık oylama: oyun ve adın gruptakilere görünür. {{ a.bitis | tr_saat("%d.%m %H:%M") }}'e kadar oyunu değiştirebilirsin.</p>
   {% endif %}
   <div class="anket-sonuc" {% if a.acik and a.benim is none %}hidden{% endif %}>
     {% for r in a.satirlar %}
@@ -226,5 +226,6 @@
     </div>
     {% endfor %}
   </div>
+  {% if a.acik %}<button type="button" class="anket-degistir" {% if a.benim is none %}hidden{% endif %}>Oyumu değiştir</button>{% endif %}
 </section>
 {%- endmacro %}

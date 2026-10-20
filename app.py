@@ -2758,7 +2758,7 @@ def admin_ziyaretler():
 
 
 # ------------------------------------------------------------
-# Anketler: açık oylama (kim neye oy verdi görünür), tek oy, değiştirilemez.
+# Anketler: açık oylama (kim neye oy verdi görünür), kişi başı tek oy; anket bitene kadar değiştirilebilir.
 # ------------------------------------------------------------
 ANKET_SONUC_GOSTERIM = timedelta(days=3)   # bittikten sonra sonuç bu kadar süre görünür
 
@@ -2836,12 +2836,16 @@ def anket_oy(anket_id):
         return jsonify({"hata": "Anket sona erdi.", "ozet": _anket_json(anket)}), 400
     if yz_mi(current_user) or not (0 <= secenek < len(anket.secenek_listesi())):
         return jsonify({"hata": "Geçersiz seçenek."}), 400
-    if not AnketOyu.query.filter_by(anket_id=anket.id, kullanici_id=current_user.id).first():
+    # Anket açık olduğu sürece oy değiştirilebilir
+    oy = AnketOyu.query.filter_by(anket_id=anket.id, kullanici_id=current_user.id).first()
+    if oy:
+        oy.secenek, oy.zaman = secenek, datetime.utcnow()
+    else:
         db.session.add(AnketOyu(anket_id=anket.id, kullanici_id=current_user.id, secenek=secenek))
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
     if request.is_json:
         return jsonify({"ozet": _anket_json(anket)})
     return redirect(request.referrer or url_for("dashboard"))
