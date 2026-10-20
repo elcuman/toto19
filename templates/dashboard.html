@@ -16,6 +16,8 @@
   </div>
 </div>
 
+{% for a in anketler or [] %}{{ p.anket_kutusu(a) }}{% endfor %}
+
 <div class="serit">
   <div><div class="deger">{{ toplam_puan }}</div><div class="ad">Toplam puan</div></div>
   <div><div class="deger">{{ toplam_tahmin }}</div><div class="ad">Tahmin</div></div>

@@ -404,6 +404,18 @@ tr:last-child td{border-bottom:0}
 
 {% block scripts %}{% endblock %}
 {% if current_user.is_authenticated and ep in ('dashboard', 'grup') %}
+{% if anketler %}
+{% import "_parcalar.html" as _pp with context %}
+{% for a in anketler if a.acik and a.benim is none %}
+<dialog class="duyuru-popup anket-popup" data-anahtar="anket_popup_{{ a.id }}" aria-label="Anket">
+  <div class="duyuru-ic">
+    <button type="button" class="anket-popup-kapat" data-kapat aria-label="Kapat">×</button>
+    {{ _pp.anket_kutusu(a) }}
+    <button type="button" class="btn btn-ikincil btn-blok" data-kapat style="margin-top:10px">Kapat</button>
+  </div>
+</dialog>
+{% endfor %}
+{% endif %}
 <dialog class="duyuru-popup" id="duyuruTekBilen" data-anahtar="duyuru_tek_bilen_10" aria-labelledby="duyuruBaslik">
   <div class="duyuru-ic">
     <div class="duyuru-rozet" aria-hidden="true">10</div>
@@ -433,11 +445,11 @@ tr:last-child td{border-bottom:0}
     <button type="button" class="btn btn-blok" data-kapat>Anladım</button>
   </div>
 </dialog>
-<dialog class="duyuru-popup" id="duyuruTekSonuc" data-anahtar="duyuru_tek_sonuc_7" aria-labelledby="duyuruTekSonucBaslik">
+<dialog class="duyuru-popup" id="duyuruTekSonuc" data-anahtar="duyuru_tek_sonuc_8" aria-labelledby="duyuruTekSonucBaslik">
   <div class="duyuru-ic">
-    <div class="duyuru-rozet" aria-hidden="true">7</div>
-    <h2 id="duyuruTekSonucBaslik">Yeni kural: Sonucu tek bilen 7 puan alır! 🎯</h2>
-    <p>Maçın kazananını ya da beraberliğini grubunda <strong>tek sen</strong> bilirsen, skoru tam tutturamasan da <strong>3 yerine 7 puan</strong> alırsın.</p>
+    <div class="duyuru-rozet" aria-hidden="true">8</div>
+    <h2 id="duyuruTekSonucBaslik">Yeni kural: Sonucu tek bilen 8 puan alır! 🎯</h2>
+    <p>Maçın kazananını ya da beraberliğini grubunda <strong>tek sen</strong> bilirsen, skoru tam tutturamasan da <strong>3 yerine 8 puan</strong> alırsın.</p>
     <ul>
       <li>Skoru tek sen tam bilirsen yine 10 puan.</li>
       <li>Robot Ziya sayılmaz.</li>
@@ -455,6 +467,25 @@ tr:last-child td{border-bottom:0}
 .duyuru-ic{background:#fff; border-radius:20px; padding:22px 20px 18px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.3)}
 .duyuru-rozet{width:64px; height:64px; margin:0 auto 10px; border-radius:50%; background:var(--sari); color:var(--murekkep); font:700 32px/64px var(--baslik)}
 .duyuru-rozet.kirmizi{background:var(--kirmizi); color:#fff}
+.anket-kutu{background:#fff; border:1px solid var(--cizgi); border-radius:var(--r-buyuk); padding:14px 16px; margin:0 0 16px; text-align:left}
+.duyuru-ic .anket-kutu{border:0; padding:0; margin:0}
+.anket-ust{display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px}
+.anket-etiket{font:700 13px var(--yazi); color:var(--cim-koyu); background:var(--cim-acik); padding:3px 9px; border-radius:999px}
+.anket-kutu h3{font-size:19px; margin:4px 0 12px; line-height:1.25}
+.anket-secenekler{display:flex; gap:10px; flex-wrap:wrap}
+.anket-secenekler .btn{flex:1; min-width:110px; font-size:16px}
+.anket-not{margin:8px 0 0}
+.anket-satir{margin-bottom:10px}
+.anket-cubuk{position:relative; height:38px; border-radius:10px; background:var(--zemin); overflow:hidden; display:flex; align-items:center; justify-content:space-between; padding:0 12px}
+.anket-cubuk span{position:absolute; left:0; top:0; bottom:0; background:var(--cim-acik); transition:width .5s ease}
+.anket-satir.benim .anket-cubuk span{background:#BFE3CF}
+.anket-cubuk b, .anket-cubuk em{position:relative; font-style:normal}
+.anket-cubuk em{font-weight:700; font-family:var(--baslik); font-size:17px}
+.anket-isimler{font-size:13px; color:var(--gri); margin:4px 2px 0}
+.anket-popup-kapat{position:absolute; top:10px; right:10px; width:36px; height:36px; border:0; border-radius:50%; background:var(--zemin); font-size:22px; cursor:pointer}
+.anket-popup .duyuru-ic{position:relative; padding-top:18px}
+.anket-popup .anket-ust{padding-right:44px}
+
 .duyuru-ic h2{font-size:24px; margin-bottom:8px}
 .duyuru-ic ul{text-align:left; margin:10px 0; padding-left:20px; color:var(--gri); font-size:14.5px}
 .duyuru-ic li{margin-bottom:4px}
@@ -484,6 +515,37 @@ tr:last-child td{border-bottom:0}
     else sonraki();
   }, 900);
 })();
+</script>
+<script>
+/* Anket oyu: tıklanınca gönder, sonuçları (isimli) aynı kutuda göster; sayfadaki diğer kopyaları da güncelle */
+document.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('.anket-kutu [data-secenek]'); if (!b) return;
+  var kutu = b.closest('.anket-kutu'), id = kutu.dataset.anket;
+  kutu.querySelectorAll('[data-secenek]').forEach(function(x){ x.disabled = true; });
+  fetch('/anket/' + id + '/oy', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({secenek: +b.dataset.secenek})})
+    .then(function(r){ return r.json(); })
+    .then(function(v){
+      var o = v.ozet; if (!o) { alert(v.hata || 'Oy kaydedilemedi.'); return; }
+      document.querySelectorAll('.anket-kutu[data-anket="' + id + '"]').forEach(function(k){
+        var sec = k.querySelector('.anket-secenekler'); if (sec) sec.remove();
+        var not = k.querySelector('.anket-not'); if (not) not.remove();
+        var s = k.querySelector('.anket-sonuc'); s.hidden = false; s.innerHTML = '';
+        o.satirlar.forEach(function(r, i){
+          var d = document.createElement('div'); d.className = 'anket-satir' + (o.benim === i ? ' benim' : '');
+          var c = document.createElement('div'); c.className = 'anket-cubuk';
+          var sp = document.createElement('span'); sp.style.width = '0%';
+          var bb = document.createElement('b'); bb.textContent = r.ad + (o.benim === i ? ' ✓' : '');
+          var em = document.createElement('em'); em.textContent = '%' + r.yuzde + ' · ' + r.sayi;
+          c.appendChild(sp); c.appendChild(bb); c.appendChild(em); d.appendChild(c);
+          if (r.isimler.length) { var n = document.createElement('div'); n.className = 'anket-isimler'; n.textContent = r.isimler.join(', '); d.appendChild(n); }
+          s.appendChild(d); requestAnimationFrame(function(){ sp.style.width = r.yuzde + '%'; });
+        });
+        var ust = k.querySelector('.anket-ust .kucuk'); if (ust) ust.textContent = o.bitis + "'e kadar · " + o.toplam + ' oy';
+      });
+    })
+    .catch(function(){ kutu.querySelectorAll('[data-secenek]').forEach(function(x){ x.disabled = false; }); });
+});
 </script>
 {% endif %}
 <script>

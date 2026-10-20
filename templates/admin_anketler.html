@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Anketler · Admin{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('admin') }}">‹ Admin</a>
+<div class="sayfa-bas"><div><h1>Anketler</h1><p class="alt">Açık oylama: kim neye oy verdi görünür; herkes tek oy verir.</p></div></div>
+
+{% for a in anketler %}
+  {{ p.anket_kutusu(a) }}
+  {% if a.acik %}
+  <form method="POST" action="{{ url_for('admin_anket_kapat', anket_id=a.id) }}" onsubmit="return confirm('Anket şimdi kapatılsın mı?')" style="margin:-8px 0 20px">
+    <button class="btn btn-kucuk btn-ikincil">Anketi şimdi kapat</button>
+  </form>
+  {% endif %}
+{% else %}
+  <div class="bos"><strong>Henüz anket yok.</strong></div>
+{% endfor %}
+
+<section class="panel">
+  <h2>Yeni anket</h2>
+  <form method="POST">
+    <label for="soru">Soru</label>
+    <input id="soru" name="soru" maxlength="300" required>
+    <label for="secenekler">Seçenekler (her satıra bir tane, 2–6)</label>
+    <textarea id="secenekler" name="secenekler" rows="3" required>Evet
+Hayır</textarea>
+    <label for="bitis">Bitiş (Türkiye saati)</label>
+    <input id="bitis" name="bitis" type="datetime-local" required>
+    <button class="btn btn-blok">Yayınla</button>
+  </form>
+</section>
+{% endblock %}

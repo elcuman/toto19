@@ -839,6 +839,34 @@ class Haber(db.Model):
     eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class Anket(db.Model):
+    """Admin'in kullanıcılara sorduğu açık (isimli) anket."""
+    __tablename__ = "anketler"
+    id = db.Column(db.Integer, primary_key=True)
+    soru = db.Column(db.String(300), nullable=False)
+    secenekler = db.Column(db.Text, nullable=False)          # satır satır seçenekler
+    bitis = db.Column(db.DateTime, nullable=False)           # UTC
+    kapali = db.Column(db.Boolean, nullable=False, default=False)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+
+    def secenek_listesi(self):
+        return [x.strip() for x in (self.secenekler or "").split("\n") if x.strip()]
+
+    def acik_mi(self):
+        return not self.kapali and utc_now_naive() < self.bitis
+
+
+class AnketOyu(db.Model):
+    __tablename__ = "anket_oylari"
+    id = db.Column(db.Integer, primary_key=True)
+    anket_id = db.Column(db.Integer, db.ForeignKey("anketler.id", ondelete="CASCADE"), nullable=False, index=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False)
+    secenek = db.Column(db.Integer, nullable=False)
+    zaman = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    kullanici = db.relationship("Kullanici")
+    __table_args__ = (db.UniqueConstraint("anket_id", "kullanici_id", name="uq_anket_oy_kullanici"),)
+
+
 class TahminCezasi(db.Model):
     """Tahmin girilmeyen maç için ceza puanı (grup bazında, Robot Ziya hariç)."""
     __tablename__ = "tahmin_cezalari"
@@ -2000,8 +2028,8 @@ SONUC_PUANI = 3
 TEK_BILEN_PUANI = 10
 TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)    # 20.10.2026 12:00 Türkiye saati
 # Tek sonuç bilen kuralı: bir grupta maçın sonucunu (kazanan / beraberlik) Robot Ziya hariç
-# yalnızca bir kişi bildiyse ve skoru tam tutmadıysa 3 yerine 7 puan alır.
-TEK_SONUC_PUANI = 7
+# yalnızca bir kişi bildiyse ve skoru tam tutmadıysa 3 yerine 8 puan alır.
+TEK_SONUC_PUANI = 8
 TEK_SONUC_BASLANGIC_UTC = datetime(2026, 10, 20, 16, 0)   # 20.10.2026 19:00 Türkiye saati
 # Tahmin girmeme cezası: bu tarihten sonra başlayan ve biten maçlarda tahmini olmayan
 # üyeden (Robot Ziya hariç, maçtan önce gruba katılmış olanlar) 1 puan düşülür.
@@ -2095,7 +2123,7 @@ def recalculate_all_points():
         if len(insanlar) == 1:
             yeni_puanlar[insanlar[0].id] = TEK_BILEN_PUANI
     # Tek sonuç bilen: sonucu (tam skor dahil) Ziya hariç tek kişi bildiyse ve o kişi
-    # skoru tam tutmadıysa 7 puan (tam tutturduysa zaten yukarıda 10 aldı)
+    # skoru tam tutmadıysa 8 puan (tam tutturduysa zaten yukarıda 10 aldı)
     for liste in sonuc_bilenler.values():
         insanlar = [t for t in liste if t.kullanici_id != yz_id]
         if len(insanlar) == 1 and yeni_puanlar.get(insanlar[0].id) == SONUC_PUANI:
@@ -2214,6 +2242,8 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE sifre_talepleri ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE geri_bildirimler ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE tahmin_cezalari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE anketler ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.commit()
@@ -2725,6 +2755,135 @@ def ziyaret_ozeti(gun_sayisi=30):
 @admin_required
 def admin_ziyaretler():
     return render_template("admin_ziyaretler.html", o=ziyaret_ozeti(30))
+
+
+# ------------------------------------------------------------
+# Anketler: açık oylama (kim neye oy verdi görünür), tek oy, değiştirilemez.
+# ------------------------------------------------------------
+ANKET_SONUC_GOSTERIM = timedelta(days=3)   # bittikten sonra sonuç bu kadar süre görünür
+
+ILK_ANKET_SORUSU = ("Beraberliği bilene 3 yerine 4 puan, beraberliği skoruyla tam bilene "
+                    "5 yerine 6 puan verilsin mi?")
+
+
+def _ilk_anketi_olustur():
+    try:
+        if not Anket.query.filter_by(soru=ILK_ANKET_SORUSU).first():
+            db.session.add(Anket(soru=ILK_ANKET_SORUSU, secenekler="Evet\nHayır",
+                                 bitis=datetime(2026, 10, 21, 15, 0)))   # 21.10.2026 18:00 TR
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print("[anket] ilk anket oluşturulamadı:", e)
+
+
+with app.app_context():
+    _ilk_anketi_olustur()
+
+
+def anket_ozeti(anket, izleyen=None):
+    secenekler = anket.secenek_listesi()
+    oylar = AnketOyu.query.options(db.joinedload(AnketOyu.kullanici)).filter_by(anket_id=anket.id).all()
+    # İsimler: izleyenle aynı grupta olanlar görünür (tek grupta herkes); sayılar herkes için
+    gorunur = None
+    if izleyen is not None and not getattr(izleyen, "admin", False):
+        gruplar = [g for (g,) in db.session.query(GrupUyeligi.grup_id).filter_by(kullanici_id=izleyen.id)]
+        gorunur = {k for (k,) in db.session.query(GrupUyeligi.kullanici_id).filter(GrupUyeligi.grup_id.in_(gruplar or [-1]))}
+    toplam = len(oylar)
+    satirlar = []
+    for i, ad in enumerate(secenekler):
+        bu = [o for o in oylar if o.secenek == i]
+        isimler = sorted((o.kullanici.kullanici_adi for o in bu if o.kullanici and (gorunur is None or o.kullanici_id in gorunur)),
+                         key=lambda x: x.lower())
+        satirlar.append({"ad": ad, "sayi": len(bu), "yuzde": round(100 * len(bu) / toplam) if toplam else 0, "isimler": isimler})
+    benim = None
+    if izleyen is not None:
+        b = next((o for o in oylar if o.kullanici_id == izleyen.id), None)
+        benim = b.secenek if b else None
+    return {"id": anket.id, "soru": anket.soru, "secenekler": secenekler, "satirlar": satirlar, "toplam": toplam,
+            "acik": anket.acik_mi(), "bitis": anket.bitis, "benim": benim}
+
+
+def gosterilecek_anketler(kullanici):
+    simdi = utc_now_naive()
+    q = Anket.query.filter(Anket.bitis > simdi - ANKET_SONUC_GOSTERIM).order_by(Anket.id.desc()).all()
+    return [anket_ozeti(a, kullanici) for a in q if a.acik_mi() or True]
+
+
+@app.context_processor
+def anket_baglami():
+    if not current_user.is_authenticated or request.endpoint not in ("dashboard", "grup"):
+        return {}
+    try:
+        return {"anketler": gosterilecek_anketler(current_user)}
+    except Exception:
+        db.session.rollback()
+        return {"anketler": []}
+
+
+@app.route("/anket/<int:anket_id>/oy", methods=["POST"])
+@login_required
+def anket_oy(anket_id):
+    anket = db.session.get(Anket, anket_id)
+    if not anket:
+        abort(404)
+    veri = request.get_json(silent=True) or request.form
+    try:
+        secenek = int(veri.get("secenek"))
+    except (TypeError, ValueError):
+        return jsonify({"hata": "Geçersiz seçenek."}), 400
+    if not anket.acik_mi():
+        return jsonify({"hata": "Anket sona erdi.", "ozet": _anket_json(anket)}), 400
+    if yz_mi(current_user) or not (0 <= secenek < len(anket.secenek_listesi())):
+        return jsonify({"hata": "Geçersiz seçenek."}), 400
+    if not AnketOyu.query.filter_by(anket_id=anket.id, kullanici_id=current_user.id).first():
+        db.session.add(AnketOyu(anket_id=anket.id, kullanici_id=current_user.id, secenek=secenek))
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    if request.is_json:
+        return jsonify({"ozet": _anket_json(anket)})
+    return redirect(request.referrer or url_for("dashboard"))
+
+
+def _anket_json(anket):
+    o = anket_ozeti(anket, current_user)
+    o["bitis"] = tr_saat_filter(o["bitis"], "%d.%m %H:%M")
+    return o
+
+
+@app.route("/admin/anketler", methods=["GET", "POST"])
+@admin_required
+def admin_anketler():
+    if request.method == "POST":
+        soru = request.form.get("soru", "").strip()[:300]
+        secenekler = [x.strip()[:80] for x in request.form.get("secenekler", "").splitlines() if x.strip()][:6]
+        bitis_str = request.form.get("bitis", "").strip()
+        try:
+            bitis = datetime.strptime(bitis_str, "%Y-%m-%dT%H:%M") - TURKIYE_UTC_OFFSET
+        except ValueError:
+            bitis = None
+        if not soru or len(secenekler) < 2 or not bitis:
+            flash("Soru, en az 2 seçenek ve bitiş zamanı gerekli.", "danger")
+        else:
+            db.session.add(Anket(soru=soru, secenekler="\n".join(secenekler), bitis=bitis))
+            db.session.commit()
+            flash("Anket yayınlandı.", "success")
+        return redirect(url_for("admin_anketler"))
+    anketler = [anket_ozeti(a) for a in Anket.query.order_by(Anket.id.desc()).limit(20).all()]
+    return render_template("admin_anketler.html", anketler=anketler)
+
+
+@app.route("/admin/anketler/<int:anket_id>/kapat", methods=["POST"])
+@admin_required
+def admin_anket_kapat(anket_id):
+    a = db.session.get(Anket, anket_id)
+    if a:
+        a.kapali = True
+        db.session.commit()
+        flash("Anket kapatıldı.", "success")
+    return redirect(url_for("admin_anketler"))
 
 
 @app.route("/admin/geri-bildirimler")

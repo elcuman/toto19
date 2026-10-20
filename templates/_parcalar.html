@@ -45,7 +45,7 @@
 {# Puan etiketi (5 = tam isabet, 3 = sonuç) #}
 {% macro puan_etiketi(puan) -%}
   {%- if puan == 10 -%}<span class="etiket etiket-tam">Tek bilen 🎯 +10</span>
-  {%- elif puan == 7 -%}<span class="etiket etiket-sonuc">Sonucu tek bilen 🎯 +7</span>
+  {%- elif puan == 8 -%}<span class="etiket etiket-sonuc">Sonucu tek bilen 🎯 +8</span>
   {%- elif puan == 5 -%}<span class="etiket etiket-tam">Tam isabet, +5</span>
   {%- elif puan == 3 -%}<span class="etiket etiket-sonuc">Sonuç tuttu, +3</span>
   {%- elif puan -%}<span class="etiket etiket-sonuc">+{{ puan }}</span>
@@ -203,4 +203,28 @@
   {% endfor %}
   <a class="kucuk kral-onizle" href="{{ haftalar[-1].sayfa }}" target="_blank" rel="noopener">Kartı gör</a>
 </div>
+{%- endmacro %}
+
+
+{# Anket kutusu: oy verilmediyse seçenek düğmeleri, verildiyse/bittiyse sonuçlar (isimli) #}
+{% macro anket_kutusu(a, kimlik="") -%}
+<section class="anket-kutu" data-anket="{{ a.id }}" id="{{ kimlik }}">
+  <div class="anket-ust"><span class="anket-etiket">📊 Anket</span>
+    <span class="kucuk sessiz">{% if a.acik %}{{ a.bitis | tr_saat("%d.%m %H:%M") }}'e kadar{% else %}Sona erdi{% endif %} · {{ a.toplam }} oy</span></div>
+  <h3>{{ a.soru }}</h3>
+  {% if a.acik and a.benim is none %}
+  <div class="anket-secenekler">
+    {% for sec in a.secenekler %}<button type="button" class="btn btn-ikincil" data-secenek="{{ loop.index0 }}">{{ sec }}</button>{% endfor %}
+  </div>
+  <p class="kucuk sessiz anket-not">Açık oylama: oyun ve adın gruptakilere görünür, sonradan değiştirilemez.</p>
+  {% endif %}
+  <div class="anket-sonuc" {% if a.acik and a.benim is none %}hidden{% endif %}>
+    {% for r in a.satirlar %}
+    <div class="anket-satir {{ 'benim' if a.benim == loop.index0 else '' }}">
+      <div class="anket-cubuk"><span style="width:{{ r.yuzde }}%"></span><b>{{ r.ad }}{% if a.benim == loop.index0 %} ✓{% endif %}</b><em>%{{ r.yuzde }} · {{ r.sayi }}</em></div>
+      {% if r.isimler %}<div class="anket-isimler">{{ r.isimler | join(", ") }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
 {%- endmacro %}
