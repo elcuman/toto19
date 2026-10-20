@@ -1981,6 +1981,14 @@ def sync_all_leagues():
     return sonuclar
 
 
+TAM_SKOR_PUANI = 5
+SONUC_PUANI = 3
+# Tek bilen kuralı: 20 Ekim 2026 (TR) ve sonrasında başlayan maçlarda, bir grupta skoru
+# Robot Ziya hariç yalnızca bir kişi tam bilirse o kişi 5 yerine 10 puan alır.
+TEK_BILEN_PUANI = 10
+TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 19, 21, 0)   # 20.10.2026 00:00 Türkiye saati
+
+
 def calculate_points(prediction_home, prediction_away, actual_home, actual_away):
     if actual_home is None or actual_away is None:
         return 0
@@ -2034,6 +2042,7 @@ def recalculate_all_points():
 
     predictions = Tahmin.query.all()
     changed = False
+    yeni_puanlar, tam_bilenler = {}, {}
     for tahmin in predictions:
         mac = tahmin.mac
         if not mac or not mac.bitti_mi() or mac.ev_skor is None or mac.deplasman_skor is None:
@@ -2052,8 +2061,21 @@ def recalculate_all_points():
         else:
             new_points = calculate_points(tahmin.ev_skor, tahmin.deplasman_skor, mac.ev_skor, mac.deplasman_skor)
 
-        if tahmin.puan != new_points:
-            tahmin.puan = new_points
+        yeni_puanlar[tahmin.id] = new_points
+        if new_points == TAM_SKOR_PUANI and mac.baslangic and mac.baslangic >= TEK_BILEN_BASLANGIC_UTC:
+            tam_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
+
+    # Tek bilen kuralı: bir grupta skoru Robot Ziya dışında yalnızca bir kişi tam bildiyse 10 puan
+    yz = yz_kullanici_getir(olustur=False)
+    yz_id = yz.id if yz else None
+    for liste in tam_bilenler.values():
+        insanlar = [t for t in liste if t.kullanici_id != yz_id]
+        if len(insanlar) == 1:
+            yeni_puanlar[insanlar[0].id] = TEK_BILEN_PUANI
+
+    for tahmin in predictions:
+        if tahmin.id in yeni_puanlar and tahmin.puan != yeni_puanlar[tahmin.id]:
+            tahmin.puan = yeni_puanlar[tahmin.id]
             changed = True
     if changed:
         db.session.commit()

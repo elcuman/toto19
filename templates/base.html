@@ -403,6 +403,50 @@ tr:last-child td{border-bottom:0}
 {% endif %}
 
 {% block scripts %}{% endblock %}
+{% if current_user.is_authenticated and ep in ('dashboard', 'grup') %}
+<dialog class="duyuru-popup" id="duyuruTekBilen" aria-labelledby="duyuruBaslik">
+  <div class="duyuru-ic">
+    <div class="duyuru-rozet" aria-hidden="true">10</div>
+    <h2 id="duyuruBaslik">Yeni kural: Tek bilen 10 puan alır! 🎯</h2>
+    <p>Bugünden itibaren bir maçın skorunu grubunda <strong>tek sen</strong> tam bilirsen <strong>5 yerine 10 puan</strong> alırsın.</p>
+    <ul>
+      <li>Robot Ziya sayılmaz: o da bildiyse 10 puan yine senin.</li>
+      <li>İki ya da daha fazla kişi bildiyse herkes 5 puan alır.</li>
+      <li>20 Ekim'den itibaren oynanan maçlarda geçerli.</li>
+    </ul>
+    <p class="duyuru-alt">Yani artık herkesin yazdığı skoru yazmak yerine cesur olmanın tam zamanı 😉</p>
+    <button type="button" class="btn btn-blok" data-kapat>Anladım</button>
+  </div>
+</dialog>
+<style>
+.duyuru-popup{border:0; padding:0; background:transparent; width:100%; max-width:min(400px, calc(100vw - 32px))}
+.duyuru-popup::backdrop{background:rgba(10,20,15,.65)}
+.duyuru-popup[open]{animation:duyuruGir .28s ease-out}
+@keyframes duyuruGir{from{opacity:0; transform:translateY(16px) scale(.97)} to{opacity:1; transform:none}}
+.duyuru-ic{background:#fff; border-radius:20px; padding:22px 20px 18px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.duyuru-rozet{width:64px; height:64px; margin:0 auto 10px; border-radius:50%; background:var(--sari); color:var(--murekkep); font:700 32px/64px var(--baslik)}
+.duyuru-ic h2{font-size:24px; margin-bottom:8px}
+.duyuru-ic ul{text-align:left; margin:10px 0; padding-left:20px; color:var(--gri); font-size:14.5px}
+.duyuru-ic li{margin-bottom:4px}
+.duyuru-alt{font-size:14px; color:var(--gri)}
+</style>
+<script>
+(function(){
+  var d = document.getElementById('duyuruTekBilen'); if (!d || !d.showModal) return;
+  var anahtar = 'duyuru_tek_bilen_10';
+  try { if (localStorage.getItem(anahtar) === '1') return; } catch (e) { return; }
+  function kapat(){ try { localStorage.setItem(anahtar, '1'); } catch (e) {} d.close(); }
+  d.querySelectorAll('[data-kapat]').forEach(function(b){ b.addEventListener('click', kapat); });
+  d.addEventListener('click', function(e){ if (e.target === d) kapat(); });
+  d.addEventListener('cancel', function(){ try { localStorage.setItem(anahtar, '1'); } catch (e) {} });
+  setTimeout(function(){
+    var kral = document.getElementById('kralPopup');
+    if (kral && kral.open) kral.addEventListener('close', function(){ setTimeout(function(){ d.showModal(); }, 250); }, {once: true});
+    else d.showModal();
+  }, 900);
+})();
+</script>
+{% endif %}
 <script>
 /* Son 5 maç kutuları: üzerine gelince (fare) ya da dokununca (telefon) maç skorunu gösteren balon */
 (function(){
