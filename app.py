@@ -1983,10 +1983,10 @@ def sync_all_leagues():
 
 TAM_SKOR_PUANI = 5
 SONUC_PUANI = 3
-# Tek bilen kuralı: 20 Ekim 2026 (TR) ve sonrasında başlayan maçlarda, bir grupta skoru
+# Tek bilen kuralı: 20 Ekim 2026 12:00 (TR) ve sonrasında başlayan maçlarda, bir grupta skoru
 # Robot Ziya hariç yalnızca bir kişi tam bilirse o kişi 5 yerine 10 puan alır.
 TEK_BILEN_PUANI = 10
-TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 19, 21, 0)   # 20.10.2026 00:00 Türkiye saati
+TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)    # 20.10.2026 12:00 Türkiye saati
 
 
 def calculate_points(prediction_home, prediction_away, actual_home, actual_away):
