@@ -2031,6 +2031,11 @@ TEK_BILEN_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)    # 20.10.2026 12:00 Tü
 # yalnızca bir kişi bildiyse ve skoru tam tutmadıysa 3 yerine 8 puan alır.
 TEK_SONUC_PUANI = 8
 TEK_SONUC_BASLANGIC_UTC = datetime(2026, 10, 20, 16, 0)   # 20.10.2026 19:00 Türkiye saati
+# Beraberlik kuralı (anket sonucu): beraberliği bilene 3 yerine 4, beraberliği skoruyla
+# tam bilene 5 yerine 6 puan. 21.10.2026 18:00 (TR) sonrası başlayan maçlarda.
+BERABERLIK_SONUC_PUANI = 4
+BERABERLIK_TAM_PUANI = 6
+BERABERLIK_BASLANGIC_UTC = datetime(2026, 10, 21, 15, 0)   # 21.10.2026 18:00 Türkiye saati
 # Tahmin girmeme cezası: bu tarihten sonra başlayan ve biten maçlarda tahmini olmayan
 # üyeden (Robot Ziya hariç, maçtan önce gruba katılmış olanlar) 1 puan düşülür.
 TAHMIN_YOK_CEZASI = -1
@@ -2091,6 +2096,7 @@ def recalculate_all_points():
     predictions = Tahmin.query.all()
     changed = False
     yeni_puanlar, tam_bilenler, sonuc_bilenler = {}, {}, {}
+    tam_kategori, sonuc_kategori = set(), set()
     for tahmin in predictions:
         mac = tahmin.mac
         if not mac or not mac.bitti_mi() or mac.ev_skor is None or mac.deplasman_skor is None:
@@ -2109,10 +2115,22 @@ def recalculate_all_points():
         else:
             new_points = calculate_points(tahmin.ev_skor, tahmin.deplasman_skor, mac.ev_skor, mac.deplasman_skor)
 
+        tam_mi = new_points == TAM_SKOR_PUANI
+        sonuc_mu = new_points == SONUC_PUANI
+        # Beraberlik maçlarında temel puan 5→6 (tam) ve 3→4 (sonuç)
+        if (mac.ev_skor == mac.deplasman_skor and mac.baslangic and mac.baslangic >= BERABERLIK_BASLANGIC_UTC):
+            if tam_mi:
+                new_points = BERABERLIK_TAM_PUANI
+            elif sonuc_mu:
+                new_points = BERABERLIK_SONUC_PUANI
         yeni_puanlar[tahmin.id] = new_points
-        if new_points == TAM_SKOR_PUANI and mac.baslangic and mac.baslangic >= TEK_BILEN_BASLANGIC_UTC:
+        if tam_mi:
+            tam_kategori.add(tahmin.id)
+        if sonuc_mu:
+            sonuc_kategori.add(tahmin.id)
+        if tam_mi and mac.baslangic and mac.baslangic >= TEK_BILEN_BASLANGIC_UTC:
             tam_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
-        if new_points in (TAM_SKOR_PUANI, SONUC_PUANI) and mac.baslangic and mac.baslangic >= TEK_SONUC_BASLANGIC_UTC:
+        if (tam_mi or sonuc_mu) and mac.baslangic and mac.baslangic >= TEK_SONUC_BASLANGIC_UTC:
             sonuc_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
 
     # Tek bilen kuralı: bir grupta skoru Robot Ziya dışında yalnızca bir kişi tam bildiyse 10 puan
@@ -2126,7 +2144,7 @@ def recalculate_all_points():
     # skoru tam tutmadıysa 8 puan (tam tutturduysa zaten yukarıda 10 aldı)
     for liste in sonuc_bilenler.values():
         insanlar = [t for t in liste if t.kullanici_id != yz_id]
-        if len(insanlar) == 1 and yeni_puanlar.get(insanlar[0].id) == SONUC_PUANI:
+        if len(insanlar) == 1 and insanlar[0].id in sonuc_kategori:
             yeni_puanlar[insanlar[0].id] = TEK_SONUC_PUANI
 
     for tahmin in predictions:
