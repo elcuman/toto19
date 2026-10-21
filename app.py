@@ -2868,7 +2868,8 @@ def anket_ozeti(anket, izleyen=None):
 def gosterilecek_anketler(kullanici):
     simdi = utc_now_naive()
     q = Anket.query.filter(Anket.bitis > simdi - ANKET_SONUC_GOSTERIM).order_by(Anket.id.desc()).all()
-    return [anket_ozeti(a, kullanici) for a in q if a.acik_mi() or True]
+    # Bitmiş anketlerin sonuçları kullanıcılara gösterilmez (admin panelinde görünür)
+    return [anket_ozeti(a, kullanici) for a in q if a.acik_mi()]
 
 
 @app.context_processor
