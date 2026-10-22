@@ -69,7 +69,11 @@
               {% if t.logo or yedek %}<img loading="lazy" class="logo" src="{{ logo_src(t.logo) or yedek }}" alt=""{% if yedek and t.logo %} onerror="this.onerror=null;this.src='{{ yedek }}';"{% endif %}>{% endif %}
               <span>{{ t.takim }}</span>
             </div>
-            {% if t.form %}
+            {% if t.form_detay %}
+            <div class="form mini-form" aria-label="Son maçlar">
+              {% for f in t.form_detay %}<span class="f-{{ f.harf }}" tabindex="0" role="button" data-mac="{{ f.mac }}" data-alt="{{ f.alt }}" aria-label="{{ f.mac }}, {{ f.alt }}">{{ f.harf }}</span>{% endfor %}
+            </div>
+            {% elif t.form %}
             <div class="form" aria-label="Son maçlar">
               {% for f in t.form %}<span class="f-{{ f }}" title="{{ {'G':'Galibiyet','B':'Beraberlik','M':'Mağlubiyet'}[f] }}">{{ f }}</span>{% endfor %}
             </div>

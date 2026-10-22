@@ -4668,11 +4668,15 @@ def lig_puan_tablosu_hesapla(lig_id):
             sonuc = "G" if at > ye else ("B" if at == ye else "M")
             t[{"G": "g", "B": "b", "M": "m"}[sonuc]] += 1
             t["form"].append(sonuc)
+            t.setdefault("form_detay", []).append({
+                "harf": sonuc, "mac": f"{m.ev_sahibi} {m.ev_skor}-{m.deplasman_skor} {m.deplasman}",
+                "alt": f"{tr_saat_filter(m.baslangic, '%d.%m')} · {LIG_KISA_ADLARI.get(m.lig_id, m.lig or '')}"})
     satirlar = []
     for t in tablo.values():
         t["av"] = t["ag"] - t["yg"]
         t["p"] = t["g"] * 3 + t["b"]
         t["form"] = t["form"][-5:]
+        t["form_detay"] = t.get("form_detay", [])[-5:]
         satirlar.append(t)
     satirlar.sort(key=lambda t: (-t["p"], -t["av"], -t["ag"], t["takim"]))
     for i, t in enumerate(satirlar, 1):

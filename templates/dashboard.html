@@ -11,10 +11,22 @@
   <div>
     <h1>Selam, {{ current_user.kullanici_adi }}</h1>
     <p class="alt">
-      {% if bekleyen %}{{ bekleyen|length }} maç tahminini bekliyor.{% else %}Yaklaşan maçların hepsine tahmin girdin.{% endif %}
+      {% if not bekleyen %}Yaklaşan maçların hepsine tahmin girdin. 👍{% else %}Haydi, maçlar başlamadan tahminlerini gir.{% endif %}
     </p>
   </div>
 </div>
+
+{% if bekleyen %}
+{% set ilk = bekleyen | sort(attribute='baslangic') | first %}
+<a class="tahmin-uyari" href="{{ url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') }}">
+  <span class="tahmin-uyari-sayi">{{ bekleyen|length }}</span>
+  <span class="tahmin-uyari-metin">
+    <strong>{{ bekleyen|length }} maça henüz tahmin girmedin!</strong>
+    <span>İlk maç {{ ilk.baslangic | tr_saat("%d.%m %H:%M") }}'de başlıyor. Tahmin girmezsen maç başına 1 puan düşer.</span>
+  </span>
+  <span class="tahmin-uyari-ok" aria-hidden="true">Tahmin gir ›</span>
+</a>
+{% endif %}
 
 <div class="serit">
   <div><div class="deger">{{ toplam_puan }}</div><div class="ad">Toplam puan</div></div>
@@ -93,4 +105,16 @@
 .grup-listesi a:hover{color:var(--cim)}
 </style>
 
+<style>
+.tahmin-uyari{display:flex; align-items:center; gap:14px; margin:-6px 0 18px; padding:14px 16px; border-radius:var(--r-buyuk);
+  background:var(--kirmizi); color:#fff; text-decoration:none; box-shadow:0 6px 18px rgba(214,69,56,.28); animation:uyariNabiz 2.4s ease-in-out infinite}
+.tahmin-uyari:hover{color:#fff; filter:brightness(1.05)}
+.tahmin-uyari-sayi{flex:none; width:52px; height:52px; border-radius:50%; background:#fff; color:var(--kirmizi); display:flex; align-items:center; justify-content:center; font:700 30px/1 var(--baslik)}
+.tahmin-uyari-metin{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px}
+.tahmin-uyari-metin strong{font:700 20px/1.15 var(--baslik)}
+.tahmin-uyari-metin span{font-size:13.5px; opacity:.92; line-height:1.3}
+.tahmin-uyari-ok{flex:none; background:#fff; color:var(--kirmizi); font-weight:700; font-size:14px; padding:8px 12px; border-radius:999px; white-space:nowrap}
+@media (max-width:420px){ .tahmin-uyari-ok{display:none} }
+@keyframes uyariNabiz{0%,100%{box-shadow:0 6px 18px rgba(214,69,56,.28)} 50%{box-shadow:0 6px 26px rgba(214,69,56,.55)}}
+</style>
 {% endblock %}
