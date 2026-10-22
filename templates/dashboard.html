@@ -5,7 +5,7 @@
 
 {% block content %}
 
-{% set bekleyen = yaklasan_maclar | rejectattr('id', 'in', tahminler.keys() | list) | list %}
+{% set bekleyen = tahmin_acik_maclar | rejectattr('id', 'in', tahminler.keys() | list) | list %}
 
 <div class="sayfa-bas">
   <div>

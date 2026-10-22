@@ -3230,6 +3230,56 @@ def cikis():
     return redirect(url_for("giris"))
 
 
+def aktif_hafta_maclari(now):
+    """Grup sayfasında tahmin için gösterilen (bu haftanın) maçlar.
+    Döner: (maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu)"""
+    pencere_sonu = now + timedelta(days=HAFTA_PENCERESI_GUN)
+    aktif_haftalar = {}
+    sonraki_mac_tarihleri = {}
+    for lig_id in gosterilecek_lig_id_listesi():
+        # Haftanın son maçı BİTENE kadar o hafta gösterilsin: önce başlamış ama
+        # henüz bitmemiş (oynanan / sonucu beklenen) maça bak, yoksa sıradaki maça.
+        devam_eden = Mac.query.filter(
+            Mac.lig_id == lig_id, Mac.baslangic.isnot(None),
+            Mac.baslangic < now, Mac.baslangic >= now - timedelta(hours=AKTIF_HAFTA_BEKLEME_SAAT),
+            ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
+            super_lig_takim_filtresi(),
+        ).order_by(Mac.baslangic.asc()).first()
+        siradaki = Mac.query.filter(
+            Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic >= now,
+            super_lig_takim_filtresi(),
+        ).order_by(Mac.baslangic.asc()).first()
+        # Hafta bittikten sonra 1 gün daha o haftayı göster (sonuçlar/puanlar
+        # görülsün). Ama yeni haftanın ilk maçı o 1 gün içinde başlıyorsa
+        # tahmin girilebilsin diye yeni haftaya geç.
+        son_biten = None
+        if not devam_eden and not (siradaki and siradaki.baslangic <= now + timedelta(hours=BITEN_HAFTA_GOSTERIM_SAAT)):
+            son_biten = Mac.query.filter(
+                Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic < now,
+                Mac.baslangic >= now - timedelta(hours=BITEN_HAFTA_GOSTERIM_SAAT + 2),
+                Mac.durum == "bitti",
+                super_lig_takim_filtresi(),
+            ).order_by(Mac.baslangic.desc()).first()
+        en_yakin_mac = devam_eden or son_biten or siradaki
+        if not en_yakin_mac:
+            continue
+        if en_yakin_mac.hafta and en_yakin_mac.baslangic <= pencere_sonu:
+            aktif_haftalar[lig_id] = en_yakin_mac.hafta
+        else:
+            sonraki_mac_tarihleri[lig_id] = en_yakin_mac.baslangic
+
+    maclar = []
+    if aktif_haftalar:
+        kosullar = [db.and_(Mac.lig_id == lig_id, Mac.hafta == hafta) for lig_id, hafta in aktif_haftalar.items()]
+        maclar = Mac.query.filter(
+            Mac.lig_id.in_(gosterilecek_lig_id_listesi()), db.or_(*kosullar),
+            Mac.baslangic <= pencere_sonu,
+            super_lig_takim_filtresi(),
+        ).order_by(Mac.baslangic.asc()).all()
+
+    return maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -3258,6 +3308,8 @@ def dashboard():
         yaklasan_maclar=yaklasan_maclar,
         biten_maclar=biten_maclar,
         tahminler=tahminler,
+        tahmin_acik_maclar=[m for m in aktif_hafta_maclari(now)[0]
+                            if m.baslangic and m.baslangic > now and m.durum not in ("bitti", "iptal", "ertelendi")],
         gruplar=gruplar,
         toplam_puan=toplam_puan,
         toplam_tahmin=toplam_tahmin,
@@ -3383,9 +3435,6 @@ def _tahminleri_esitle_guvenli(kullanici_id=None):
         return 0
 
 
-# Eski veriler: açılışta bir kez, başlamamış maçlardaki tahminleri tüm gruplara eşitle
-with app.app_context():
-    _tahminleri_esitle_guvenli()
 
 
 @app.route("/grup-katil", methods=["POST"])
@@ -3562,49 +3611,7 @@ def grup(grup_id):
     # SADECE BU HAFTANIN maçları: bir ligin sıradaki maçı önümüzdeki
     # HAFTA_PENCERESI_GUN gün içinde değilse o lig bu hafta boş gösterilir
     # (örn. Uluslar Ligi'nin bir sonraki maçı 1 ay sonraysa listelenmez).
-    pencere_sonu = now + timedelta(days=HAFTA_PENCERESI_GUN)
-    aktif_haftalar = {}
-    sonraki_mac_tarihleri = {}
-    for lig_id in gosterilecek_lig_id_listesi():
-        # Haftanın son maçı BİTENE kadar o hafta gösterilsin: önce başlamış ama
-        # henüz bitmemiş (oynanan / sonucu beklenen) maça bak, yoksa sıradaki maça.
-        devam_eden = Mac.query.filter(
-            Mac.lig_id == lig_id, Mac.baslangic.isnot(None),
-            Mac.baslangic < now, Mac.baslangic >= now - timedelta(hours=AKTIF_HAFTA_BEKLEME_SAAT),
-            ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
-            super_lig_takim_filtresi(),
-        ).order_by(Mac.baslangic.asc()).first()
-        siradaki = Mac.query.filter(
-            Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic >= now,
-            super_lig_takim_filtresi(),
-        ).order_by(Mac.baslangic.asc()).first()
-        # Hafta bittikten sonra 1 gün daha o haftayı göster (sonuçlar/puanlar
-        # görülsün). Ama yeni haftanın ilk maçı o 1 gün içinde başlıyorsa
-        # tahmin girilebilsin diye yeni haftaya geç.
-        son_biten = None
-        if not devam_eden and not (siradaki and siradaki.baslangic <= now + timedelta(hours=BITEN_HAFTA_GOSTERIM_SAAT)):
-            son_biten = Mac.query.filter(
-                Mac.lig_id == lig_id, Mac.baslangic.isnot(None), Mac.baslangic < now,
-                Mac.baslangic >= now - timedelta(hours=BITEN_HAFTA_GOSTERIM_SAAT + 2),
-                Mac.durum == "bitti",
-                super_lig_takim_filtresi(),
-            ).order_by(Mac.baslangic.desc()).first()
-        en_yakin_mac = devam_eden or son_biten or siradaki
-        if not en_yakin_mac:
-            continue
-        if en_yakin_mac.hafta and en_yakin_mac.baslangic <= pencere_sonu:
-            aktif_haftalar[lig_id] = en_yakin_mac.hafta
-        else:
-            sonraki_mac_tarihleri[lig_id] = en_yakin_mac.baslangic
-
-    maclar = []
-    if aktif_haftalar:
-        kosullar = [db.and_(Mac.lig_id == lig_id, Mac.hafta == hafta) for lig_id, hafta in aktif_haftalar.items()]
-        maclar = Mac.query.filter(
-            Mac.lig_id.in_(gosterilecek_lig_id_listesi()), db.or_(*kosullar),
-            Mac.baslangic <= pencere_sonu,
-            super_lig_takim_filtresi(),
-        ).order_by(Mac.baslangic.asc()).all()
+    maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu = aktif_hafta_maclari(now)
 
     # Lig sekmeleri: grup sayfasının üstünde her lig için ayrı bir buton.
     lig_sekmeleri = []
@@ -6234,6 +6241,12 @@ def not_found(error):
 def internal_error(error):
     db.session.rollback()
     return "<h1>500</h1><p>Sunucu tarafında bir hata oluştu.</p>", 500
+
+
+# Eski veriler: açılışta bir kez, başlamamış maçlardaki tahminleri tüm gruplara eşitle.
+# Dosyanın sonunda çalışır ki Robot Ziya yardımcıları tanımlı olsun.
+with app.app_context():
+    _tahminleri_esitle_guvenli()
 
 
 if __name__ == "__main__":
