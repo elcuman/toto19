@@ -254,6 +254,9 @@ NATIONS_LEAGUE_TAKIP_KISALTMALARI = ["TUR"]
 
 # Avrupa kupalarında takip edilen kulüpler (ESPN kısaltmaları: BES, TRAB)
 ESPN_AVRUPA_SLUGLARI = {"uefa.europa": "UEFA Avrupa Ligi", "uefa.europa.conf": "UEFA Konferans Ligi"}
+# Ön eleme turları (sadece form için; tahmine açılmaz)
+ESPN_AVRUPA_ELEME_SLUGLARI = {"uefa.europa_qual": "UEFA Avrupa Ligi ön eleme",
+                              "uefa.europa.conf_qual": "UEFA Konferans Ligi ön eleme"}
 AVRUPA_TAKIP_EDILEN_TAKIMLAR = ["besiktas", "beşiktaş", "trabzonspor"]
 AVRUPA_TAKIP_KISALTMALARI = ["BES", "TRAB"]
 
@@ -1873,6 +1876,19 @@ def sync_avrupa_espn(requested_season=None, aylar=None):
                     diger_eventler[e["id"]] = (e, kupa_adi)
     if basarili_istek == 0:
         raise RuntimeError("ESPN Avrupa kupaları istekleri başarısız: " + " | ".join(hatalar[:2]))
+
+    # Ön eleme turları ayrı ESPN liglerinde; sadece rakiplerin formu için çekilir (hata olursa geçilir)
+    for slug, kupa_adi in ESPN_AVRUPA_ELEME_SLUGLARI.items():
+        for yil, ay in aylar:
+            if ay not in (7, 8):
+                continue
+            try:
+                yanit = espn_get(slug, "scoreboard", params={"dates": f"{yil}{ay:02d}", "limit": 500})
+            except Exception:
+                continue
+            for e in yanit.get("events", []) or []:
+                if e.get("id"):
+                    diger_eventler[e["id"]] = (e, kupa_adi)
 
     inserted = updated = skipped = 0
     for event_id, (event, kupa_adi) in eventler.items():
@@ -4025,7 +4041,8 @@ def admin_sync_tek_lig(lig_kodu):
     try:
         result = sync_league(lig_kodu)
         lig_adi = LEAGUES[lig_kodu]["ad"]
-        flash(f"{lig_adi} senkronizasyonu tamamlandı. API: {result['api_matches']} | Yeni: {result['inserted']} | Güncellenen: {result['updated']}", "success")
+        ek = f" | Rakip form maçı: {result['form_maclari']}" if "form_maclari" in result else ""
+        flash(f"{lig_adi} senkronizasyonu tamamlandı. API: {result['api_matches']} | Yeni: {result['inserted']} | Güncellenen: {result['updated']}{ek}", "success")
     except Exception as e:
         db.session.rollback()
         ipucu = ""
