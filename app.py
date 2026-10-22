@@ -839,6 +839,21 @@ class Haber(db.Model):
     eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class FormMaci(db.Model):
+    """Sadece "son maçlar" formu için tutulan, tahmine açılmayan maç sonuçları
+    (örn. Avrupa kupalarında Beşiktaş/Trabzonspor'un rakiplerinin diğer maçları)."""
+    __tablename__ = "form_maclari"
+    id = db.Column(db.Integer, primary_key=True)
+    external_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    lig_id = db.Column(db.Integer, nullable=False, index=True)
+    lig = db.Column(db.String(80))
+    baslangic = db.Column(db.DateTime, nullable=False, index=True)
+    ev_sahibi = db.Column(db.String(120), nullable=False)
+    deplasman = db.Column(db.String(120), nullable=False)
+    ev_skor = db.Column(db.Integer, nullable=False)
+    deplasman_skor = db.Column(db.Integer, nullable=False)
+
+
 class Anket(db.Model):
     """Admin'in kullanıcılara sorduğu açık (isimli) anket."""
     __tablename__ = "anketler"
@@ -1788,6 +1803,43 @@ def espn_avrupa_takip_maci_mi(event):
     return False
 
 
+def _form_maclarini_kaydet(eventler, lig_id):
+    """Biten ESPN eventlerini (skoruyla) FormMaci tablosuna yazar/günceller."""
+    mevcut = {f.external_id: f for f in FormMaci.query.filter(
+        FormMaci.external_id.in_([ESPN_EXTERNAL_ID_OFFSET + int(i) for i in eventler] or [-1])).all()}
+    sayi = 0
+    for event_id, (event, kupa_adi) in eventler.items():
+        comp = (event.get("competitions") or [{}])[0]
+        durum = ((comp.get("status") or event.get("status") or {}).get("type") or {})
+        if not durum.get("completed"):
+            continue
+        ev = dep = None
+        for c in comp.get("competitors") or []:
+            if c.get("homeAway") == "home":
+                ev = c
+            elif c.get("homeAway") == "away":
+                dep = c
+        tarih = parse_api_date(event.get("date"))
+        if not ev or not dep or tarih is None:
+            continue
+        try:
+            ev_skor, dep_skor = int(ev.get("score")), int(dep.get("score"))
+        except (TypeError, ValueError):
+            continue
+        ev_ad = (ev.get("team") or {}).get("displayName") or "?"
+        dep_ad = (dep.get("team") or {}).get("displayName") or "?"
+        eid = ESPN_EXTERNAL_ID_OFFSET + int(event_id)
+        f = mevcut.get(eid)
+        if not f:
+            f = FormMaci(external_id=eid)
+            db.session.add(f)
+        f.lig_id, f.lig, f.baslangic = lig_id, kupa_adi, tarih
+        f.ev_sahibi, f.deplasman, f.ev_skor, f.deplasman_skor = ev_ad, dep_ad, ev_skor, dep_skor
+        sayi += 1
+    db.session.commit()
+    return sayi
+
+
 def sync_avrupa_espn(requested_season=None, aylar=None):
     """
     Avrupa Ligi ve Konferans Ligi'nde SADECE Beşiktaş ve Trabzonspor'un
@@ -1804,6 +1856,7 @@ def sync_avrupa_espn(requested_season=None, aylar=None):
         ]
 
     eventler = {}   # event id -> (event, kupa adı)
+    diger_eventler = {}   # takip edilmeyen maçlar: sadece rakiplerin formu için
     hatalar, basarili_istek = [], 0
     for slug, kupa_adi in ESPN_AVRUPA_SLUGLARI.items():
         for yil, ay in aylar:
@@ -1816,6 +1869,8 @@ def sync_avrupa_espn(requested_season=None, aylar=None):
             for e in yanit.get("events", []) or []:
                 if e.get("id") and espn_avrupa_takip_maci_mi(e):
                     eventler[e["id"]] = (e, kupa_adi)
+                elif e.get("id"):
+                    diger_eventler[e["id"]] = (e, kupa_adi)
     if basarili_istek == 0:
         raise RuntimeError("ESPN Avrupa kupaları istekleri başarısız: " + " | ".join(hatalar[:2]))
 
@@ -1841,9 +1896,16 @@ def sync_avrupa_espn(requested_season=None, aylar=None):
             inserted += 1
 
     db.session.commit()
+    try:
+        form_sayisi = _form_maclarini_kaydet(diger_eventler, AVRUPA_ID)
+    except Exception as e:
+        db.session.rollback()
+        form_sayisi = 0
+        print("[form-maclari] hata:", e)
     recalculate_all_points()
     return {
         "success": True,
+        "form_maclari": form_sayisi,
         "lig_kodu": AVRUPA_CODE,
         "competition_id": AVRUPA_ID,
         "api_matches": len(eventler),
@@ -2304,6 +2366,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE geri_bildirimler ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE tahmin_cezalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anketler ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE form_maclari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -4911,6 +4974,12 @@ def _tum_takim_formlari():
         maclar = (Mac.query.filter(Mac.durum == "bitti", Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
                                    Mac.baslangic.isnot(None), Mac.baslangic >= sinir)
                   .order_by(Mac.baslangic.desc()).limit(3000).all())
+        try:
+            # Tahmine açılmayan ama form için tutulan maçlar (Avrupa'da rakiplerin diğer maçları)
+            maclar += FormMaci.query.filter(FormMaci.baslangic >= sinir).all()
+            maclar.sort(key=lambda m: m.baslangic, reverse=True)
+        except Exception:
+            db.session.rollback()
         gorulen = set()
         for m in maclar:
             ev, dep = takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman)
