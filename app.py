@@ -2427,6 +2427,12 @@ def ana_domaine_yonlendir():
     return None
 
 
+@app.route("/google84ae3ba8f3a9de04.html")
+def google_site_dogrulama():
+    """Google Search Console sahiplik doğrulama dosyası (HTML dosyası yöntemi)."""
+    return Response("google-site-verification: google84ae3ba8f3a9de04.html", mimetype="text/html")
+
+
 @app.route("/ads.txt")
 def ads_txt():
     """Google AdSense siteyi onaylamak için bu dosyayı domain kökünde arar.
