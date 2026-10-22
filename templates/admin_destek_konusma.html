@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ k.gorunen_ad() }} · Destek{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('admin_destek') }}">‹ Destek mesajları</a>
+<div class="sayfa-bas"><div><h1>{{ k.gorunen_ad() }}</h1>
+  <p class="alt">{% if k.kullanici %}Kayıtlı kullanıcı{% if k.kullanici.sifre_degismeli %} · geçici şifre bekliyor{% endif %}{% else %}Giriş yapmadan yazdı; yanıtını aynı cihazdan bu sayfaya girince görür.{% endif %}</p>
+</div></div>
+
+<section class="panel ds-kutu">
+  <div class="ds-akis" id="dsAkis">
+    {% for m in mesajlar %}
+      <div class="ds-msj {{ 'ds-ben' if m.admin else 'ds-admin' }}"><span class="ds-kim">{{ 'Sen' if m.admin else k.gorunen_ad() }} · {{ m.saat }}</span>{{ m.metin }}</div>
+    {% endfor %}
+    <span id="son"></span>
+  </div>
+  <form method="POST" class="ds-form">
+    <div class="ds-yaz">
+      <textarea name="metin" rows="2" maxlength="{{ max_uzunluk }}" required placeholder="Yanıtını yaz…"></textarea>
+      <button type="submit" class="btn">Yanıtla</button>
+    </div>
+  </form>
+</section>
+{% if k.kullanici %}<p class="sessiz kucuk">Şifre sorunu varsa: <a href="{{ url_for('admin') }}">Admin</a> sayfasındaki şifre talepleriyle sıfırlayabilirsin.</p>{% endif %}
+<style>
+.ds-kutu{padding:0; overflow:hidden}
+.ds-akis{max-height:min(60vh,520px); min-height:160px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; background:var(--zemin)}
+.ds-msj{max-width:82%; padding:8px 12px; border-radius:14px; font-size:15px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word}
+.ds-kim{display:block; font-size:11.5px; opacity:.7; margin-bottom:2px}
+.ds-ben{align-self:flex-end; background:var(--cim); color:#fff; border-bottom-right-radius:4px}
+.ds-admin{align-self:flex-start; background:var(--kart); border:1px solid var(--cizgi); border-bottom-left-radius:4px}
+.ds-form{padding:12px; border-top:1px solid var(--cizgi); background:var(--kart)}
+.ds-yaz{display:flex; gap:8px; align-items:flex-end} .ds-yaz textarea{flex:1; margin:0; min-height:44px}
+</style>
+<script>var a=document.getElementById('dsAkis'); a.scrollTop=a.scrollHeight;</script>
+{% endblock %}

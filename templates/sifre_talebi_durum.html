@@ -46,7 +46,7 @@
   {% elif durum == 'reddedildi' %}
   <section class="panel">
     <h2>Talep reddedildi</h2>
-    <p style="margin:0">Yönetici bu talebi onaylamadı. Bir yanlışlık olduğunu düşünüyorsan yöneticiye doğrudan yaz ya da <a href="{{ url_for('sifremi_unuttum') }}">yeni bir talep</a> gönder.</p>
+    <p style="margin:0">Yönetici bu talebi onaylamadı. Bir yanlışlık olduğunu düşünüyorsan <a href="{{ url_for('destek') }}">yöneticiye doğrudan yaz</a> ya da <a href="{{ url_for('sifremi_unuttum') }}">yeni bir talep</a> gönder.</p>
   </section>
 
   {% elif durum == 'kullanildi' %}

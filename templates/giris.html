@@ -18,7 +18,7 @@
       <input id="sifre" type="password" name="sifre" required autocomplete="current-password">
       <button type="submit" class="btn btn-blok">Giriş yap</button>
     </form>
-    <p class="unuttum"><a href="{{ url_for('sifremi_unuttum') }}">Şifremi unuttum</a></p>
+    <p class="unuttum"><a href="{{ url_for('sifremi_unuttum') }}">Şifremi unuttum</a> · <a href="{{ url_for('destek') }}">Sorun mu var? Admin'e yaz</a></p>
   </section>
 
   <p class="giris-alt">Hesabın yok mu? <a href="{{ url_for('kayit', next=request.args.get('next')) if request.args.get('next') else url_for('kayit') }}">Kayıt ol</a></p>

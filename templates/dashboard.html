@@ -16,6 +16,11 @@
   </div>
 </div>
 
+{% if destek_yanit_var %}
+<a class="destek-yanit" href="{{ url_for('destek') }}">🛟 <strong>Admin mesajına yanıt verdi.</strong> <span>Okumak için dokun ›</span></a>
+<style>.destek-yanit{display:block; background:#EAF2FB; border:1px solid #BFD5EE; color:#1F4A7A; border-radius:var(--r); padding:11px 14px; margin-bottom:12px; text-decoration:none; font-size:14.5px}.destek-yanit span{white-space:nowrap}</style>
+{% endif %}
+
 {% if bekleyen %}
 {% set ilk = bekleyen | sort(attribute='baslangic') | first %}
 <a class="tahmin-uyari" href="{{ url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') }}">

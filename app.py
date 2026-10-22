@@ -842,6 +842,36 @@ class Haber(db.Model):
     eklenme = db.Column(db.DateTime, default=lambda: datetime.utcnow())
 
 
+class DestekKonusma(db.Model):
+    """Kullanıcı (ya da giriş yapamayan misafir) ile admin arasındaki birebir yazışma."""
+    __tablename__ = "destek_konusmalari"
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=True, index=True)
+    misafir_ad = db.Column(db.String(80))
+    anahtar_hash = db.Column(db.String(64), unique=True)     # misafir için tarayıcıdaki gizli anahtar
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    son_mesaj = db.Column(db.DateTime, default=lambda: datetime.utcnow(), index=True)
+    admin_okumadi = db.Column(db.Boolean, nullable=False, default=False)
+    kullanici_okumadi = db.Column(db.Boolean, nullable=False, default=False)
+    kullanici = db.relationship("Kullanici")
+    mesajlar = db.relationship("DestekMesaj", backref="konusma", order_by="DestekMesaj.id",
+                               cascade="all, delete-orphan")
+
+    def gorunen_ad(self):
+        if self.kullanici:
+            return self.kullanici.kullanici_adi
+        return (self.misafir_ad or "Misafir") + " (giriş yapmadan)"
+
+
+class DestekMesaj(db.Model):
+    __tablename__ = "destek_mesajlari"
+    id = db.Column(db.Integer, primary_key=True)
+    konusma_id = db.Column(db.Integer, db.ForeignKey("destek_konusmalari.id", ondelete="CASCADE"), nullable=False, index=True)
+    admin_mi = db.Column(db.Boolean, nullable=False, default=False)
+    metin = db.Column(db.Text, nullable=False)
+    zaman = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+
+
 class FormMaci(db.Model):
     """Sadece "son maçlar" formu için tutulan, tahmine açılmayan maç sonuçları
     (örn. Avrupa kupalarında Beşiktaş/Trabzonspor'un rakiplerinin diğer maçları)."""
@@ -2383,6 +2413,8 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE tahmin_cezalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anketler ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE form_maclari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE destek_konusmalari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE destek_mesajlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -2489,7 +2521,7 @@ def robots_txt():
     satirlar = [
         "User-agent: *",
         "Allow: /$", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /z", "Disallow: /tlogo", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /tlogo", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2673,10 +2705,12 @@ def admin_sifre_rozeti():
     try:
         sifre = len(bekleyen_sifre_talepleri())
         gb = GeriBildirim.query.filter_by(okundu=False).count()
-        return {"bekleyen_sifre_sayisi": sifre, "okunmamis_geri_bildirim": gb, "admin_rozet": sifre + gb}
+        destek = DestekKonusma.query.filter_by(admin_okumadi=True).count()
+        return {"bekleyen_sifre_sayisi": sifre, "okunmamis_geri_bildirim": gb, "okunmamis_destek": destek,
+                "admin_rozet": sifre + gb + destek}
     except Exception:
         db.session.rollback()
-        return {"bekleyen_sifre_sayisi": 0, "okunmamis_geri_bildirim": 0, "admin_rozet": 0}
+        return {"bekleyen_sifre_sayisi": 0, "okunmamis_geri_bildirim": 0, "okunmamis_destek": 0, "admin_rozet": 0}
 
 
 GERI_BILDIRIM_TURLERI = {"oneri": "💡 Fikir / öneri", "hata": "🐞 Hata", "diger": "💬 Diğer"}
@@ -3035,6 +3069,123 @@ def admin_anket_kapat(anket_id):
         db.session.commit()
         flash("Anket kapatıldı.", "success")
     return redirect(url_for("admin_anketler"))
+
+
+# ------------------------------------------------------------
+# Admin ile birebir destek yazışması. Girişli kullanıcı kendi hesabıyla,
+# giriş yapamayan (örn. şifresini unutan) misafir ise tarayıcısına verilen
+# gizli anahtarla kendi yazışmasına ulaşır.
+# ------------------------------------------------------------
+DESTEK_MAX_UZUNLUK = 1500
+
+
+def _destek_konusmasi(olustur=False, misafir_ad=None):
+    if current_user.is_authenticated:
+        k = DestekKonusma.query.filter_by(kullanici_id=current_user.id).first()
+        if not k and olustur:
+            k = DestekKonusma(kullanici_id=current_user.id)
+            db.session.add(k)
+            db.session.flush()
+        return k
+    anahtar = session.get("destek_anahtar")
+    if anahtar:
+        k = DestekKonusma.query.filter_by(anahtar_hash=_anahtar_hash(anahtar)).first()
+        if k:
+            return k
+    if olustur:
+        import secrets
+        anahtar = secrets.token_urlsafe(24)
+        session["destek_anahtar"] = anahtar
+        session.permanent = True
+        k = DestekKonusma(misafir_ad=(misafir_ad or "")[:80] or None, anahtar_hash=_anahtar_hash(anahtar))
+        db.session.add(k)
+        db.session.flush()
+        return k
+    return None
+
+
+def _destek_json(k):
+    return [{"id": m.id, "admin": m.admin_mi, "metin": m.metin, "saat": tr_saat_filter(m.zaman, "%d.%m %H:%M")}
+            for m in (k.mesajlar if k else [])]
+
+
+@app.route("/destek", methods=["GET", "POST"])
+def destek():
+    if request.method == "POST":
+        metin = (request.form.get("metin") or "").strip()[:DESTEK_MAX_UZUNLUK]
+        if request.form.get("web_sitesi"):          # bot tuzağı
+            return redirect(url_for("destek"))
+        if len(metin) < 2:
+            flash("Mesaj boş olamaz.", "warning")
+            return redirect(url_for("destek"))
+        # Basit sınır: 10 dakikada en fazla 8 mesaj
+        simdi_ts = utc_now_naive().timestamp()
+        gecmis = [t for t in session.get("destek_zamanlar", []) if simdi_ts - t < 600]
+        if len(gecmis) >= 8:
+            flash("Kısa sürede çok mesaj gönderdin, biraz sonra tekrar dene.", "warning")
+            return redirect(url_for("destek"))
+        session["destek_zamanlar"] = gecmis + [simdi_ts]
+        k = _destek_konusmasi(olustur=True, misafir_ad=request.form.get("ad", "").strip())
+        db.session.add(DestekMesaj(konusma_id=k.id, admin_mi=False, metin=metin))
+        k.son_mesaj, k.admin_okumadi = datetime.utcnow(), True
+        db.session.commit()
+        return redirect(url_for("destek") + "#son")
+    k = _destek_konusmasi()
+    if k and k.kullanici_okumadi:
+        k.kullanici_okumadi = False
+        db.session.commit()
+    return render_template("destek.html", konusma=k, mesajlar=_destek_json(k), max_uzunluk=DESTEK_MAX_UZUNLUK)
+
+
+@app.route("/destek/mesajlar")
+def destek_mesajlar():
+    k = _destek_konusmasi()
+    if k and k.kullanici_okumadi:
+        k.kullanici_okumadi = False
+        db.session.commit()
+    return jsonify({"mesajlar": _destek_json(k)})
+
+
+@app.context_processor
+def destek_bildirimi():
+    """Admin yanıt verdiyse kullanıcıya gösterilecek işaret."""
+    try:
+        if current_user.is_authenticated:
+            k = DestekKonusma.query.filter_by(kullanici_id=current_user.id, kullanici_okumadi=True).first()
+            return {"destek_yanit_var": bool(k)}
+    except Exception:
+        db.session.rollback()
+    return {"destek_yanit_var": False}
+
+
+@app.route("/admin/destek")
+@admin_required
+def admin_destek():
+    konusmalar = (DestekKonusma.query.options(db.joinedload(DestekKonusma.kullanici))
+                  .order_by(DestekKonusma.admin_okumadi.desc(), DestekKonusma.son_mesaj.desc()).limit(100).all())
+    ozet = []
+    for k in konusmalar:
+        son = k.mesajlar[-1] if k.mesajlar else None
+        ozet.append({"k": k, "son": son})
+    return render_template("admin_destek.html", konusmalar=ozet)
+
+
+@app.route("/admin/destek/<int:konusma_id>", methods=["GET", "POST"])
+@admin_required
+def admin_destek_konusma(konusma_id):
+    k = db.session.get(DestekKonusma, konusma_id) or abort(404)
+    if request.method == "POST":
+        metin = (request.form.get("metin") or "").strip()[:DESTEK_MAX_UZUNLUK]
+        if metin:
+            db.session.add(DestekMesaj(konusma_id=k.id, admin_mi=True, metin=metin))
+            k.son_mesaj, k.kullanici_okumadi = datetime.utcnow(), True
+        k.admin_okumadi = False
+        db.session.commit()
+        return redirect(url_for("admin_destek_konusma", konusma_id=k.id) + "#son")
+    if k.admin_okumadi:
+        k.admin_okumadi = False
+        db.session.commit()
+    return render_template("admin_destek_konusma.html", k=k, mesajlar=_destek_json(k), max_uzunluk=DESTEK_MAX_UZUNLUK)
 
 
 @app.route("/admin/geri-bildirimler")
@@ -3845,7 +3996,7 @@ def gecici_sifreyi_degistirt():
     """Geçici şifreyle giren kullanıcı yeni şifresini belirlemeden başka sayfaya geçemez."""
     if not current_user.is_authenticated or not getattr(current_user, "sifre_degismeli", False):
         return None
-    if request.endpoint in ("sifre_degistir", "cikis", "static", "ads_txt", "robots_txt") \
+    if request.endpoint in ("sifre_degistir", "cikis", "static", "destek", "destek_mesajlar", "ads_txt", "robots_txt") \
             or (request.endpoint or "").startswith("cron"):
         return None
     if request.path.startswith("/cron"):

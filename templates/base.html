@@ -12,7 +12,7 @@
 
 <!-- Google AdSense (Auto Ads): giriş/kayıt, sohbet ve admin sayfalarında YÜKLENMEZ (içeriksiz ve kullanıcı içerikli sayfalar) -->
 {% set _ep = request.endpoint or "" %}
-{% if not (_ep in ('giris', 'kayit', 'cikis', 'sohbetler', 'grup_sohbet', 'tahmin', 'sifremi_unuttum', 'sifre_talebi_durum', 'sifre_degistir', 'geri_bildirim') or _ep.startswith('admin') or _ep == 'static') %}
+{% if not (_ep in ('giris', 'kayit', 'cikis', 'sohbetler', 'grup_sohbet', 'tahmin', 'sifremi_unuttum', 'sifre_talebi_durum', 'sifre_degistir', 'geri_bildirim', 'destek', 'destek_mesajlar') or _ep.startswith('admin') or _ep == 'static') %}
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3716423648799781" crossorigin="anonymous"></script>
 {% endif %}
 
@@ -371,6 +371,7 @@ tr:last-child td{border-bottom:0}
     <a href="{{ url_for('gizlilik') }}">Gizlilik</a>
     <a href="{{ url_for('iletisim') }}">İletişim</a>
     <a href="{{ url_for('geri_bildirim') }}">Geri bildirim</a>
+    <a href="{{ url_for('destek') }}">Yardım · Admin'e yaz</a>
   </nav>
   <p>Tahmin Ligi arkadaş grupları için parasız bir skor tahmin oyunudur. Bahis veya para ödülü yoktur.</p>
 </footer>
