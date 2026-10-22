@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Robot Ziya'nın Maç Tahminleri · Süper Lig ve Şampiyonlar Ligi · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="Robot Ziya'nın bu haftaki Süper Lig, Şampiyonlar Ligi ve Avrupa kupası maç tahminleri: kazanma olasılıkları, beklenen goller, son maçlar ve maç analizi. Ücretsiz, bahis yok.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/robot-ziya-tahminleri">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Robot Ziya'nın bu haftaki maç tahminleri 🤖">
+<meta property="og:description" content="Süper Lig ve Avrupa maçları için kazanma olasılıkları, beklenen goller ve analiz. Ziya'yı geçebilir misin?">
+<meta property="og:url" content="https://{{ ANA_DOMAIN_ADI }}/robot-ziya-tahminleri">
+{% endblock %}
+
+{% block content %}
+<div class="sayfa-bas">
+  <div>
+    <h1>🤖 Robot Ziya'nın tahminleri</h1>
+    <p class="alt">Robot Ziya, takımların bu sezonki gollerine, iç saha ve deplasman performansına, son maçlarına ve puan durumuna bakarak her maçı istatistikle tahmin eden botumuz. Kesin skor tahmini, oyunda kopyalanmasın diye maç başlayınca açılır.</p>
+  </div>
+</div>
+
+{% if karne.mac %}
+<div class="zt-karne">
+  <div><strong>{{ karne.mac }}</strong><span>son 8 günde maç</span></div>
+  <div><strong>{{ karne.tutan }}</strong><span>sonucu bildi</span></div>
+  <div><strong>{{ karne.tam }}</strong><span>tam skor</span></div>
+</div>
+{% endif %}
+
+<div class="zt-cta">
+  <span><strong>Ziya'yı geçebilir misin?</strong> Arkadaşlarınla grup kur, her hafta skor tahmini yap. Ücretsiz, bahis yok.</span>
+  {% if current_user.is_authenticated %}
+    <a class="btn btn-kucuk" href="{{ url_for('gruplar') }}">Tahmin gir</a>
+  {% else %}
+    <a class="btn btn-kucuk" href="{{ url_for('kayit') }}">Hemen oyna</a>
+  {% endif %}
+</div>
+
+<h2 class="zt-bolum">Yaklaşan maçlar</h2>
+{% if kartlar %}
+  {% set ns = namespace(gun=None) %}
+  {% for k in kartlar %}
+    {% set gun = k.mac.baslangic | tr_saat("%d.%m.%Y") %}
+    {% if gun != ns.gun %}{% set ns.gun = gun %}<h3 class="zt-gun">{{ k.mac.baslangic | tr_saat("%d.%m.%Y") }}</h3>{% endif %}
+    <article class="panel zt-kart">
+      <div class="mac-ust"><span>{{ k.mac.lig }}</span><span>{{ k.mac.baslangic | tr_saat("%H:%M") }}</span></div>
+      <div class="zt-takimlar">
+        {{ p.takim_ev(k.mac, form=True) }}
+        <div class="zt-vs">{% if k.ziya_skor %}<span class="zt-skor">{{ k.ziya_skor }}</span><small>Ziya</small>{% else %}VS{% endif %}</div>
+        {{ p.takim_dep(k.mac, form=True) }}
+      </div>
+
+      <div class="zt-olasilik" role="img" aria-label="{{ k.mac.ev_sahibi }} kazanır %{{ k.p_ev }}, beraberlik %{{ k.p_x }}, {{ k.mac.deplasman }} kazanır %{{ k.p_dep }}">
+        <span class="zt-o-ev" style="flex:{{ [k.p_ev,1]|max }}">%{{ k.p_ev }}</span>
+        <span class="zt-o-x" style="flex:{{ [k.p_x,1]|max }}">%{{ k.p_x }}</span>
+        <span class="zt-o-dep" style="flex:{{ [k.p_dep,1]|max }}">%{{ k.p_dep }}</span>
+      </div>
+      <div class="zt-olasilik-etiket"><span>{{ k.mac.ev_sahibi }}</span><span>Beraberlik</span><span>{{ k.mac.deplasman }}</span></div>
+
+      <dl class="zt-istatistik">
+        <div><dt>Beklenen gol</dt><dd>{{ k.lam_ev }} – {{ k.lam_dep }}</dd></div>
+        <div><dt>3+ gol ihtimali</dt><dd>%{{ k.uc_arti }}</dd></div>
+        <div><dt>İki takım da gol atar</dt><dd>%{{ k.kg }}</dd></div>
+      </dl>
+
+      <p class="zt-yorum">💬 {{ k.yorum }}</p>
+      {% if k.ikili %}<p class="zt-ikili"><strong>Son karşılaşmalar:</strong> {{ k.ikili | join(" · ") }}</p>{% endif %}
+
+      {% if k.ziya_skor %}
+        <p class="zt-acik">🤖 Ziya'nın tahmini: <strong>{{ k.ziya_skor }}</strong></p>
+        {% if k.analiz %}<p class="zt-analiz">{{ k.analiz }}</p>{% endif %}
+      {% else %}
+        <p class="zt-kilit">🔒 Ziya'nın kesin skor tahmini maç başlayınca açılır.</p>
+      {% endif %}
+    </article>
+  {% endfor %}
+{% else %}
+  <div class="bos"><strong>Önümüzdeki günlerde maç yok.</strong>Fikstür gelince Ziya'nın tahminleri burada.</div>
+{% endif %}
+
+{% if sonuclar %}
+<h2 class="zt-bolum">Ziya ne tuttu? <span class="kucuk sessiz">(son 8 gün)</span></h2>
+<section class="panel">
+  <ul class="zt-sonuclar">
+    {% for r in sonuclar %}
+    <li>
+      <span class="zt-s-mac">{{ r.mac.ev_sahibi }} <strong>{{ r.mac.ev_skor }}–{{ r.mac.deplasman_skor }}</strong> {{ r.mac.deplasman }}<small>{{ r.mac.baslangic | tr_saat("%d.%m") }} · {{ r.mac.lig }}</small></span>
+      <span class="zt-s-ziya">Ziya: <strong>{{ r.ziya_skor }}</strong> {{ p.puan_etiketi(r.puan) }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<p class="sessiz kucuk">Olasılıklar Poisson modeliyle, bu sezonki maç sonuçlarından hesaplanır; son maçlar daha ağırlıklı sayılır. Eğlence amaçlıdır, bahis tavsiyesi değildir. Son güncelleme: {{ guncelleme | tr_saat("%d.%m %H:%M") }}.</p>
+
+<style>
+.zt-karne{display:grid; grid-template-columns:repeat(3,1fr); background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); margin-bottom:12px}
+.zt-karne div{padding:12px; text-align:center; border-left:1px solid var(--cizgi)}
+.zt-karne div:first-child{border-left:0}
+.zt-karne strong{display:block; font:700 28px/1 var(--baslik)}
+.zt-karne span{font-size:12.5px; color:var(--gri)}
+.zt-cta{display:flex; align-items:center; gap:12px; justify-content:space-between; background:var(--cim-acik); border:1px solid #CFE6D9; border-radius:var(--r); padding:12px 14px; margin-bottom:18px; font-size:14.5px}
+.zt-bolum{margin:8px 0 10px}
+.zt-gun{font-size:15px; color:var(--gri); margin:16px 0 8px; text-transform:none}
+.zt-kart{padding:14px 16px}
+.zt-takimlar{display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:center; margin:6px 0 12px}
+.zt-vs{text-align:center; font:700 18px var(--baslik); color:var(--gri-acik); min-width:54px}
+.zt-skor{display:block; font:700 24px/1 var(--baslik); color:var(--murekkep); background:var(--sari-acik); border-radius:8px; padding:4px 8px}
+.zt-vs small{display:block; font-size:11px; color:var(--gri); margin-top:2px}
+.zt-olasilik{display:flex; height:30px; border-radius:8px; overflow:hidden; font:700 13px/30px var(--yazi); color:#fff; text-align:center}
+.zt-olasilik span{min-width:34px}
+.zt-o-ev{background:var(--cim)} .zt-o-x{background:var(--gri-acik)} .zt-o-dep{background:#2F5D8C}
+.zt-olasilik-etiket{display:flex; justify-content:space-between; font-size:12px; color:var(--gri); margin:4px 2px 10px}
+.zt-istatistik{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0 0 10px}
+.zt-istatistik div{background:var(--zemin); border-radius:8px; padding:8px; text-align:center}
+.zt-istatistik dt{font-size:11.5px; color:var(--gri)}
+.zt-istatistik dd{margin:2px 0 0; font:700 17px var(--baslik)}
+.zt-yorum{font-size:14.5px; margin:0 0 8px}
+.zt-ikili{font-size:13px; color:var(--gri); margin:0 0 8px}
+.zt-kilit{font-size:13.5px; color:var(--gri); background:var(--zemin); border-radius:8px; padding:8px 10px; margin:0}
+.zt-acik{margin:0 0 6px; font-size:15px}
+.zt-analiz{font-size:13.5px; color:var(--gri); margin:0}
+.zt-sonuclar{list-style:none; margin:0; padding:0}
+.zt-sonuclar li{display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 0; border-top:1px solid var(--cizgi)}
+.zt-sonuclar li:first-child{border-top:0}
+.zt-s-mac small{display:block; font-size:12px; color:var(--gri)}
+.zt-s-ziya{font-size:14px; white-space:nowrap}
+@media (max-width:480px){ .zt-cta{flex-direction:column; align-items:flex-start} .zt-istatistik dd{font-size:15px} }
+</style>
+{% endblock %}

@@ -19,6 +19,20 @@
 
 {{ p.haber_slider(haberler) }}
 
+<a class="ziya-tanitim" href="{{ url_for('ziya_tahminleri') }}">
+  <span class="ziya-tanitim-ikon" aria-hidden="true">🤖</span>
+  <span><strong>Robot Ziya bu hafta ne diyor?</strong><span>Süper Lig ve Avrupa maçları için kazanma olasılıkları, beklenen goller ve analiz.</span></span>
+  <span class="ziya-tanitim-ok" aria-hidden="true">›</span>
+</a>
+<style>
+.ziya-tanitim{display:flex; align-items:center; gap:12px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:var(--murekkep); color:#fff; text-decoration:none}
+.ziya-tanitim:hover{color:#fff}
+.ziya-tanitim-ikon{font-size:30px}
+.ziya-tanitim strong{display:block; font:700 19px/1.2 var(--baslik)}
+.ziya-tanitim span span{font-size:13.5px; opacity:.8}
+.ziya-tanitim-ok{margin-left:auto; font-size:26px; opacity:.7}
+</style>
+
 <section class="panel">
   <h2>Puanlama</h2>
   <ul class="puanlama">

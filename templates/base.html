@@ -344,6 +344,7 @@ tr:last-child td{border-bottom:0}
     </nav>
     {% else %}
     <nav class="ustmenu-acik" aria-label="Ana menü">
+      <a class="gizle-mobil" href="{{ url_for('ziya_tahminleri') }}" {% if ep == 'ziya_tahminleri' %}aria-current="page"{% endif %}>Ziya'nın tahminleri</a>
       <a class="gizle-mobil" href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
       <a class="gizle-mobil" href="{{ url_for('nasil_oynanir') }}" {% if ep == 'nasil_oynanir' %}aria-current="page"{% endif %}>Nasıl oynanır</a>
       {% if ep != 'giris' %}<a class="btn btn-kucuk" href="{{ url_for('giris') }}">Giriş yap</a>{% endif %}
@@ -364,6 +365,7 @@ tr:last-child td{border-bottom:0}
 
 <footer class="altbilgi">
   <nav aria-label="Site bağlantıları">
+    <a href="{{ url_for('ziya_tahminleri') }}">Robot Ziya'nın tahminleri</a>
     <a href="{{ url_for('puan_durumu') }}">Puan durumu</a>
     <a href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır</a>
     <a href="{{ url_for('gizlilik') }}">Gizlilik</a>

@@ -2482,7 +2482,7 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Allow: /$", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
         "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /paylas", "Disallow: /z", "Disallow: /tlogo", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
@@ -2492,7 +2492,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -5034,6 +5034,138 @@ def takim_formu(takim_adi, lig_id=None):
 
 
 app.jinja_env.globals["takim_formu"] = takim_formu
+
+
+# ------------------------------------------------------------
+# Herkese açık "Robot Ziya'nın tahminleri" sayfası (SEO + içerik).
+# Maç başlamadan: olasılıklar, beklenen goller, form, sıralama, ikili maçlar ve
+# skor içermeyen bir yorum. Ziya'nın kesin skoru maç başlayınca açılır
+# (gruplarda kopyalanmasın diye).
+# ------------------------------------------------------------
+_ZIYA_SAYFA_ONBELLEK = {"zaman": None, "veri": None}
+ZIYA_SAYFA_ONBELLEK_SURE = timedelta(minutes=10)
+
+
+def _yuzde(x):
+    return int(round(x * 100))
+
+
+def _ziya_takim_ozeti(ad, yer, ist):
+    k = takim_adi_normalize(ad)
+    t = ist["takimlar"].get(k)
+    sira = ist["siralama"].get(k)
+    ozet = {"ad": ad, "sira": sira["sira"] if sira else None, "puan": sira["puan"] if sira else None,
+            "oynanan": sira["o"] if sira else 0, "at": None, "ye": None}
+    if t:
+        b = t[yer]
+        if b[0] >= 1:
+            ozet["at"], ozet["ye"] = round(b[1] / b[0], 1), round(b[2] / b[0], 1)
+    return ozet
+
+
+def _ziya_yorum(mac, ev, dep, p_ev, p_x, p_dep, lam_ev, lam_dep):
+    """Skor söylemeyen, istatistiklerden kısa Türkçe yorum."""
+    cumleler = []
+    if ev["sira"] and dep["sira"]:
+        cumleler.append(f"{ev['ad']} {ev['sira']}. sırada ({ev['puan']} puan), {dep['ad']} {dep['sira']}. sırada ({dep['puan']} puan).")
+    if ev["at"] is not None:
+        cumleler.append(f"{ev['ad']} evinde maç başına {ev['at']} gol atıp {ev['ye']} gol yiyor.")
+    if dep["at"] is not None:
+        cumleler.append(f"{dep['ad']} deplasmanda maç başına {dep['at']} gol atıp {dep['ye']} gol yiyor.")
+    enb = max(p_ev, p_x, p_dep)
+    if enb == p_x:
+        cumleler.append(f"Robot Ziya'ya göre güçler dengeli; beraberlik ihtimali %{_yuzde(p_x)}.")
+    else:
+        fav, olas = (ev["ad"], p_ev) if p_ev >= p_dep else (dep["ad"], p_dep)
+        fark = abs(p_ev - p_dep)
+        derece = "açık ara favori" if fark > 0.35 else ("favori" if fark > 0.15 else "hafif favori")
+        cumleler.append(f"Robot Ziya'ya göre {fav} {derece} (%{_yuzde(olas)}).")
+    toplam = lam_ev + lam_dep
+    if toplam >= 3.0:
+        cumleler.append("Gollü bir maç bekleniyor.")
+    elif toplam <= 2.0:
+        cumleler.append("Az gollü, kontrollü bir maç bekleniyor.")
+    return " ".join(cumleler)
+
+
+def ziya_sayfa_verisi():
+    simdi = utc_now_naive()
+    o = _ZIYA_SAYFA_ONBELLEK
+    if o["veri"] is not None and o["zaman"] and simdi - o["zaman"] < ZIYA_SAYFA_ONBELLEK_SURE:
+        return o["veri"]
+    ligler = gosterilecek_lig_id_listesi()
+    yaklasan = (Mac.query.filter(Mac.lig_id.in_(ligler), super_lig_takim_filtresi(), Mac.baslangic.isnot(None),
+                                 Mac.baslangic >= simdi - timedelta(hours=3), Mac.baslangic < simdi + timedelta(days=8),
+                                 ~Mac.durum.in_(["iptal", "ertelendi"]))
+                .order_by(Mac.baslangic.asc()).limit(60).all())
+    biten = (Mac.query.filter(Mac.lig_id.in_(ligler), super_lig_takim_filtresi(), Mac.durum == "bitti",
+                              Mac.baslangic >= simdi - timedelta(days=8), Mac.baslangic < simdi)
+             .order_by(Mac.baslangic.desc()).limit(40).all())
+    yz = yz_kullanici_getir(olustur=False)
+    ziya_tahmin = {}
+    if yz:
+        ids = [m.id for m in yaklasan + biten]
+        for t in Tahmin.query.filter(Tahmin.kullanici_id == yz.id, Tahmin.mac_id.in_(ids or [-1])).all():
+            ziya_tahmin.setdefault(t.mac_id, t)
+    analizler = {a.mac_id: a.metin for a in YzAnaliz.query.filter(
+        YzAnaliz.mac_id.in_([m.id for m in yaklasan + biten] or [-1])).all()}
+    istatistikler = {}
+
+    def ist_al(lig_id):
+        if lig_id not in istatistikler:
+            istatistikler[lig_id] = _yz_lig_istatistigi(lig_id, simdi)
+        return istatistikler[lig_id]
+
+    kartlar = []
+    for m in yaklasan:
+        if m.durum == "bitti":
+            continue
+        ist = ist_al(m.lig_id)
+        lam_ev, lam_dep, _, _ = yz_beklenen_goller(m, ist)
+        p_ev, p_x, p_dep = yz_sonuc_olasiliklari(lam_ev, lam_dep)
+        ev, dep = _ziya_takim_ozeti(m.ev_sahibi, "ic", ist), _ziya_takim_ozeti(m.deplasman, "dis", ist)
+        import math
+        kg = (1 - math.exp(-lam_ev)) * (1 - math.exp(-lam_dep))
+        uc_arti = 1 - sum(_poisson(i, lam_ev) * _poisson(j, lam_dep) for i in range(3) for j in range(3 - i))
+        ikili = ist["ikili"].get(frozenset((takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman))), [])[-3:]
+        basladi = m.basladi_mi()
+        t = ziya_tahmin.get(m.id)
+        kartlar.append({
+            "mac": m, "ev": ev, "dep": dep, "lam_ev": round(lam_ev, 1), "lam_dep": round(lam_dep, 1),
+            "p_ev": _yuzde(p_ev), "p_x": _yuzde(p_x), "p_dep": _yuzde(p_dep),
+            "kg": _yuzde(kg), "uc_arti": _yuzde(uc_arti), "ikili": list(reversed(ikili)),
+            "yorum": _ziya_yorum(m, ev, dep, p_ev, p_x, p_dep, lam_ev, lam_dep),
+            "basladi": basladi,
+            "ziya_skor": (f"{t.ev_skor}-{t.deplasman_skor}" if (t and basladi) else None),
+            "analiz": analizler.get(m.id) if basladi else None,
+        })
+    sonuclar = []
+    for m in biten:
+        t = ziya_tahmin.get(m.id)
+        if not t:
+            continue
+        sonuclar.append({"mac": m, "ziya_skor": f"{t.ev_skor}-{t.deplasman_skor}", "puan": t.puan or 0,
+                         "analiz": analizler.get(m.id)})
+    tutan = sum(1 for r in sonuclar if r["puan"] > 0)
+    tam = sum(1 for r in sonuclar if r["puan"] >= 5)
+    veri = {"kartlar": kartlar, "sonuclar": sonuclar,
+            "karne": {"mac": len(sonuclar), "tutan": tutan, "tam": tam}, "guncelleme": simdi}
+    o["zaman"], o["veri"] = simdi, veri
+    return veri
+
+
+app.jinja_env.globals["ANA_DOMAIN_ADI"] = ANA_DOMAIN or "skorbilen.com"
+
+
+@app.route("/robot-ziya-tahminleri")
+def ziya_tahminleri():
+    try:
+        veri = ziya_sayfa_verisi()
+    except Exception as e:
+        db.session.rollback()
+        print("[ziya-sayfa] hata:", e)
+        veri = {"kartlar": [], "sonuclar": [], "karne": {"mac": 0, "tutan": 0, "tam": 0}, "guncelleme": utc_now_naive()}
+    return render_template("ziya_tahminleri.html", **veri)
 
 
 @app.route("/puan-durumu")
