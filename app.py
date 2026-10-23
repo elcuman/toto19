@@ -162,9 +162,9 @@ LIG_KISA_ADLARI = {
 # Grup sayfasında "bu hafta" sayılan süre: bir ligin sıradaki maçı bu kadar
 # gün içinde değilse o lig için maç listelenmez.
 HAFTA_PENCERESI_GUN = 7
-# Haftalık puan tablosu Türkiye saatiyle bu gün ve saatte sıfırlanır (Cuma 15:00).
+# Haftalık puan tablosu Türkiye saatiyle bu gün ve saatte sıfırlanır (Cuma 12:00).
 HAFTA_BASLANGIC_GUNU = 4      # Pazartesi=0 ... Cuma=4
-HAFTA_BASLANGIC_SAATI = 15
+HAFTA_BASLANGIC_SAATI = 12
 # Başlamış ama sonucu gelmemiş bir maç, haftayı en fazla bu kadar saat açık tutar
 # (API hiç güncellemezse grup sayfası eski haftada takılı kalmasın diye).
 AKTIF_HAFTA_BEKLEME_SAAT = 12
@@ -3490,7 +3490,7 @@ def hafta_anahtari(tarih):
     aynı haftada oynanıyorsa TEK bir haftalık tabloda birleşsin."""
     if not tarih:
         return None
-    # Hafta, Türkiye saatiyle Cuma 15:00'te başlar (Cuma 15:00 → sonraki Cuma 15:00).
+    # Hafta, Türkiye saatiyle Cuma 12:00'de başlar (Cuma 12:00 → sonraki Cuma 12:00).
     # tarih UTC (naive); dönüş de UTC (naive).
     tr = tarih + TURKIYE_UTC_OFFSET
     gun = (tr.weekday() - HAFTA_BASLANGIC_GUNU) % 7
@@ -4916,7 +4916,7 @@ def grup_sezon_siralamasi(grup_id):
 
 
 def bu_haftanin_araligi(now=None):
-    """Grup haftası Türkiye saatiyle Cuma 15:00'te başlar (UTC naive döner)."""
+    """Grup haftası Türkiye saatiyle Cuma 12:00'de başlar (UTC naive döner)."""
     bas = hafta_anahtari(now or utc_now_naive())
     return bas, bas + timedelta(days=7)
 
@@ -5377,7 +5377,7 @@ def puan_durumu():
              "siralama": su_anki_hafta_liderligi_hesapla(secili_grup.id, hafta_basi, hafta_sonu),
              "kral": "Haftanın kralı", "cenabet": "Haftanın cenabeti",
              "not": f"{secili_grup.ad}: {to_turkiye_saati(hafta_basi).strftime('%d.%m')} – "
-                    f"{to_turkiye_saati(hafta_sonu).strftime('%d.%m')} (Cuma 15:00) arası, her hafta sıfırdan başlar."},
+                    f"{to_turkiye_saati(hafta_sonu).strftime('%d.%m')} (Cuma 12:00) arası, her hafta sıfırdan başlar."},
         ] + sekmeler
 
     gecerli = {s["kod"] for s in sekmeler}
