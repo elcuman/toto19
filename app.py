@@ -1470,14 +1470,24 @@ def espn_events_to_maclar(events, bosluk_gun=None):
 
     ayristirilan.sort(key=lambda x: x[0])
 
+    # Yeni hafta: maçlar arasında uzun boşluk varsa YA DA bu haftada zaten
+    # oynamış bir takım tekrar sahaya çıkıyorsa (her takım haftada bir maç
+    # oynar). Sadece boşluğa bakmak, Pazartesi maçından 4 gün sonraki Cuma
+    # maçını aynı haftaya katıyordu.
     hafta_no = 0
     onceki_tarih = None
+    haftadaki_takimlar = set()
     sonuc = []
     for tarih, event in ayristirilan:
+        takimlar = {((c.get("team") or {}).get("id") or (c.get("team") or {}).get("displayName"))
+                    for c in ((event.get("competitions") or [{}])[0].get("competitors") or [])}
+        takimlar.discard(None)
         if onceki_tarih is None or (tarih - onceki_tarih).days > (
             ESPN_HAFTA_BOSLUK_GUN if bosluk_gun is None else bosluk_gun
-        ):
+        ) or (takimlar & haftadaki_takimlar):
             hafta_no += 1
+            haftadaki_takimlar = set()
+        haftadaki_takimlar |= takimlar
         onceki_tarih = tarih
         sonuc.append((event, hafta_no))
     return sonuc
