@@ -41,10 +41,10 @@
 </div>
 
 <div class="kl-klavye" id="klKlavye" aria-label="Klavye">
-  {% for satir in ["ertyuıopğü", "asdfghjklşi", "+zcvbnmöç-"] %}
+  {% for satir in ["ertyuıopğü", "asdfghjklşi", "-zcvbnmöç+"] %}
   <div class="kl-ksatir">
     {% for h in satir %}
-      {% if h == "+" %}<button type="button" class="kl-tus kl-genis" data-tus="enter">GİR</button>
+      {% if h == "+" %}<button type="button" class="kl-tus kl-enter" data-tus="enter" aria-label="Gönder">ENTER</button>
       {% elif h == "-" %}<button type="button" class="kl-tus kl-genis" data-tus="sil" aria-label="Sil">⌫</button>
       {% else %}<button type="button" class="kl-tus" data-tus="{{ h }}">{{ h.replace('i','İ').replace('ı','I').upper() }}</button>{% endif %}
     {% endfor %}
@@ -132,7 +132,8 @@
 .kl-klavye{width:min(100%, 500px); margin:6px auto 18px; display:grid; gap:6px; touch-action:manipulation}
 .kl-ksatir{display:flex; gap:4px; justify-content:center}
 .kl-tus{flex:1 1 0; min-width:0; height:52px; border:0; border-radius:6px; background:#DDE3DF; color:var(--murekkep); font:700 15px var(--yazi); cursor:pointer; padding:0}
-.kl-tus.kl-genis{flex:1.6 1 0; font-size:13px}
+.kl-tus.kl-genis{flex:1.3 1 0; font-size:17px}
+.kl-tus.kl-enter{flex:2.4 1 0; background:var(--cim); color:#fff; font-size:14px; letter-spacing:.03em}
 .kl-tus.y{background:#3A9A5B; color:#fff} .kl-tus.s{background:#D4A520; color:#fff} .kl-tus.g{background:#7C8681; color:#fff}
 .kl-tus:active{filter:brightness(.92)}
 .kl-sira h2{margin:0 0 6px; font-size:19px}
