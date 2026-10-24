@@ -3298,14 +3298,26 @@ def kelime_siralamasi(gun=None):
             return max(0, int((o.bitis - o.baslangic).total_seconds()))
         return 10 ** 9
     oyunlar.sort(key=lambda o: (not o.kazandi, len(o.liste()) if o.kazandi else 99, sure(o)))
+    # İsimler sadece aynı grupta olduğun kişilerde (ve kendinde) görünür; misafir
+    # ve grup dışı kişiler sadece sırayı görür. Gizli isim sunucudan hiç gönderilmez.
+    gorunur = set()
+    if current_user.is_authenticated:
+        gorunur.add(current_user.id)
+        gidler = kullanicinin_grup_idleri(current_user.id)
+        if gidler:
+            gorunur |= {kid for (kid,) in db.session.query(GrupUyeligi.kullanici_id)
+                        .filter(GrupUyeligi.grup_id.in_(gidler)).all()}
     liste, sira = [], 0
     for o in oyunlar:
         if not o.kullanici or yz_mi(o.kullanici):
             continue
         sira += 1
         s = sure(o)
-        liste.append({"sira": sira if o.kazandi else None, "ad": o.kullanici.kullanici_adi,
-                      "kullanici_id": o.kullanici_id, "kazandi": o.kazandi,
+        acik = o.kullanici_id in gorunur
+        liste.append({"sira": sira if o.kazandi else None,
+                      "ad": o.kullanici.kullanici_adi if acik else "Oyuncu" + "•" * (3 + o.id % 5),
+                      "gizli": not acik,
+                      "kullanici_id": o.kullanici_id if acik else None, "kazandi": o.kazandi,
                       "deneme": len(o.liste()), "sure": (f"{s // 60}:{s % 60:02d}" if s < 10 ** 9 else "")})
     return liste
 
