@@ -14,13 +14,18 @@
   <h1>Kelime <span>#{{ veri.numara }}</span></h1>
   <button type="button" class="kl-yardim-btn" id="klYardimBtn" aria-label="Nasıl oynanır">?</button>
 </div>
-<p class="kl-alt">5 harfli kelimeyi 6 denemede bul. Her gün gece 00:00'da yeni kelime.</p>
+<p class="kl-alt{{ ' kl-uye' if current_user.is_authenticated }}">5 harfli kelimeyi 6 denemede bul. Her gün gece 00:00'da yeni kelime.</p>
 
-<div class="kl-tahta" id="klTahta" aria-label="Tahmin tablosu">
+<div class="kl-tahta" id="klTahta" aria-label="Tahmin tablosu"{% if current_user.is_authenticated %} style="--kl-pay:420px"{% endif %}>
   {% for i in range(veri.hak) %}
   <div class="kl-satir">{% for j in range(uzunluk) %}<div class="kl-kutu"></div>{% endfor %}</div>
   {% endfor %}
 </div>
+
+<form id="klGirisForm" class="kl-giris-form" autocomplete="off" onsubmit="return false">
+  <input id="klGiris" class="kl-giris" type="text" aria-label="Harf yaz" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" value=" ">
+</form>
+<p class="kl-ipucu{{ ' kl-uye' if current_user.is_authenticated }}" id="klIpucu">Kutuya dokunup telefonunun klavyesiyle de yazabilirsin.</p>
 
 <div class="kl-mesaj" id="klMesaj" role="status" aria-live="polite"></div>
 
@@ -88,6 +93,18 @@
 .kl-yardim-btn{position:absolute; right:0; width:32px; height:32px; border-radius:50%; border:1px solid var(--cizgi); background:var(--kart); font:700 16px var(--yazi); color:var(--gri); cursor:pointer}
 .kl-alt{text-align:center; color:var(--gri); font-size:14px; margin:4px 0 14px}
 .kl-tahta{display:grid; gap:6px; width:min(100%, 320px); margin:0 auto}
+@media (max-width:600px){
+  .kl-bas h1{font-size:24px}
+  .kl-alt{font-size:12.5px; margin:2px 0 8px}
+  .kl-tahta{gap:5px; width:min(100%, 320px, calc((100svh - var(--kl-pay, 340px)) * 0.83)); min-width:150px}
+  .kl-satir{gap:5px}
+  .kl-mesaj{min-height:24px; margin:6px 0 2px}
+  .kl-ipucu{margin-top:6px; font-size:12px}
+  .kl-tus{height:46px}
+  .kl-klavye{gap:5px; margin-top:2px}
+}
+@media (max-width:600px) and (max-height:720px){ .kl-alt, .kl-ipucu{display:none} .kl-bas{margin-top:0} }
+@media (max-width:600px){ .kl-uye{display:none} }
 .kl-satir{display:grid; grid-template-columns:repeat(5,1fr); gap:6px}
 .kl-satir.salla{animation:kl-salla .4s}
 @keyframes kl-salla{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
@@ -99,6 +116,11 @@
 .kl-kutu.ac{animation:kl-cevir .45s ease both}
 @keyframes kl-cevir{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
 @media (prefers-reduced-motion:reduce){.kl-kutu.ac,.kl-kutu.dolu,.kl-satir.salla{animation:none}}
+.kl-giris-form{position:fixed; left:0; bottom:0; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none}
+.kl-giris{font-size:16px; width:40px}
+.kl-satir.aktif .kl-kutu{cursor:text}
+.kl-kutu.imlec{border-color:var(--cim); box-shadow:0 0 0 2px rgba(14,122,76,.25)}
+.kl-ipucu{text-align:center; font-size:12.5px; color:var(--gri); margin:8px 0 0}
 .kl-mesaj{min-height:28px; text-align:center; font-weight:600; margin:10px 0 4px}
 .kl-mesaj span{display:inline-block; background:var(--murekkep); color:#fff; padding:5px 12px; border-radius:8px; font-size:14px}
 .kl-sonuc{text-align:center; margin:4px auto 12px; max-width:420px}
@@ -142,7 +164,10 @@
   var HARF = 'abcçdefgğhıijklmnoöprsştuüvyz';
   var tahta = document.getElementById('klTahta'), mesaj = document.getElementById('klMesaj');
   var satirlar = tahta.querySelectorAll('.kl-satir');
-  var yazilan = '', mesgul = false, bitti = veri.bitti;
+  var harfler = [], poz = 0, mesgul = false, bitti = veri.bitti;
+  function sifirla(){ harfler = []; for (var i=0;i<UZ;i++) harfler.push(''); poz = 0; }
+  sifirla();
+  var giris = document.getElementById('klGiris');
   function BUYUK(h){ return h.toLocaleUpperCase('tr-TR'); }
   function goster(m, sure){
     mesaj.innerHTML = m ? '<span></span>' : ''; if (m) mesaj.firstChild.textContent = m;
@@ -170,32 +195,72 @@
     veri.tahminler.forEach(function(t, i){ satirYaz(i, t.kelime, t.renk, anim && i === veri.tahminler.length-1); });
   }
   function aktif(){ return veri.tahminler.length; }
+  function aktifCiz(){
+    satirlar.forEach(function(s, i){ s.classList.toggle('aktif', !bitti && i === aktif()); });
+    if (bitti || aktif() >= HAK) return;
+    satirYaz(aktif(), harfler);
+    var kutular = satirlar[aktif()].children;
+    for (var j=0;j<UZ;j++) kutular[j].classList.toggle('imlec', j === poz);
+  }
   function bas(h){
     if (bitti || mesgul) return;
     if (h === 'enter') return gonder();
-    if (h === 'sil') { yazilan = yazilan.slice(0,-1); }
-    else if (yazilan.length < UZ && HARF.indexOf(h) >= 0) { yazilan += h; }
-    else return;
-    satirYaz(aktif(), yazilan);
+    if (h === 'sil') {
+      if (harfler[poz]) harfler[poz] = '';
+      else if (poz > 0) { poz--; harfler[poz] = ''; }
+    } else if (HARF.indexOf(h) >= 0) {
+      harfler[poz] = h;
+      if (poz < UZ-1) poz++;
+    } else return;
+    aktifCiz();
   }
+  // Kutuya dokununca o kutuya geç ve telefonun kendi klavyesini aç
+  tahta.addEventListener('click', function(e){
+    var k = e.target.closest('.kl-kutu'); if (!k || bitti) return;
+    var satir = k.parentNode; if ([].indexOf.call(satirlar, satir) !== aktif()) return;
+    poz = [].indexOf.call(satir.children, k); aktifCiz();
+    giris.focus({preventScroll:true});
+  });
+  // Telefon klavyesi: kutuda hep bir boşluk tutulur; boşluk silinirse "sil", yeni karakter gelirse harf
+  giris.addEventListener('input', function(){
+    var v = giris.value;
+    if (v.length < 1) bas('sil');
+    else {
+      v.replace(' ', '').split('').forEach(function(c){
+        var h = c === 'I' ? 'ı' : c === 'İ' ? 'i' : c.toLocaleLowerCase('tr-TR');
+        if (HARF.indexOf(h) >= 0) bas(h);
+      });
+    }
+    giris.value = ' ';
+    try { giris.setSelectionRange(1,1); } catch(e) {}
+  });
+  giris.addEventListener('focus', function(){ try { giris.setSelectionRange(1,1); } catch(e) {} });
+  giris.addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); bas('enter'); }
+    else if (e.key === 'Backspace' && giris.value === ' ') { e.preventDefault(); bas('sil'); }
+  });
   function salla(){ var s = satirlar[aktif()]; s.classList.remove('salla'); void s.offsetWidth; s.classList.add('salla'); }
   function gonder(){
-    if (yazilan.length < UZ) { goster('Kelime 5 harfli olmalı', 1600); salla(); return; }
+    var yazilan = harfler.join('');
+    if (yazilan.length < UZ || harfler.indexOf('') >= 0) { goster('Kelime 5 harfli olmalı', 1600); salla(); return; }
     mesgul = true;
     fetch('{{ url_for("kelime_tahmin") }}', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({kelime: yazilan})})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
       .then(function(x){
         mesgul = false;
         if (!x.ok) { goster(x.j.hata || 'Olmadı', 1800); salla(); return; }
-        veri = x.j; yazilan = ''; goster('');
+        veri = x.j; sifirla(); goster('');
         satirYaz(veri.tahminler.length-1, veri.tahminler[veri.tahminler.length-1].kelime, veri.tahminler[veri.tahminler.length-1].renk, true);
-        if (veri.bitti) { bitti = true; setTimeout(function(){ sonucGoster(true); if (veri.siralama) siraCiz(veri.siralama); }, UZ*250+500); }
+        if (veri.bitti) { bitti = true; giris.blur(); }
+        setTimeout(aktifCiz, UZ*250+300);
+        if (veri.bitti) { setTimeout(function(){ sonucGoster(true); if (veri.siralama) siraCiz(veri.siralama); }, UZ*250+500); }
       })
       .catch(function(){ mesgul = false; goster('Bağlantı hatası, tekrar dene', 2000); });
   }
   var tebrik = ['Dahi!', 'Muhteşem!', 'Harika!', 'Çok iyi!', 'İyi iş!', 'Kıl payı!'];
   function sonucGoster(yeni){
     var b = document.getElementById('klSonuc'); b.hidden = false;
+    document.getElementById('klIpucu').hidden = true;
     document.getElementById('klKlavye').hidden = true;
     var baslik = document.getElementById('klSonucBaslik');
     baslik.textContent = veri.kazandi ? (tebrik[veri.tahminler.length-1] + ' ' + veri.tahminler.length + '/6')
@@ -247,6 +312,7 @@
   document.getElementById('klYardimBtn').addEventListener('click', function(){ dlg.showModal(); });
   try { if (!localStorage.getItem('kelime_yardim') && !veri.tahminler.length) { dlg.showModal(); localStorage.setItem('kelime_yardim','1'); } } catch(e) {}
   hepsiniCiz(false);
+  aktifCiz();
   if (bitti) sonucGoster(false);
 })();
 </script>
