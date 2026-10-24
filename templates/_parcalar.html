@@ -231,3 +231,30 @@
   {% if a.acik %}<button type="button" class="anket-degistir" {% if a.benim is none %}hidden{% endif %}>Oyumu değiştir</button>{% endif %}
 </section>
 {%- endmacro %}
+
+
+{% macro kelime_karti() -%}
+{% set kb = kelime_karti_bilgisi() %}
+<a class="kk" href="{{ url_for('kelime_oyunu') }}">
+  <span class="kk-kutular" aria-hidden="true"><i class="y">K</i><i class="s">E</i><i>L</i><i class="y">İ</i><i class="s">M</i><i class="y">E</i></span>
+  <span class="kk-metin">
+    <strong>Günün kelimesi #{{ kb.numara }}</strong>
+    <span>5 harfli kelimeyi 6 denemede bul, günlük sıralamada yarış.{% if not current_user.is_authenticated %} Üye olmadan da oynanır.{% endif %}</span>
+    {% if kb.oynayan %}<small>Bugün {{ kb.oynayan }} kişi çözdü</small>{% endif %}
+  </span>
+  <span class="kk-btn">{{ 'Sıralamaya bak' if kb.bitirdi else 'Oyna' }} ›</span>
+</a>
+<style>
+.kk{display:flex; align-items:center; gap:14px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg,#F3FAF5,#FDF6DF); border:1px solid #D8E8DD; text-decoration:none; color:var(--murekkep)}
+.kk:hover{color:var(--murekkep); border-color:#B9D6C3}
+.kk-kutular{display:grid; grid-template-columns:repeat(3,26px); gap:3px; flex:none}
+.kk-kutular i{width:26px; height:26px; display:flex; align-items:center; justify-content:center; font:700 15px var(--baslik); font-style:normal; border-radius:5px; background:#7C8681; color:#fff}
+.kk-kutular i.y{background:#3A9A5B} .kk-kutular i.s{background:#D4A520}
+.kk-metin{flex:1; min-width:0}
+.kk-metin strong{display:block; font:700 19px/1.2 var(--baslik)}
+.kk-metin span{display:block; font-size:13.5px; color:var(--gri); margin-top:2px}
+.kk-metin small{display:inline-block; margin-top:4px; font-size:12px; font-weight:600; color:var(--cim)}
+.kk-btn{flex:none; background:var(--cim); color:#fff; font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; white-space:nowrap}
+@media (max-width:480px){ .kk{flex-wrap:wrap} .kk-btn{width:100%; text-align:center} }
+</style>
+{%- endmacro %}

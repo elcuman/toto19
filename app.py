@@ -3377,6 +3377,25 @@ def kelime_tahmin():
     return jsonify(veri)
 
 
+def kelime_karti_bilgisi():
+    """Ana sayfa kartı için: bugünkü bulmaca no ve bugün bitiren kişi sayısı."""
+    bilgi = {"numara": kelime_numarasi(), "oynayan": 0, "bitirdi": False}
+    try:
+        bilgi["oynayan"] = KelimeOyunu.query.filter_by(gun=kelime_bugun(), bitti=True).count()
+        if current_user.is_authenticated:
+            bilgi["bitirdi"] = bool(KelimeOyunu.query.filter_by(
+                kullanici_id=current_user.id, gun=kelime_bugun(), bitti=True).first())
+        else:
+            m = session.get("kelime") or {}
+            bilgi["bitirdi"] = m.get("gun") == kelime_bugun().isoformat() and m.get("b", False)
+    except Exception:
+        db.session.rollback()
+    return bilgi
+
+
+app.jinja_env.globals["kelime_karti_bilgisi"] = kelime_karti_bilgisi
+
+
 @app.route("/kelime/siralama")
 def kelime_siralama_json():
     return jsonify({"siralama": kelime_siralamasi()})
