@@ -337,6 +337,7 @@ tr:last-child td{border-bottom:0}
       <a href="{{ url_for('dashboard') }}" {% if ep == 'dashboard' %}aria-current="page"{% endif %}>Ana sayfa</a>
       <a href="{{ url_for('gruplar') }}" {% if ep.startswith('grup') and not sohbette %}aria-current="page"{% endif %}>Gruplar</a>
       <a href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
+      <a href="{{ url_for('kelime_oyunu') }}" {% if ep == 'kelime_oyunu' %}aria-current="page"{% endif %}>Kelime</a>
       <a href="{{ url_for('profil') }}" {% if ep == 'profil' %}aria-current="page"{% endif %}>Profil</a>
       <a href="{{ url_for('sohbetler') }}" {% if sohbette %}aria-current="page"{% endif %}>Sohbet{% if toplam_okunmamis %} <span class="ust-rozet">{{ toplam_okunmamis }}</span>{% endif %}</a>
       {% if current_user.admin %}<a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>Admin{% if admin_rozet %} <span class="ust-rozet">{{ admin_rozet }}</span>{% endif %}</a>{% endif %}
@@ -365,6 +366,7 @@ tr:last-child td{border-bottom:0}
 
 <footer class="altbilgi">
   <nav aria-label="Site bağlantıları">
+    <a href="{{ url_for('kelime_oyunu') }}">Günlük kelime oyunu</a>
     <a href="{{ url_for('ziya_tahminleri') }}">Robot Ziya'nın tahminleri</a>
     <a href="{{ url_for('puan_durumu') }}">Puan durumu</a>
     <a href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır</a>

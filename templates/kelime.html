@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Günlük Kelime Oyunu #{{ veri.numara }} · Türkçe Wordle · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="Her gün yeni bir 5 harfli Türkçe kelime. 6 denemede bul, arkadaşlarınla günlük sıralamada yarış. Ücretsiz Türkçe Wordle.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/kelime">
+<meta property="og:title" content="Günlük Kelime #{{ veri.numara }} · Türkçe Wordle">
+<meta property="og:description" content="5 harfli kelimeyi 6 denemede bulabilir misin? Her gün yeni kelime.">
+<meta property="og:url" content="https://{{ ANA_DOMAIN_ADI }}/kelime">
+{% endblock %}
+
+{% block content %}
+<div class="kl-bas">
+  <h1>Kelime <span>#{{ veri.numara }}</span></h1>
+  <button type="button" class="kl-yardim-btn" id="klYardimBtn" aria-label="Nasıl oynanır">?</button>
+</div>
+<p class="kl-alt">5 harfli kelimeyi 6 denemede bul. Her gün gece 00:00'da yeni kelime.</p>
+
+<div class="kl-tahta" id="klTahta" aria-label="Tahmin tablosu">
+  {% for i in range(veri.hak) %}
+  <div class="kl-satir">{% for j in range(uzunluk) %}<div class="kl-kutu"></div>{% endfor %}</div>
+  {% endfor %}
+</div>
+
+<div class="kl-mesaj" id="klMesaj" role="status" aria-live="polite"></div>
+
+<div class="kl-sonuc" id="klSonuc" hidden>
+  <p class="kl-sonuc-baslik" id="klSonucBaslik"></p>
+  <div class="kl-sonuc-dugmeler">
+    <button type="button" class="btn" id="klPaylas">Sonucu paylaş</button>
+  </div>
+  <p class="kl-sayac">Yeni kelime: <strong id="klSayac">--:--:--</strong></p>
+  {% if not current_user.is_authenticated %}
+  <p class="kl-misafir">Sıralamada görünmek için <a href="{{ url_for('giris', next='/kelime') }}">giriş yap</a> ya da <a href="{{ url_for('kayit') }}">kayıt ol</a>. Yarından itibaren sonucun tabloya girer.</p>
+  {% endif %}
+</div>
+
+<div class="kl-klavye" id="klKlavye" aria-label="Klavye">
+  {% for satir in ["ertyuıopğü", "asdfghjklşi", "+zcvbnmöç-"] %}
+  <div class="kl-ksatir">
+    {% for h in satir %}
+      {% if h == "+" %}<button type="button" class="kl-tus kl-genis" data-tus="enter">GİR</button>
+      {% elif h == "-" %}<button type="button" class="kl-tus kl-genis" data-tus="sil" aria-label="Sil">⌫</button>
+      {% else %}<button type="button" class="kl-tus" data-tus="{{ h }}">{{ h.replace('i','İ').replace('ı','I').upper() }}</button>{% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<section class="panel kl-sira">
+  <h2>🏆 Bugünün sıralaması</h2>
+  <p class="sessiz kucuk" style="margin-top:-4px">Önce en az denemede bulan, eşitlikte daha hızlı bulan önde. Tahmin ligi puanlarına etkisi yok.</p>
+  <ol class="kl-sira-liste" id="klSira">
+    {% for s in siralama %}
+    <li class="{{ 'kl-ben' if current_user.is_authenticated and s.kullanici_id == current_user.id }}{{ ' kl-kaybetti' if not s.kazandi }}">
+      <span class="kl-s-no">{{ s.sira or '–' }}</span>
+      <span class="kl-s-ad">{{ s.ad }}</span>
+      <span class="kl-s-deneme">{{ (s.deneme ~ '/6') if s.kazandi else 'X/6' }}</span>
+      <span class="kl-s-sure">{{ s.sure if s.kazandi }}</span>
+    </li>
+    {% else %}
+    <li class="kl-bos">Bugün henüz kimse bitirmedi. İlk sen ol!</li>
+    {% endfor %}
+  </ol>
+</section>
+
+{% if dunku_kelime %}
+<p class="sessiz kucuk kl-dun">Dünün kelimesi: <strong>{{ dunku_kelime.replace('i','İ').replace('ı','I').upper() }}</strong></p>
+{% endif %}
+
+<dialog class="kl-dlg" id="klYardim" aria-labelledby="klYardimBaslik">
+  <h2 id="klYardimBaslik">Nasıl oynanır?</h2>
+  <p>5 harfli kelimeyi 6 denemede bul. Her tahmin sözlükte olan 5 harfli bir kelime olmalı.</p>
+  <div class="kl-ornek"><span class="kl-kutu y">K</span><span class="kl-kutu">A</span><span class="kl-kutu">L</span><span class="kl-kutu">E</span><span class="kl-kutu">M</span></div>
+  <p><strong>Yeşil:</strong> harf kelimede ve doğru yerde.</p>
+  <div class="kl-ornek"><span class="kl-kutu">D</span><span class="kl-kutu s">E</span><span class="kl-kutu">N</span><span class="kl-kutu">İ</span><span class="kl-kutu">Z</span></div>
+  <p><strong>Sarı:</strong> harf kelimede var ama başka yerde.</p>
+  <div class="kl-ornek"><span class="kl-kutu">S</span><span class="kl-kutu">A</span><span class="kl-kutu">B</span><span class="kl-kutu g">A</span><span class="kl-kutu">H</span></div>
+  <p><strong>Gri:</strong> harf kelimede yok.</p>
+  <p class="sessiz kucuk">Herkese aynı kelime çıkar. Giriş yaptıysan sonucun günün sıralamasına girer.</p>
+  <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
+</dialog>
+
+<style>
+.kl-bas{display:flex; align-items:center; justify-content:center; gap:10px; position:relative; margin-top:4px}
+.kl-bas h1{margin:0; font-size:30px; letter-spacing:.04em}
+.kl-bas h1 span{color:var(--gri); font-weight:600}
+.kl-yardim-btn{position:absolute; right:0; width:32px; height:32px; border-radius:50%; border:1px solid var(--cizgi); background:var(--kart); font:700 16px var(--yazi); color:var(--gri); cursor:pointer}
+.kl-alt{text-align:center; color:var(--gri); font-size:14px; margin:4px 0 14px}
+.kl-tahta{display:grid; gap:6px; width:min(100%, 320px); margin:0 auto}
+.kl-satir{display:grid; grid-template-columns:repeat(5,1fr); gap:6px}
+.kl-satir.salla{animation:kl-salla .4s}
+@keyframes kl-salla{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.kl-kutu{aspect-ratio:1; display:flex; align-items:center; justify-content:center; border:2px solid var(--cizgi); border-radius:6px; background:var(--kart); font:700 clamp(24px,8vw,32px)/1 var(--baslik); text-transform:none; user-select:none}
+.kl-kutu.dolu{border-color:var(--gri-acik); animation:kl-bas .1s}
+@keyframes kl-bas{50%{transform:scale(1.08)}}
+.kl-kutu.y,.kl-kutu.s,.kl-kutu.g{color:#fff; border-color:transparent}
+.kl-kutu.y{background:#3A9A5B} .kl-kutu.s{background:#D4A520} .kl-kutu.g{background:#7C8681}
+.kl-kutu.ac{animation:kl-cevir .45s ease both}
+@keyframes kl-cevir{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+@media (prefers-reduced-motion:reduce){.kl-kutu.ac,.kl-kutu.dolu,.kl-satir.salla{animation:none}}
+.kl-mesaj{min-height:28px; text-align:center; font-weight:600; margin:10px 0 4px}
+.kl-mesaj span{display:inline-block; background:var(--murekkep); color:#fff; padding:5px 12px; border-radius:8px; font-size:14px}
+.kl-sonuc{text-align:center; margin:4px auto 12px; max-width:420px}
+.kl-sonuc-baslik{font:700 20px var(--baslik); margin:0 0 8px}
+.kl-sayac{color:var(--gri); font-size:14px; margin:10px 0 0}
+.kl-sayac strong{font-variant-numeric:tabular-nums; color:var(--murekkep)}
+.kl-misafir{font-size:13.5px; background:var(--cim-acik); border-radius:8px; padding:8px 10px; margin:10px 0 0}
+.kl-klavye[hidden]{display:none}
+.kl-klavye{width:min(100%, 500px); margin:6px auto 18px; display:grid; gap:6px; touch-action:manipulation}
+.kl-ksatir{display:flex; gap:4px; justify-content:center}
+.kl-tus{flex:1 1 0; min-width:0; height:52px; border:0; border-radius:6px; background:#DDE3DF; color:var(--murekkep); font:700 15px var(--yazi); cursor:pointer; padding:0}
+.kl-tus.kl-genis{flex:1.6 1 0; font-size:13px}
+.kl-tus.y{background:#3A9A5B; color:#fff} .kl-tus.s{background:#D4A520; color:#fff} .kl-tus.g{background:#7C8681; color:#fff}
+.kl-tus:active{filter:brightness(.92)}
+.kl-sira h2{margin:0 0 6px; font-size:19px}
+.kl-sira-liste{list-style:none; margin:0; padding:0}
+.kl-sira-liste li{display:grid; grid-template-columns:28px 1fr auto 48px; gap:8px; align-items:center; padding:8px 4px; border-top:1px solid var(--cizgi); font-size:15px}
+.kl-sira-liste li:first-child{border-top:0}
+.kl-s-no{font:700 17px var(--baslik); color:var(--gri)}
+.kl-sira-liste li:nth-child(1) .kl-s-no{color:#C99A0A}
+.kl-s-ad{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.kl-s-deneme{font:700 16px var(--baslik)}
+.kl-s-sure{color:var(--gri); font-size:13px; text-align:right; font-variant-numeric:tabular-nums}
+.kl-ben{background:var(--sari-acik); border-radius:8px}
+.kl-kaybetti .kl-s-deneme{color:var(--gri)}
+.kl-bos{display:block !important; color:var(--gri); text-align:center}
+.kl-dun{text-align:center}
+.kl-dlg{max-width:380px; border:0; border-radius:var(--r-buyuk); padding:20px}
+.kl-dlg::backdrop{background:rgba(0,0,0,.45)}
+.kl-dlg h2{margin:0 0 8px}
+.kl-dlg p{font-size:14.5px; margin:6px 0}
+.kl-ornek{display:grid; grid-template-columns:repeat(5,38px); gap:4px; margin-top:10px}
+.kl-ornek .kl-kutu{font-size:20px}
+@media (max-width:380px){ .kl-tus{height:48px; font-size:14px} .kl-ksatir{gap:3px} }
+</style>
+
+<script>
+(function(){
+  var UZ = {{ uzunluk }}, HAK = {{ veri.hak }};
+  var veri = {{ veri | tojson }};
+  var HARF = 'abcçdefgğhıijklmnoöprsştuüvyz';
+  var tahta = document.getElementById('klTahta'), mesaj = document.getElementById('klMesaj');
+  var satirlar = tahta.querySelectorAll('.kl-satir');
+  var yazilan = '', mesgul = false, bitti = veri.bitti;
+  function BUYUK(h){ return h.toLocaleUpperCase('tr-TR'); }
+  function goster(m, sure){
+    mesaj.innerHTML = m ? '<span></span>' : ''; if (m) mesaj.firstChild.textContent = m;
+    clearTimeout(goster.t); if (m && sure) goster.t = setTimeout(function(){ mesaj.innerHTML=''; }, sure);
+  }
+  var oncelik = {g:1, s:2, y:3};
+  function tusBoya(h, r){
+    var t = document.querySelector('.kl-tus[data-tus="'+h+'"]'); if (!t) return;
+    var eski = t.dataset.r || ''; if (!eski || oncelik[r] > oncelik[eski]) { t.dataset.r = r; t.classList.remove('y','s','g'); t.classList.add(r); }
+  }
+  function satirYaz(i, kelime, renk, anim){
+    var kutular = satirlar[i].children;
+    for (var j=0;j<UZ;j++){
+      var k = kutular[j]; k.textContent = kelime[j] ? BUYUK(kelime[j]) : ''; k.className = 'kl-kutu' + (kelime[j] ? ' dolu' : '');
+      if (renk){
+        (function(k, r, j){
+          if (anim){ setTimeout(function(){ k.classList.add('ac'); setTimeout(function(){ k.classList.add(r); }, 220); }, j*250); }
+          else k.classList.add(r);
+        })(k, renk[j], j);
+      }
+    }
+    if (renk) for (var j2=0;j2<UZ;j2++) (function(h,r){ setTimeout(function(){ tusBoya(h,r); }, anim ? UZ*250+100 : 0); })(kelime[j2], renk[j2]);
+  }
+  function hepsiniCiz(anim){
+    veri.tahminler.forEach(function(t, i){ satirYaz(i, t.kelime, t.renk, anim && i === veri.tahminler.length-1); });
+  }
+  function aktif(){ return veri.tahminler.length; }
+  function bas(h){
+    if (bitti || mesgul) return;
+    if (h === 'enter') return gonder();
+    if (h === 'sil') { yazilan = yazilan.slice(0,-1); }
+    else if (yazilan.length < UZ && HARF.indexOf(h) >= 0) { yazilan += h; }
+    else return;
+    satirYaz(aktif(), yazilan);
+  }
+  function salla(){ var s = satirlar[aktif()]; s.classList.remove('salla'); void s.offsetWidth; s.classList.add('salla'); }
+  function gonder(){
+    if (yazilan.length < UZ) { goster('Kelime 5 harfli olmalı', 1600); salla(); return; }
+    mesgul = true;
+    fetch('{{ url_for("kelime_tahmin") }}', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({kelime: yazilan})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+      .then(function(x){
+        mesgul = false;
+        if (!x.ok) { goster(x.j.hata || 'Olmadı', 1800); salla(); return; }
+        veri = x.j; yazilan = ''; goster('');
+        satirYaz(veri.tahminler.length-1, veri.tahminler[veri.tahminler.length-1].kelime, veri.tahminler[veri.tahminler.length-1].renk, true);
+        if (veri.bitti) { bitti = true; setTimeout(function(){ sonucGoster(true); if (veri.siralama) siraCiz(veri.siralama); }, UZ*250+500); }
+      })
+      .catch(function(){ mesgul = false; goster('Bağlantı hatası, tekrar dene', 2000); });
+  }
+  var tebrik = ['Dahi!', 'Muhteşem!', 'Harika!', 'Çok iyi!', 'İyi iş!', 'Kıl payı!'];
+  function sonucGoster(yeni){
+    var b = document.getElementById('klSonuc'); b.hidden = false;
+    document.getElementById('klKlavye').hidden = true;
+    var baslik = document.getElementById('klSonucBaslik');
+    baslik.textContent = veri.kazandi ? (tebrik[veri.tahminler.length-1] + ' ' + veri.tahminler.length + '/6')
+                                      : 'Bugünkü kelime: ' + BUYUK(veri.cevap || '');
+    if (yeni && veri.kazandi) goster(tebrik[veri.tahminler.length-1], 2500);
+    sayac();
+  }
+  function paylasimMetni(){
+    var e = {y:'🟩', s:'🟨', g:'⬜'};
+    var satir = veri.tahminler.map(function(t){ return t.renk.split('').map(function(r){ return e[r]; }).join(''); }).join('\n');
+    return 'Kelime #' + veri.numara + ' ' + (veri.kazandi ? veri.tahminler.length : 'X') + '/6\n\n' + satir + '\n\nskorbilen.com/kelime';
+  }
+  document.getElementById('klPaylas').addEventListener('click', function(){
+    var m = paylasimMetni();
+    if (navigator.share) { navigator.share({text: m}).catch(function(){}); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(m) : Promise.reject()).then(function(){ goster('Sonuç kopyalandı', 1800); }, function(){ window.open('https://wa.me/?text=' + encodeURIComponent(m), '_blank'); });
+  });
+  function sayac(){
+    var el = document.getElementById('klSayac');
+    function ciz(){
+      var simdi = new Date(), tr = new Date(simdi.getTime() + (simdi.getTimezoneOffset() + 180) * 60000);
+      var kalan = 86400 - (tr.getHours()*3600 + tr.getMinutes()*60 + tr.getSeconds());
+      if (kalan <= 1) { location.reload(); return; }
+      var s = Math.floor(kalan/3600), d = Math.floor(kalan%3600/60), sn = kalan%60;
+      el.textContent = (s<10?'0':'')+s+':'+(d<10?'0':'')+d+':'+(sn<10?'0':'')+sn;
+    }
+    ciz(); clearInterval(sayac.t); sayac.t = setInterval(ciz, 1000);
+  }
+  function esc(t){ var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+  function siraCiz(liste){
+    var ol = document.getElementById('klSira'), ben = {{ current_user.id if current_user.is_authenticated else 'null' }};
+    if (!liste.length) return;
+    ol.innerHTML = liste.map(function(s){
+      return '<li class="'+(s.kullanici_id===ben?'kl-ben':'')+(s.kazandi?'':' kl-kaybetti')+'"><span class="kl-s-no">'+(s.sira||'–')+'</span><span class="kl-s-ad">'+esc(s.ad)+'</span><span class="kl-s-deneme">'+(s.kazandi?s.deneme+'/6':'X/6')+'</span><span class="kl-s-sure">'+(s.kazandi?esc(s.sure):'')+'</span></li>';
+    }).join('');
+  }
+  document.getElementById('klKlavye').addEventListener('click', function(e){
+    var t = e.target.closest('.kl-tus'); if (t) { bas(t.dataset.tus); t.blur(); }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName||''))) return;
+    if (e.key === 'Enter') { e.preventDefault(); bas('enter'); }
+    else if (e.key === 'Backspace') { e.preventDefault(); bas('sil'); }
+    else if (e.key && e.key.length === 1) { var h = e.key === 'I' ? 'ı' : e.key === 'İ' ? 'i' : e.key.toLocaleLowerCase('tr-TR'); if (HARF.indexOf(h) >= 0) { e.preventDefault(); bas(h); } }
+  });
+  var dlg = document.getElementById('klYardim');
+  document.getElementById('klYardimBtn').addEventListener('click', function(){ dlg.showModal(); });
+  try { if (!localStorage.getItem('kelime_yardim') && !veri.tahminler.length) { dlg.showModal(); localStorage.setItem('kelime_yardim','1'); } } catch(e) {}
+  hepsiniCiz(false);
+  if (bitti) sonucGoster(false);
+})();
+</script>
+{% endblock %}

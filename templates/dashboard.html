@@ -21,6 +21,21 @@
 <style>.destek-yanit{display:block; background:#EAF2FB; border:1px solid #BFD5EE; color:#1F4A7A; border-radius:var(--r); padding:11px 14px; margin-bottom:12px; text-decoration:none; font-size:14.5px}.destek-yanit span{white-space:nowrap}</style>
 {% endif %}
 
+<a class="kl-kart" href="{{ url_for('kelime_oyunu') }}">
+  <span class="kl-kart-kutular" aria-hidden="true"><i class="y">K</i><i class="s">E</i><i>L</i><i class="y">İ</i><i>M</i></span>
+  <span class="kl-kart-metin"><strong>Günün kelimesi</strong><span>5 harfli kelimeyi 6 denemede bul, günlük sıralamada yarış.</span></span>
+  <span class="kl-kart-ok" aria-hidden="true">Oyna ›</span>
+</a>
+<style>
+.kl-kart{display:flex; align-items:center; gap:12px; background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r); padding:10px 14px; margin-bottom:12px; text-decoration:none; color:inherit}
+.kl-kart-kutular{display:flex; gap:3px; flex:none}
+.kl-kart-kutular i{width:22px; height:22px; display:flex; align-items:center; justify-content:center; font:700 13px var(--baslik); font-style:normal; border-radius:4px; background:#7C8681; color:#fff}
+.kl-kart-kutular i.y{background:#3A9A5B} .kl-kart-kutular i.s{background:#D4A520}
+.kl-kart-metin{flex:1; min-width:0; font-size:13.5px; color:var(--gri)} .kl-kart-metin strong{display:block; color:var(--murekkep); font-size:15px}
+.kl-kart-ok{font-weight:700; color:var(--cim); white-space:nowrap}
+@media (max-width:420px){ .kl-kart-kutular i{width:18px; height:18px; font-size:11px} .kl-kart-metin span{display:none} }
+</style>
+
 {% if bekleyen %}
 {% set ilk = bekleyen | sort(attribute='baslangic') | first %}
 <a class="tahmin-uyari" href="{{ url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') }}">

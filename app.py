@@ -3,7 +3,7 @@ import calendar
 import hashlib
 import threading
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from functools import wraps
 from urllib.parse import quote
 
@@ -870,6 +870,24 @@ class DestekMesaj(db.Model):
     admin_mi = db.Column(db.Boolean, nullable=False, default=False)
     metin = db.Column(db.Text, nullable=False)
     zaman = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+
+
+class KelimeOyunu(db.Model):
+    """Günlük kelime oyunu (Wordle). Tahmin ligi puanlarından tamamen bağımsız."""
+    __tablename__ = "kelime_oyunlari"
+    __table_args__ = (db.UniqueConstraint("kullanici_id", "gun", name="uq_kelime_kullanici_gun"),)
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    gun = db.Column(db.Date, nullable=False, index=True)
+    tahminler = db.Column(db.Text, nullable=False, default="")      # virgülle ayrılmış
+    bitti = db.Column(db.Boolean, nullable=False, default=False)
+    kazandi = db.Column(db.Boolean, nullable=False, default=False)
+    baslangic = db.Column(db.DateTime)
+    bitis = db.Column(db.DateTime)
+    kullanici = db.relationship("Kullanici")
+
+    def liste(self):
+        return [t for t in (self.tahminler or "").split(",") if t]
 
 
 class FormMaci(db.Model):
@@ -2425,6 +2443,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE form_maclari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE destek_konusmalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE destek_mesajlari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE kelime_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -2540,7 +2559,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/kelime", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -3196,6 +3215,171 @@ def admin_destek_konusma(konusma_id):
         k.admin_okumadi = False
         db.session.commit()
     return render_template("admin_destek_konusma.html", k=k, mesajlar=_destek_json(k), max_uzunluk=DESTEK_MAX_UZUNLUK)
+
+
+# ------------------------------------------------------------
+# GÜNLÜK KELİME OYUNU (Türkçe Wordle). Her gün Türkiye saatiyle 00:00'da
+# herkese aynı 5 harfli kelime. Cevap tarayıcıya gönderilmez; her tahmini
+# sunucu kontrol eder. Sıralama sadece giriş yapanlar için, sadece o gün.
+# ------------------------------------------------------------
+KELIME_UZUNLUK = 5
+KELIME_HAK = 6
+KELIME_BASLANGIC_GUNU = date(2026, 10, 24)      # 1 numaralı bulmaca
+_KELIME_DIZINI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kelime")
+
+
+def _kelime_dosyasi(ad):
+    try:
+        with open(os.path.join(_KELIME_DIZINI, ad), encoding="utf-8") as f:
+            return [s.strip() for s in f if s.strip()]
+    except OSError:
+        return []
+
+
+KELIME_CEVAPLAR = _kelime_dosyasi("cevaplar.txt")
+KELIME_GECERLI = set(_kelime_dosyasi("gecerli.txt")) | set(KELIME_CEVAPLAR)
+
+
+def tr_kucuk(metin):
+    return (metin or "").replace("I", "ı").replace("İ", "i").lower().strip()
+
+
+def kelime_bugun():
+    """Türkiye saatine göre bugünün tarihi."""
+    return (utc_now_naive() + TURKIYE_UTC_OFFSET).date()
+
+
+def kelime_numarasi(gun=None):
+    return ((gun or kelime_bugun()) - KELIME_BASLANGIC_GUNU).days + 1
+
+
+def kelime_cevabi(gun=None):
+    if not KELIME_CEVAPLAR:
+        return None
+    return KELIME_CEVAPLAR[(kelime_numarasi(gun) - 1) % len(KELIME_CEVAPLAR)]
+
+
+def kelime_renkleri(tahmin, cevap):
+    """Wordle renkleri: 'y' doğru yer, 's' kelimede var, 'g' yok. Tekrarlı harfler doğru sayılır."""
+    sonuc = ["g"] * len(tahmin)
+    kalan = {}
+    for i, (t, c) in enumerate(zip(tahmin, cevap)):
+        if t == c:
+            sonuc[i] = "y"
+        else:
+            kalan[c] = kalan.get(c, 0) + 1
+    for i, t in enumerate(tahmin):
+        if sonuc[i] != "y" and kalan.get(t, 0) > 0:
+            sonuc[i] = "s"
+            kalan[t] -= 1
+    return "".join(sonuc)
+
+
+def _kelime_durumu():
+    """Bugünkü oyunun durumu. Giriş yapmışsa veritabanı, misafirse oturum çerezi."""
+    gun = kelime_bugun()
+    if current_user.is_authenticated:
+        oyun = KelimeOyunu.query.filter_by(kullanici_id=current_user.id, gun=gun).first()
+        return {"tahminler": oyun.liste() if oyun else [], "bitti": bool(oyun and oyun.bitti),
+                "kazandi": bool(oyun and oyun.kazandi), "oyun": oyun}
+    m = session.get("kelime") or {}
+    if m.get("gun") != gun.isoformat():
+        m = {}
+    return {"tahminler": m.get("t", []), "bitti": m.get("b", False), "kazandi": m.get("k", False), "oyun": None}
+
+
+def kelime_siralamasi(gun=None):
+    gun = gun or kelime_bugun()
+    oyunlar = (KelimeOyunu.query.options(db.joinedload(KelimeOyunu.kullanici))
+               .filter(KelimeOyunu.gun == gun, KelimeOyunu.bitti.is_(True)).all())
+
+    def sure(o):
+        if o.baslangic and o.bitis:
+            return max(0, int((o.bitis - o.baslangic).total_seconds()))
+        return 10 ** 9
+    oyunlar.sort(key=lambda o: (not o.kazandi, len(o.liste()) if o.kazandi else 99, sure(o)))
+    liste, sira = [], 0
+    for o in oyunlar:
+        if not o.kullanici or yz_mi(o.kullanici):
+            continue
+        sira += 1
+        s = sure(o)
+        liste.append({"sira": sira if o.kazandi else None, "ad": o.kullanici.kullanici_adi,
+                      "kullanici_id": o.kullanici_id, "kazandi": o.kazandi,
+                      "deneme": len(o.liste()), "sure": (f"{s // 60}:{s % 60:02d}" if s < 10 ** 9 else "")})
+    return liste
+
+
+def _kelime_yanit(durum, cevap):
+    veri = {"tahminler": [{"kelime": t, "renk": kelime_renkleri(t, cevap)} for t in durum["tahminler"]],
+            "bitti": durum["bitti"], "kazandi": durum["kazandi"], "hak": KELIME_HAK,
+            "numara": kelime_numarasi()}
+    if durum["bitti"]:
+        veri["cevap"] = cevap
+    return veri
+
+
+@app.route("/kelime")
+def kelime_oyunu():
+    cevap = kelime_cevabi()
+    if not cevap:
+        abort(404)
+    durum = _kelime_durumu()
+    dun = kelime_bugun() - timedelta(days=1)
+    return render_template(
+        "kelime.html", veri=_kelime_yanit(durum, cevap), siralama=kelime_siralamasi(),
+        dunku_kelime=kelime_cevabi(dun) if dun >= KELIME_BASLANGIC_GUNU else None,
+        uzunluk=KELIME_UZUNLUK,
+    )
+
+
+@app.route("/kelime/tahmin", methods=["POST"])
+def kelime_tahmin():
+    cevap = kelime_cevabi()
+    if not cevap:
+        abort(404)
+    tahmin = tr_kucuk((request.get_json(silent=True) or {}).get("kelime") or request.form.get("kelime"))
+    durum = _kelime_durumu()
+    if durum["bitti"]:
+        return jsonify({"hata": "Bugünkü kelime bitti, yarın yenisi gelecek.", **_kelime_yanit(durum, cevap)}), 400
+    if len(tahmin) != KELIME_UZUNLUK:
+        return jsonify({"hata": f"Kelime {KELIME_UZUNLUK} harfli olmalı."}), 400
+    if tahmin not in KELIME_GECERLI:
+        return jsonify({"hata": "Bu kelime sözlükte yok."}), 400
+    if tahmin in durum["tahminler"]:
+        return jsonify({"hata": "Bu kelimeyi zaten denedin."}), 400
+
+    tahminler = durum["tahminler"] + [tahmin]
+    kazandi = tahmin == cevap
+    bitti = kazandi or len(tahminler) >= KELIME_HAK
+    simdi = utc_now_naive()
+    if current_user.is_authenticated:
+        oyun = durum["oyun"]
+        if oyun is None:
+            oyun = KelimeOyunu(kullanici_id=current_user.id, gun=kelime_bugun(), baslangic=simdi)
+            db.session.add(oyun)
+        oyun.tahminler = ",".join(tahminler)
+        oyun.kazandi, oyun.bitti = kazandi, bitti
+        if bitti:
+            oyun.bitis = simdi
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return jsonify({"hata": "Kaydedilemedi, sayfayı yenileyip tekrar dene."}), 409
+    else:
+        session["kelime"] = {"gun": kelime_bugun().isoformat(), "t": tahminler, "b": bitti, "k": kazandi}
+        session.permanent = True
+    yeni = {"tahminler": tahminler, "bitti": bitti, "kazandi": kazandi}
+    veri = _kelime_yanit(yeni, cevap)
+    if bitti:
+        veri["siralama"] = kelime_siralamasi()
+    return jsonify(veri)
+
+
+@app.route("/kelime/siralama")
+def kelime_siralama_json():
+    return jsonify({"siralama": kelime_siralamasi()})
 
 
 @app.route("/admin/geri-bildirimler")
