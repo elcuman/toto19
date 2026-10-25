@@ -94,7 +94,13 @@ body.sohbet-sayfasi .altbilgi{display:none}
 .mesaj-ust:empty{display:none}
 .mesaj-ad{font-weight:700; color:var(--cim)}
 .mesaj.benim .mesaj-ad{display:none}
-.mesaj-icerik{white-space:pre-wrap; font-size:16px; line-height:1.35}
+.mesaj-icerik{white-space:pre-wrap; font-size:16px; line-height:1.35; overflow-wrap:anywhere}
+.mesaj-link{color:inherit; text-decoration:underline; text-underline-offset:2px; font-weight:600; word-break:break-all}
+.yt-kart{display:block; position:relative; width:min(280px, 62vw); aspect-ratio:16/9; margin:6px 0 2px; padding:0; border:0; border-radius:10px; overflow:hidden; background:#000; cursor:pointer}
+.yt-kart img{width:100%; height:100%; object-fit:cover; display:block}
+.yt-oyna{position:absolute; left:50%; top:50%; width:56px; height:40px; margin:-20px 0 0 -28px; border-radius:12px; background:rgba(230,33,23,.92)}
+.yt-oyna::after{content:""; position:absolute; left:23px; top:12px; border-style:solid; border-width:8px 0 8px 14px; border-color:transparent transparent transparent #fff}
+iframe.yt-oynuyor{cursor:auto}
 .mesaj-alt{display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:1px; font-size:11.5px; line-height:1.2}
 .mesaj-saat{color:var(--gri-acik)}
 .mesaj.benim .mesaj-saat{color:rgba(255,255,255,.8)}
@@ -164,7 +170,61 @@ body.sohbet-sayfasi .altbilgi{display:none}
                         .sort(function(a, b){ return b.length - a.length; });
   function kucuk(t){ return (t || '').toLocaleLowerCase('tr'); }
   // Metni güvenli şekilde DOM'a çevirir; @Ad etiketlerini vurgular. Beni etiketlediyse true döner.
+  // Bağlantılar: http(s):// ya da www. ile başlayan adresler tıklanabilir olur.
+  var URL_RE = /(?:https?:\/\/|www\.|youtu\.be\/|(?:m\.)?youtube\.com\/)[^\s<>"']*/gi;
+  function urlTemizle(u){
+    var son = '';
+    while (/[.,!?;:)\]'"»]$/.test(u)) {
+      if (u.slice(-1) === ')' && (u.match(/\(/g) || []).length >= (u.match(/\)/g) || []).length) break;
+      son = u.slice(-1) + son; u = u.slice(0, -1);
+    }
+    return [u, son];
+  }
+  function youtubeId(u){
+    var m = u.match(/(?:youtube\.com\/(?:watch\?(?:[^#\s]*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
+    return m ? m[1] : null;
+  }
   function icerikYaz(el, metin){
+    var son = 0, beni = false, m, videolar = [];
+    URL_RE.lastIndex = 0;
+    while ((m = URL_RE.exec(metin)) !== null) {
+      var t = urlTemizle(m[0]), adres = t[0];
+      if (!adres) continue;
+      if (m.index > son && etiketYaz(el, metin.slice(son, m.index))) beni = true;
+      var href = /^https?:\/\//i.test(adres) ? adres : 'https://' + adres;
+      var a = document.createElement('a');
+      a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer nofollow ugc'; a.className = 'mesaj-link';
+      a.textContent = adres;
+      el.appendChild(a);
+      son = m.index + adres.length;
+      URL_RE.lastIndex = son;
+      var vid = youtubeId(href);
+      if (vid && videolar.indexOf(vid) < 0) videolar.push(vid);
+    }
+    if (son < metin.length && etiketYaz(el, metin.slice(son))) beni = true;
+    videolar.slice(0, 2).forEach(function(vid){ el.appendChild(youtubeKarti(vid)); });
+    return beni;
+  }
+  // YouTube önizlemesi: küçük resim + oynat düğmesi; dokununca sohbetin içinde oynar.
+  function youtubeKarti(vid){
+    var k = document.createElement('button'); k.type = 'button'; k.className = 'yt-kart';
+    k.setAttribute('aria-label', 'YouTube videosunu oynat');
+    var img = document.createElement('img'); img.loading = 'lazy'; img.alt = '';
+    img.src = 'https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg';
+    img.onerror = function(){ img.style.visibility = 'hidden'; };
+    var oyna = document.createElement('span'); oyna.className = 'yt-oyna'; oyna.setAttribute('aria-hidden', 'true');
+    k.appendChild(img); k.appendChild(oyna);
+    k.addEventListener('click', function(e){
+      e.stopPropagation();
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + vid + '?autoplay=1&playsinline=1';
+      f.className = 'yt-kart yt-oynuyor'; f.title = 'YouTube videosu';
+      f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+      k.replaceWith(f);
+    });
+    return k;
+  }
+  function etiketYaz(el, metin){
     var i = 0, son = 0, beni = false, km = kucuk(metin);
     while ((i = metin.indexOf('@', i)) !== -1) {
       var bulunan = null;
@@ -270,7 +330,7 @@ body.sohbet-sayfasi .altbilgi{display:none}
     d.appendChild(ikon);
     // Dokunmatikte mesaja dokununca Yanıtla/Sil görünür
     d.addEventListener('click', function(e){
-      if (e.target.closest('button') || d.dataset.yeniSuruklendi) return;
+      if (e.target.closest('button, a, iframe') || d.dataset.yeniSuruklendi) return;
       var acik = d.classList.contains('secili');
       seciliKaldir();
       if (!acik) d.classList.add('secili');
