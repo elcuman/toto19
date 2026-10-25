@@ -82,13 +82,14 @@ p{margin:0 0 .75em}
   border-bottom:1px solid var(--cizgi);
 }
 .appbar-ic{
-  max-width:760px; margin:0 auto; padding:0 16px;
+  max-width:1040px; margin:0 auto; padding:0 16px;
   height:56px; display:flex; align-items:center; justify-content:space-between; gap:16px;
 }
 .marka{
   display:flex; align-items:center; gap:10px;
   font-family:var(--baslik); font-weight:700; font-size:22px;
   color:var(--murekkep); text-decoration:none; letter-spacing:.3px;
+  white-space:nowrap; flex-shrink:0;
 }
 .marka:hover{color:var(--murekkep)}
 .marka-isaret{
@@ -101,11 +102,13 @@ p{margin:0 0 .75em}
 .marka-isaret::after{
   content:""; position:absolute; left:50%; top:3px; bottom:3px; width:2px; margin-left:-1px; background:#fff;
 }
-.ustmenu{display:flex; gap:4px}
+.ustmenu{display:flex; gap:2px; min-width:0; overflow-x:auto; scrollbar-width:none}
+.ustmenu::-webkit-scrollbar{display:none}
 .ustmenu a{
   color:var(--gri); text-decoration:none; font-weight:600; font-size:15px;
-  padding:8px 12px; border-radius:var(--r-kucuk);
+  padding:8px 11px; border-radius:var(--r-kucuk); white-space:nowrap; flex-shrink:0;
 }
+@media (max-width:900px){ .ustmenu a{padding:8px 8px; font-size:14.5px} .marka{font-size:20px} }
 .ustmenu a:hover{color:var(--murekkep); background:var(--zemin)}
 .ustmenu a[aria-current="page"]{color:var(--cim); background:var(--cim-acik)}
 
@@ -135,7 +138,7 @@ p{margin:0 0 .75em}
 
 /* ---------- Girişsiz üst menü ve alt bilgi ---------- */
 .ustmenu-acik{display:flex; align-items:center; gap:4px}
-.ustmenu-acik a:not(.btn){color:var(--gri); text-decoration:none; font-weight:600; font-size:15px; padding:8px 12px; border-radius:var(--r-kucuk)}
+.ustmenu-acik a:not(.btn){color:var(--gri); text-decoration:none; font-weight:600; font-size:15px; padding:8px 12px; border-radius:var(--r-kucuk); white-space:nowrap}
 .ustmenu-acik a:not(.btn):hover{color:var(--murekkep); background:var(--zemin)}
 .ustmenu-acik a[aria-current="page"]{color:var(--cim); background:var(--cim-acik)}
 @media (max-width:640px){ .gizle-mobil{display:none} }
