@@ -5687,9 +5687,9 @@ def derbi_paylasim():
     görselini gösterir, tıklayan kişiyi Robot Ziya'nın tahmin sayfasına götürür."""
     hedef = url_for("ziya_tahminleri")
     kok = f"https://{ANA_DOMAIN or request.host}"
-    baslik = "Galatasaray – Fenerbahçe derbisi: Robot Ziya ne diyor? 🤖"
-    aciklama = "Robot Ziya'ya göre GS %32, beraberlik %25, FB %43. Sen de skorunu tahmin et, Ziya'yı geç. Ücretsiz, bahis yok."
-    gorsel = f"{kok}/static/paylas/derbi_ziya_og.png?v=2"
+    baslik = "Derbi tahmini: arkadaşlarınla yarış, eğlen! ⚽ Robot Ziya ne diyor? 🤖"
+    aciklama = "Arkadaşlarınla grup kur, derbi skorunu tahmin et, yarışın! Robot Ziya: GS %32, beraberlik %25, FB %43. Ücretsiz, bahis yok."
+    gorsel = f"{kok}/static/paylas/derbi_arkadas_og.png"
     html = f"""<!doctype html><html lang="tr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{baslik}</title>
