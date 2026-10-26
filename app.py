@@ -5681,6 +5681,36 @@ def ziya_sayfa_verisi():
 app.jinja_env.globals["ANA_DOMAIN_ADI"] = ANA_DOMAIN or "skorbilen.com"
 
 
+@app.route("/derbi")
+def derbi_paylasim():
+    """Sosyal medyada paylaşılacak link: Facebook/WhatsApp önizlemesinde derbi
+    görselini gösterir, tıklayan kişiyi Robot Ziya'nın tahmin sayfasına götürür."""
+    hedef = url_for("ziya_tahminleri")
+    kok = f"https://{ANA_DOMAIN or request.host}"
+    baslik = "Galatasaray – Fenerbahçe derbisi: Robot Ziya ne diyor? 🤖"
+    aciklama = "Robot Ziya'ya göre GS %32, beraberlik %25, FB %43. Sen de skorunu tahmin et, Ziya'yı geç. Ücretsiz, bahis yok."
+    gorsel = f"{kok}/static/paylas/derbi_ziya_og.png"
+    html = f"""<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{baslik}</title>
+<meta name="description" content="{aciklama}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Skorbilen">
+<meta property="og:url" content="{kok}/derbi">
+<meta property="og:title" content="{baslik}">
+<meta property="og:description" content="{aciklama}">
+<meta property="og:image" content="{gorsel}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:locale" content="tr_TR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{gorsel}">
+<link rel="canonical" href="{kok}{hedef}">
+<script>location.replace("{hedef}");</script>
+</head><body style="font-family:sans-serif;text-align:center;padding:40px">
+<p><a href="{hedef}">Robot Ziya'nın derbi tahminine git ›</a></p></body></html>"""
+    return Response(html, mimetype="text/html")
+
+
 @app.route("/robot-ziya-tahminleri")
 def ziya_tahminleri():
     try:
