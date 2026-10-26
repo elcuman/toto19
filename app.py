@@ -2563,8 +2563,8 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /tlogo", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Allow: /$", "Allow: /kelime", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
