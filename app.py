@@ -4336,6 +4336,43 @@ def profil():
     return render_template("profil.html", toplam_puan=total_points, toplam_tahmin=prediction_count)
 
 
+KULLANICI_ADI_RE = __import__("re").compile(r"^[0-9A-Za-zÇĞİÖŞÜçğıöşü._\- ]{3,30}$")
+
+
+@app.route("/profil/kullanici-adi", methods=["GET", "POST"])
+@login_required
+def kullanici_adi_degistir():
+    """Kullanıcı adını değiştirir. Tahminler, puanlar ve gruplar kullanıcıya
+    (id'ye) bağlı olduğu için hiçbiri etkilenmez; sadece görünen ad değişir."""
+    ana_admin = current_user.kullanici_adi == os.getenv("ADMIN_USERNAME", "admin")
+    yeni = ""
+    if request.method == "POST":
+        yeni = " ".join((request.form.get("yeni_ad") or "").split())
+        if ana_admin:
+            flash("Ana yönetici hesabının adı değiştirilemez.", "warning")
+        elif yeni == current_user.kullanici_adi:
+            flash("Yeni ad şu anki adınla aynı.", "warning")
+        elif not KULLANICI_ADI_RE.match(yeni):
+            flash("Kullanıcı adı 3–30 karakter olmalı; harf, rakam, boşluk, nokta, alt çizgi ve tire kullanabilirsin.", "danger")
+        elif _yz_adi_rezerve_mi(yeni) or Kullanici.query.filter(
+                db.func.lower(Kullanici.kullanici_adi) == yeni.lower(), Kullanici.id != current_user.id).first():
+            flash("Bu kullanıcı adı başkası tarafından kullanılıyor.", "danger")
+        elif not current_user.check_password(request.form.get("sifre", "")):
+            flash("Şifren hatalı.", "danger")
+        else:
+            eski = current_user.kullanici_adi
+            current_user.kullanici_adi = yeni
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                flash("Bu kullanıcı adı başkası tarafından kullanılıyor.", "danger")
+                return redirect(url_for("kullanici_adi_degistir"))
+            flash(f"Kullanıcı adın değişti: {eski} → {yeni}. Bundan sonra yeni adınla giriş yap.", "success")
+            return redirect(url_for("profil"))
+    return render_template("kullanici_adi_degistir.html", ana_admin=ana_admin, yeni=yeni)
+
+
 @app.route("/profil/sifre", methods=["GET", "POST"])
 @login_required
 def sifre_degistir():

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Kullanıcı adını değiştir · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('profil') }}">‹ Profil</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Kullanıcı adını değiştir</h1>
+    <p class="alt">Şu anki adın: <strong>{{ current_user.kullanici_adi }}</strong>. Puanların, tahminlerin ve grupların aynen kalır; sadece görünen adın ve giriş yaparken yazdığın ad değişir.</p>
+  </div>
+</div>
+
+{% if ana_admin %}
+<div class="bos"><strong>Ana yönetici hesabının adı değiştirilemez.</strong>Bu ad sunucu ayarlarına bağlı.</div>
+{% else %}
+<section class="panel" style="max-width:440px">
+  <form method="POST" autocomplete="off">
+    <label for="yeni_ad">Yeni kullanıcı adı</label>
+    <input id="yeni_ad" name="yeni_ad" required minlength="3" maxlength="30" value="{{ yeni }}" autocapitalize="none" spellcheck="false">
+    <p class="ipucu">3–30 karakter. Harf, rakam, boşluk, nokta, alt çizgi ve tire kullanabilirsin.</p>
+    <label for="sifre">Şifren <span class="sessiz" style="font-weight:400">(onay için)</span></label>
+    <input id="sifre" name="sifre" type="password" required autocomplete="current-password">
+    <button type="submit" class="btn btn-blok">Adımı değiştir</button>
+  </form>
+</section>
+<p class="sessiz kucuk">Değiştirdikten sonra giriş yaparken yeni adını yazman gerekir. Sohbette eski adınla yapılmış @etiketler eski hâliyle kalır.</p>
+{% endif %}
+{% endblock %}
