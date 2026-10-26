@@ -5689,7 +5689,7 @@ def derbi_paylasim():
     kok = f"https://{ANA_DOMAIN or request.host}"
     baslik = "Galatasaray – Fenerbahçe derbisi: Robot Ziya ne diyor? 🤖"
     aciklama = "Robot Ziya'ya göre GS %32, beraberlik %25, FB %43. Sen de skorunu tahmin et, Ziya'yı geç. Ücretsiz, bahis yok."
-    gorsel = f"{kok}/static/paylas/derbi_ziya_og.png"
+    gorsel = f"{kok}/static/paylas/derbi_ziya_og.png?v=2"
     html = f"""<!doctype html><html lang="tr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{baslik}</title>
