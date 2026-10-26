@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Özel maçlar · {{ grup.ad }} · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('grup', grup_id=grup.id) }}">‹ {{ grup.ad }}</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Özel maçlar</h1>
+    <p class="alt">Takip ettiğimiz liglerde olmayan bir maçı <strong>sadece {{ grup.ad }}</strong> grubuna ekle. Diğer gruplar ve genel sayfalar bu maçı görmez. Puanlama normal kurallarla yapılır, puanlar bu grubun tablolarına eklenir. Sonucu maçtan sonra buradan sen girersin.</p>
+  </div>
+</div>
+
+<section class="panel om-form">
+  <h2>Yeni maç ekle</h2>
+  <form method="POST" autocomplete="off">
+    <div class="om-takimlar">
+      <div>
+        <label for="ev_sahibi">Ev sahibi</label>
+        <input id="ev_sahibi" name="ev_sahibi" required maxlength="100" placeholder="Real Madrid" value="{{ form.get('ev_sahibi', '') }}">
+      </div>
+      <span class="om-vs" aria-hidden="true">–</span>
+      <div>
+        <label for="deplasman">Deplasman</label>
+        <input id="deplasman" name="deplasman" required maxlength="100" placeholder="Barcelona" value="{{ form.get('deplasman', '') }}">
+      </div>
+    </div>
+    <div class="om-satir">
+      <div>
+        <label for="baslangic">Başlama (Türkiye saati)</label>
+        <input id="baslangic" name="baslangic" type="datetime-local" required value="{{ form.get('baslangic', varsayilan_saat) }}">
+      </div>
+      <div>
+        <label for="etiket">Lig / turnuva <span class="sessiz" style="font-weight:400">(isteğe bağlı)</span></label>
+        <input id="etiket" name="etiket" maxlength="60" placeholder="La Liga" value="{{ form.get('etiket', '') }}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-blok">Maçı gruba ekle</button>
+  </form>
+</section>
+
+<h2 class="om-baslik">Bu grubun özel maçları</h2>
+{% if maclar %}
+<section class="panel" style="padding:0">
+  <ul class="om-liste">
+  {% for m in maclar %}
+    <li>
+      <div class="om-ust">
+        <div>
+          <strong>{{ m.ev_sahibi }} – {{ m.deplasman }}</strong>
+          <small>{{ m.lig }} · {{ m.baslangic | tr_saat("%d.%m.%Y %H:%M") }} · {{ tahmin_sayilari.get(m.id, 0) }} tahmin</small>
+        </div>
+        {% if m.bitti_mi() %}<span class="om-skor">{{ m.ev_skor }}–{{ m.deplasman_skor }}</span>
+        {% elif m.basladi_mi() %}<span class="etiket etiket-uyari">Sonuç bekliyor</span>
+        {% else %}<span class="etiket">Tahmine açık</span>{% endif %}
+      </div>
+      <div class="om-eylem">
+        {% if m.basladi_mi() %}
+        <form method="POST" action="{{ url_for('grup_ozel_mac_sonuc', grup_id=grup.id, mac_id=m.id) }}" class="om-sonuc">
+          <input type="number" name="ev_skor" min="0" max="30" inputmode="numeric" required value="{{ m.ev_skor if m.ev_skor is not none }}" aria-label="{{ m.ev_sahibi }} golü">
+          <span>–</span>
+          <input type="number" name="deplasman_skor" min="0" max="30" inputmode="numeric" required value="{{ m.deplasman_skor if m.deplasman_skor is not none }}" aria-label="{{ m.deplasman }} golü">
+          <button type="submit" class="btn btn-kucuk">{{ 'Sonucu düzelt' if m.bitti_mi() else 'Sonucu kaydet' }}</button>
+        </form>
+        {% else %}
+        <span class="sessiz kucuk">Sonuç maç başlayınca girilebilir.</span>
+        {% endif %}
+        <form method="POST" action="{{ url_for('grup_ozel_mac_sil', grup_id=grup.id, mac_id=m.id) }}" onsubmit="return confirm('Bu maç ve ona girilen tüm tahminler silinsin mi? Puanlar tablodan çıkar.');">
+          <button type="submit" class="om-sil">Sil</button>
+        </form>
+      </div>
+    </li>
+  {% endfor %}
+  </ul>
+</section>
+{% else %}
+<div class="bos"><strong>Henüz özel maç yok.</strong>Eklediğin maç grup sayfasında "Özel maçlar" sekmesinde çıkar.</div>
+{% endif %}
+
+<style>
+.om-form h2{margin:0 0 10px; font-size:19px}
+.om-takimlar{display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:end}
+.om-vs{font:700 22px var(--baslik); color:var(--gri); padding-bottom:12px}
+.om-satir{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.om-baslik{margin:22px 0 10px}
+.om-liste{list-style:none; margin:0; padding:0}
+.om-liste li{padding:12px 16px; border-top:1px solid var(--cizgi)}
+.om-liste li:first-child{border-top:0}
+.om-ust{display:flex; justify-content:space-between; gap:10px; align-items:center}
+.om-ust small{display:block; color:var(--gri); font-size:13px; margin-top:2px}
+.om-skor{font:700 22px var(--baslik)}
+.om-eylem{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap}
+.om-sonuc{display:flex; align-items:center; gap:6px; margin:0}
+.om-sonuc input{width:56px; margin:0; text-align:center}
+.om-sil{background:none; border:0; color:#B3261E; font-weight:600; cursor:pointer; padding:6px 0}
+@media (max-width:520px){ .om-satir{grid-template-columns:1fr} }
+</style>
+{% endblock %}

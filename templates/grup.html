@@ -74,7 +74,7 @@
 <section class="panel">
   <div class="panel-bas">
     <h2>Bu haftanın maçları</h2>
-    <span class="kucuk"><a href="{{ url_for('puan_durumu', grup=grup.id) }}">Puan durumu</a> &nbsp; <a href="{{ url_for('grup_gecmis_maclar', grup_id=grup.id) }}">Geçmiş maçlar</a></span>
+    <span class="kucuk"><a href="{{ url_for('puan_durumu', grup=grup.id) }}">Puan durumu</a> &nbsp; <a href="{{ url_for('grup_gecmis_maclar', grup_id=grup.id) }}">Geçmiş maçlar</a>{% if ozel_mac_yetkisi %} &nbsp; <a href="{{ url_for('grup_ozel_maclar', grup_id=grup.id) }}">➕ Özel maç</a>{% endif %}</span>
   </div>
 
   {% if lig_sekmeleri %}

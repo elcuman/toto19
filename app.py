@@ -162,6 +162,9 @@ LIG_KISA_ADLARI = {
 # Grup sayfasında "bu hafta" sayılan süre: bir ligin sıradaki maçı bu kadar
 # gün içinde değilse o lig için maç listelenmez.
 HAFTA_PENCERESI_GUN = 7
+# Bir gruba elle eklenen özel maçlar (ör. Real Madrid–Barcelona). Takip edilen
+# liglerde olmadığı için genel sayfalara, Robot Ziya'ya ve diğer gruplara karışmaz.
+OZEL_LIG_ID = 990001
 # Haftalık puan tablosu Türkiye saatiyle bu gün ve saatte sıfırlanır (Cuma 12:00).
 HAFTA_BASLANGIC_GUNU = 4      # Pazartesi=0 ... Cuma=4
 HAFTA_BASLANGIC_SAATI = 12
@@ -560,6 +563,9 @@ class Mac(db.Model):
     son_guncelleme = db.Column(
         db.DateTime
     )
+
+    # Doluysa maç SADECE bu gruba aittir (grup kurucusu/admin elle ekledi).
+    ozel_grup_id = db.Column(db.Integer, nullable=True, index=True)
 
     tahminler = db.relationship(
         "Tahmin",
@@ -2302,7 +2308,8 @@ def tahmin_cezalarini_guncelle(tahminler=None, yz_id=None):
     maclar = Mac.query.filter(
         Mac.durum == "bitti", Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
         Mac.baslangic.isnot(None), Mac.baslangic >= TAHMIN_YOK_CEZA_BASLANGIC_UTC,
-        Mac.lig_id.in_(gosterilecek_lig_id_listesi()), super_lig_takim_filtresi(),
+        db.or_(db.and_(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), super_lig_takim_filtresi()),
+               Mac.ozel_grup_id.isnot(None)),
     ).all()
     mac_map = {m.id: m for m in maclar}
     if tahminler is None:
@@ -2315,6 +2322,8 @@ def tahmin_cezalarini_guncelle(tahminler=None, yz_id=None):
             for u in uyelikler:
                 if u.kullanici_id == yz_id:
                     continue
+                if m.ozel_grup_id and u.grup_id != m.ozel_grup_id:
+                    continue   # özel maç sadece kendi grubunu ilgilendirir
                 if u.katilma_tarihi and u.katilma_tarihi > m.baslangic:
                     continue   # maçtan sonra katılan cezalandırılmaz
                 if (u.grup_id, m.id, u.kullanici_id) not in var_olan:
@@ -2423,6 +2432,11 @@ def initialize_database():
             db.session.rollback()
         try:
             kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("kullanicilar")}
+            mac_kolonlari = {k["name"] for k in db.inspect(db.engine).get_columns("maclar")}
+            if "ozel_grup_id" not in mac_kolonlari:
+                db.session.execute(db.text("ALTER TABLE maclar ADD COLUMN ozel_grup_id INTEGER"))
+                db.session.execute(db.text("CREATE INDEX IF NOT EXISTS ix_maclar_ozel_grup_id ON maclar (ozel_grup_id)"))
+                db.session.commit()
             if "sifre_degismeli" not in kolonlar:
                 db.session.execute(db.text(
                     "ALTER TABLE kullanicilar ADD COLUMN sifre_degismeli BOOLEAN NOT NULL DEFAULT FALSE"))
@@ -3534,7 +3548,11 @@ def dashboard():
         biten_maclar=biten_maclar,
         tahminler=tahminler,
         tahmin_acik_maclar=[m for m in aktif_hafta_maclari(now)[0]
-                            if m.baslangic and m.baslangic > now and m.durum not in ("bitti", "iptal", "ertelendi")],
+                            if m.baslangic and m.baslangic > now and m.durum not in ("bitti", "iptal", "ertelendi")]
+                           + Mac.query.filter(
+                               Mac.ozel_grup_id.in_([g.id for g in gruplar] or [-1]), Mac.baslangic > now,
+                               Mac.baslangic <= now + timedelta(days=HAFTA_PENCERESI_GUN),
+                               ~Mac.durum.in_(["bitti", "iptal", "ertelendi"])).all(),
         gruplar=gruplar,
         toplam_puan=toplam_puan,
         toplam_tahmin=toplam_tahmin,
@@ -3600,6 +3618,10 @@ def tahmini_tum_gruplara_yaz(kullanici_id, mac_id, ev_skor, deplasman_skor, grup
     """Bir maçın tahminini kullanıcının tüm gruplarına yazar (yoksa ekler, varsa günceller)."""
     if grup_idleri is None:
         grup_idleri = kullanicinin_grup_idleri(kullanici_id)
+    mac = db.session.get(Mac, mac_id)
+    if mac is not None and mac.ozel_grup_id:
+        # Gruba özel maç: tahmin sadece o gruba yazılır, diğer gruplara yansımaz
+        grup_idleri = [g for g in grup_idleri if g == mac.ozel_grup_id]
     mevcut = {t.grup_id: t for t in Tahmin.query.filter(
         Tahmin.kullanici_id == kullanici_id, Tahmin.mac_id == mac_id,
         Tahmin.grup_id.in_(grup_idleri or [-1])).all()}
@@ -3621,7 +3643,7 @@ def tahminleri_gruplara_esitle(kullanici_id=None):
     Başlamış/bitmiş maçlara dokunmaz. Robot Ziya zaten her gruba ayrı tahmin girer."""
     simdi = utc_now_naive()
     q = (db.session.query(Tahmin).join(Mac, Mac.id == Tahmin.mac_id)
-         .filter(Mac.baslangic.isnot(None), Mac.baslangic > simdi,
+         .filter(Mac.baslangic.isnot(None), Mac.baslangic > simdi, Mac.ozel_grup_id.is_(None),
                  ~Mac.durum.in_(["bitti", "iptal", "ertelendi"])))
     if kullanici_id is not None:
         q = q.filter(Tahmin.kullanici_id == kullanici_id)
@@ -3798,7 +3820,7 @@ def su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu):
         .join(Mac, Tahmin.mac_id == Mac.id)
         .filter(
             Tahmin.grup_id == grup_id,
-            Mac.lig_id.in_(gosterilecek_lig_id_listesi()),
+            db.or_(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.ozel_grup_id == grup_id),
             Mac.baslangic >= hafta_basi,
             Mac.baslangic < hafta_sonu,
         )
@@ -3852,6 +3874,18 @@ def grup(grup_id):
             "hafta": None if bilgi["id"] == AVRUPA_ID else aktif_haftalar.get(bilgi["id"]),
             "sonraki_mac": sonraki_mac_tarihleri.get(bilgi["id"]),
             "acik_mac": sum(1 for m in lig_maclari if m.oynanabilir_mi()),
+        })
+    # Gruba özel (elle eklenen) maçlar: henüz bitmemişler + son 1 günde bitenler
+    ozel_maclar = (Mac.query.filter(
+        Mac.ozel_grup_id == grup_id, Mac.baslangic.isnot(None),
+        db.or_(Mac.durum != "bitti", Mac.baslangic >= now - timedelta(days=1)),
+    ).order_by(Mac.baslangic.asc()).all())
+    if ozel_maclar:
+        maclar = list(maclar) + ozel_maclar
+        lig_sekmeleri.append({
+            "id": OZEL_LIG_ID, "kod": "ozel", "ad": "Özel maçlar", "maclar": ozel_maclar,
+            "hafta": None, "sonraki_mac": None,
+            "acik_mac": sum(1 for m in ozel_maclar if m.oynanabilir_mi()),
         })
     # Varsayılan açık sekme: tahmine açık maçı en yakın olan lig.
     def _ilk_acik_mac(sekme):
@@ -3927,6 +3961,7 @@ def grup(grup_id):
         hafta_sonu=hafta_sonu,
         oynanabilir_mac_var=oynanabilir_mac_var,
         paylas_haftalar=_guvenli_paylas_haftalar(grup_id),
+        ozel_mac_yetkisi=ozel_mac_yetkili_mi(grup_obj),
     )
 
 
@@ -4083,7 +4118,7 @@ def tahminleri_kaydet(grup_id):
             continue
 
         mac = db.session.get(Mac, mac_id)
-        if not mac or not mac.oynanabilir_mi():
+        if not mac or not mac.oynanabilir_mi() or (mac.ozel_grup_id and mac.ozel_grup_id not in grup_idleri):
             atlanan += 1
             continue
 
@@ -4109,7 +4144,7 @@ def tahmin(grup_id, mac_id):
     """Tek bir maç için tahmin girme/güncelleme sayfası (örn. geçmiş sayfasından tekil düzenleme için)."""
     membership = GrupUyeligi.query.filter_by(grup_id=grup_id, kullanici_id=current_user.id).first()
     mac = db.session.get(Mac, mac_id)
-    if not membership or not mac:
+    if not membership or not mac or (mac.ozel_grup_id and mac.ozel_grup_id != grup_id):
         abort(403)
 
     if not mac.oynanabilir_mi():
@@ -4138,6 +4173,105 @@ def tahmin(grup_id, mac_id):
     return render_template("tahmin.html", grup=membership.grup, mac=mac, tahmin=existing)
 
 
+# ------------------------------------------------------------
+# GRUBA ÖZEL MAÇ: grup kurucusu (ya da admin) takip edilen liglerde olmayan
+# bir maçı sadece kendi grubuna ekler, sonucunu da kendisi girer.
+# Puanlama aynı kurallarla yapılır ve sadece o grubun tablolarına yansır.
+# ------------------------------------------------------------
+def ozel_mac_yetkili_mi(grup_obj):
+    return bool(current_user.is_authenticated and grup_obj and
+                (getattr(current_user, "admin", False) or grup_obj.kurucu_id == current_user.id))
+
+
+def _ozel_mac_grubu(grup_id):
+    grup_obj = db.session.get(Grup, grup_id)
+    if not grup_obj or not ozel_mac_yetkili_mi(grup_obj):
+        abort(403)
+    return grup_obj
+
+
+@app.route("/grup/<int:grup_id>/ozel-maclar", methods=["GET", "POST"])
+@login_required
+def grup_ozel_maclar(grup_id):
+    grup_obj = _ozel_mac_grubu(grup_id)
+    if request.method == "POST":
+        ev = " ".join((request.form.get("ev_sahibi") or "").split())[:100]
+        dep = " ".join((request.form.get("deplasman") or "").split())[:100]
+        etiket = " ".join((request.form.get("etiket") or "").split())[:60] or "Özel maç"
+        try:
+            tr_saat = datetime.strptime(request.form.get("baslangic") or "", "%Y-%m-%dT%H:%M")
+        except ValueError:
+            tr_saat = None
+        if len(ev) < 2 or len(dep) < 2:
+            flash("İki takımın adını da yaz.", "warning")
+        elif not tr_saat:
+            flash("Maçın tarih ve saatini seç.", "warning")
+        elif tr_saat - TURKIYE_UTC_OFFSET <= utc_now_naive():
+            flash("Başlama saati ileride olmalı; geçmiş bir maça tahmin girilemez.", "warning")
+        else:
+            import random as _rnd
+            while True:
+                ext = -_rnd.randint(1, 2_000_000_000)
+                if not Mac.query.filter_by(external_id=ext).first():
+                    break
+            mac = Mac(external_id=ext, ev_sahibi=ev, deplasman=dep, lig=etiket, lig_id=OZEL_LIG_ID,
+                      baslangic=tr_saat - TURKIYE_UTC_OFFSET, durum="planlandi", api_status="MANUEL",
+                      ozel_grup_id=grup_obj.id, son_guncelleme=utc_now_naive())
+            db.session.add(mac)
+            db.session.commit()
+            flash(f"Eklendi: {ev} – {dep}. Sadece {grup_obj.ad} grubunda görünür.", "success")
+            return redirect(url_for("grup_ozel_maclar", grup_id=grup_id))
+    maclar = Mac.query.filter_by(ozel_grup_id=grup_id).order_by(Mac.baslangic.desc()).all()
+    tahmin_sayilari = dict(db.session.query(Tahmin.mac_id, db.func.count(Tahmin.id))
+                           .filter(Tahmin.mac_id.in_([m.id for m in maclar] or [-1]))
+                           .group_by(Tahmin.mac_id).all())
+    varsayilan = (utc_now_naive() + TURKIYE_UTC_OFFSET + timedelta(days=1)).replace(hour=21, minute=0, second=0, microsecond=0)
+    return render_template("ozel_maclar.html", grup=grup_obj, maclar=maclar, tahmin_sayilari=tahmin_sayilari,
+                           varsayilan_saat=varsayilan.strftime("%Y-%m-%dT%H:%M"),
+                           form=request.form if request.method == "POST" else {})
+
+
+@app.route("/grup/<int:grup_id>/ozel-maclar/<int:mac_id>/sonuc", methods=["POST"])
+@login_required
+def grup_ozel_mac_sonuc(grup_id, mac_id):
+    _ozel_mac_grubu(grup_id)
+    mac = db.session.get(Mac, mac_id)
+    if not mac or mac.ozel_grup_id != grup_id:
+        abort(404)
+    if not mac.basladi_mi():
+        flash("Sonuç ancak maç başladıktan sonra girilebilir.", "warning")
+        return redirect(url_for("grup_ozel_maclar", grup_id=grup_id))
+    try:
+        ev, dep = int(request.form.get("ev_skor")), int(request.form.get("deplasman_skor"))
+        if ev < 0 or dep < 0 or ev > 30 or dep > 30:
+            raise ValueError
+    except (TypeError, ValueError):
+        flash("Skoru doğru gir.", "warning")
+        return redirect(url_for("grup_ozel_maclar", grup_id=grup_id))
+    mac.ev_skor, mac.deplasman_skor = ev, dep
+    mac.durum, mac.api_status, mac.son_guncelleme = "bitti", "MANUEL", utc_now_naive()
+    db.session.commit()
+    recalculate_all_points()
+    flash(f"Sonuç kaydedildi: {mac.ev_sahibi} {ev}–{dep} {mac.deplasman}. Puanlar hesaplandı.", "success")
+    return redirect(url_for("grup_ozel_maclar", grup_id=grup_id))
+
+
+@app.route("/grup/<int:grup_id>/ozel-maclar/<int:mac_id>/sil", methods=["POST"])
+@login_required
+def grup_ozel_mac_sil(grup_id, mac_id):
+    _ozel_mac_grubu(grup_id)
+    mac = db.session.get(Mac, mac_id)
+    if not mac or mac.ozel_grup_id != grup_id:
+        abort(404)
+    ad = f"{mac.ev_sahibi} – {mac.deplasman}"
+    TahminCezasi.query.filter_by(mac_id=mac.id).delete()
+    db.session.delete(mac)      # tahminler de birlikte silinir
+    db.session.commit()
+    recalculate_all_points()
+    flash(f"Silindi: {ad}. Bu maçtan gelen puanlar tablolardan çıkarıldı.", "success")
+    return redirect(url_for("grup_ozel_maclar", grup_id=grup_id))
+
+
 @app.route("/grup/<int:grup_id>/haftalik-liderlik")
 @login_required
 def grup_haftalik_liderlik(grup_id):
@@ -4162,8 +4296,9 @@ def grup_gecmis_maclar(grup_id):
         abort(403)
 
     bitmis_maclar = Mac.query.filter(
-        Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.durum == "bitti",
-        super_lig_takim_filtresi(),
+        db.or_(db.and_(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), super_lig_takim_filtresi()),
+               Mac.ozel_grup_id == grup_id),
+        Mac.durum == "bitti",
     ).order_by(Mac.baslangic.desc()).limit(100).all()
 
     members = GrupUyeligi.query.options(db.joinedload(GrupUyeligi.kullanici)).filter_by(grup_id=grup_id).all()
