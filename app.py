@@ -4174,13 +4174,13 @@ def tahmin(grup_id, mac_id):
 
 
 # ------------------------------------------------------------
-# GRUBA ÖZEL MAÇ: grup kurucusu (ya da admin) takip edilen liglerde olmayan
+# GRUBA ÖZEL MAÇ: sadece admin, takip edilen liglerde olmayan
 # bir maçı sadece kendi grubuna ekler, sonucunu da kendisi girer.
 # Puanlama aynı kurallarla yapılır ve sadece o grubun tablolarına yansır.
 # ------------------------------------------------------------
 def ozel_mac_yetkili_mi(grup_obj):
-    return bool(current_user.is_authenticated and grup_obj and
-                (getattr(current_user, "admin", False) or grup_obj.kurucu_id == current_user.id))
+    """Özel maç ekleme / sonuç girme / silme SADECE admin."""
+    return bool(current_user.is_authenticated and grup_obj and getattr(current_user, "admin", False))
 
 
 def _ozel_mac_grubu(grup_id):
