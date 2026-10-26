@@ -139,7 +139,7 @@
         {% set digerleri = members | rejectattr('kullanici_id', 'equalto', current_user.id) | list %}
         {% if digerleri %}
         <details class="digerleri">
-          <summary>Diğerlerinin tahminleri <span class="sessiz">({{ digerleri | selectattr('kullanici_id', 'in', mac_tahminleri.keys() | list) | list | length }}/{{ digerleri|length }} girdi)</span></summary>
+          <summary>Diğerlerinin tahminleri{% if mac.ozel_grup_id and not mac.basladi_mi() %} <span class="etiket">açık</span>{% endif %} <span class="sessiz">({{ digerleri | selectattr('kullanici_id', 'in', mac_tahminleri.keys() | list) | list | length }}/{{ digerleri|length }} girdi)</span></summary>
           <ul>
             {% for member in digerleri %}
               {% set mt = mac_tahminleri.get(member.kullanici_id) %}
@@ -147,7 +147,7 @@
               <li{% if ziya_mi %} class="ziya-satir"{% endif %}>
                 <span>{{ member.kullanici.kullanici_adi }}{% if ziya_mi %} 🤖{% endif %}</span>
                 {% if mt %}
-                  {% if mac.basladi_mi() %}
+                  {% if mac.basladi_mi() or mac.ozel_grup_id %}
                     <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong>{% if mac.bitti_mi() %} {{ p.puan_etiketi(mt.puan) }}{% endif %}</span>
                   {% else %}
                     <span class="sessiz">Gizli, maç başlayınca açılır</span>
