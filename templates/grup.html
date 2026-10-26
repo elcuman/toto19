@@ -302,7 +302,7 @@
   dlg.addEventListener('click', function(e){ if (e.target === dlg) kapat(); });   // karartılmış alana dokununca
   dlg.addEventListener('cancel', gorulduYap);                                      // Esc / geri tuşu
   // Bu hafta için daha önce kapatılmadıysa sayfa açılınca kendiliğinden göster
-  if (dlg.dataset.otomatik === '1' && !gorulduMu()) setTimeout(function(){ dlg.showModal(); }, 400);
+  if ({{ 'true' if POPUPLAR_ACIK else 'false' }} && dlg.dataset.otomatik === '1' && !gorulduMu()) setTimeout(function(){ dlg.showModal(); }, 400);
 })();
 </script>
 <style>

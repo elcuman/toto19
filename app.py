@@ -3421,6 +3421,11 @@ def kelime_karti_bilgisi():
 
 app.jinja_env.globals["kelime_karti_bilgisi"] = kelime_karti_bilgisi
 
+# Kendiliğinden açılan pop-up'lar (duyurular, Haftanın Kralı, kelime oyunu yardımı).
+# Şimdilik KAPALI; açmak için True yap. Düğmeyle açılanlar (kral kartı, "?") çalışmaya devam eder.
+POPUPLAR_ACIK = False
+app.jinja_env.globals["POPUPLAR_ACIK"] = POPUPLAR_ACIK
+
 
 @app.route("/kelime/siralama")
 def kelime_siralama_json():

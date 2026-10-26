@@ -520,6 +520,7 @@ tr:last-child td{border-bottom:0}
 <script>
 (function(){
   /* Duyurular sırayla, her biri kişi başına bir kez gösterilir (kral kartı açıksa o kapanınca) */
+  if (!{{ 'true' if POPUPLAR_ACIK else 'false' }}) return;   // pop-up'lar şimdilik kapalı
   var kuyruk = [].slice.call(document.querySelectorAll('dialog.duyuru-popup')).filter(function(d){
     if (!d.showModal) return false;
     try { return localStorage.getItem(d.dataset.anahtar) !== '1'; } catch (e) { return false; }

@@ -316,7 +316,7 @@
   });
   var dlg = document.getElementById('klYardim');
   document.getElementById('klYardimBtn').addEventListener('click', function(){ dlg.showModal(); });
-  try { if (!localStorage.getItem('kelime_yardim') && !veri.tahminler.length) { dlg.showModal(); localStorage.setItem('kelime_yardim','1'); } } catch(e) {}
+  try { if ({{ 'true' if POPUPLAR_ACIK else 'false' }} && !localStorage.getItem('kelime_yardim') && !veri.tahminler.length) { dlg.showModal(); localStorage.setItem('kelime_yardim','1'); } } catch(e) {}
   hepsiniCiz(false);
   aktifCiz();
   if (bitti) sonucGoster(false);
