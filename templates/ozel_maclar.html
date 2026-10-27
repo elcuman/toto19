@@ -45,13 +45,14 @@
 <section class="panel" style="padding:0">
   <ul class="om-liste">
   {% for m in maclar %}
-    <li>
+    <li class="{{ 'om-gizli' if m.ozel_gizli }}">
       <div class="om-ust">
         <div>
           <strong>{{ m.ev_sahibi }} – {{ m.deplasman }}</strong>
           <small>{{ m.lig }} · {{ m.baslangic | tr_saat("%d.%m.%Y %H:%M") }} · {{ tahmin_sayilari.get(m.id, 0) }} tahmin</small>
         </div>
-        {% if m.bitti_mi() %}<span class="om-skor">{{ m.ev_skor }}–{{ m.deplasman_skor }}</span>
+        {% if m.ozel_gizli %}<span class="etiket om-gizli-etiket">Gizli</span>
+        {% elif m.bitti_mi() %}<span class="om-skor">{{ m.ev_skor }}–{{ m.deplasman_skor }}</span>
         {% elif m.basladi_mi() %}<span class="etiket etiket-uyari">Sonuç bekliyor</span>
         {% else %}<span class="etiket">Tahmine açık</span>{% endif %}
       </div>
@@ -66,9 +67,22 @@
         {% else %}
         <span class="sessiz kucuk">Sonuç maç başlayınca girilebilir.</span>
         {% endif %}
-        <form method="POST" action="{{ url_for('grup_ozel_mac_sil', grup_id=grup.id, mac_id=m.id) }}" onsubmit="return confirm('Bu maç ve ona girilen tüm tahminler silinsin mi? Puanlar tablodan çıkar.');">
-          <button type="submit" class="om-sil">Sil</button>
+      </div>
+      <div class="om-eylem om-eylem-2">
+        {% if not m.bitti_mi() %}
+        <form method="POST" action="{{ url_for('grup_ozel_mac_saat', grup_id=grup.id, mac_id=m.id) }}" class="om-saat">
+          <input type="datetime-local" name="baslangic" required value="{{ m.baslangic | tr_saat('%Y-%m-%dT%H:%M') }}" aria-label="Yeni tarih ve saat">
+          <button type="submit" class="btn btn-ikincil btn-kucuk">Saati değiştir</button>
         </form>
+        {% endif %}
+        <div class="om-sag">
+          <form method="POST" action="{{ url_for('grup_ozel_mac_gorunurluk', grup_id=grup.id, mac_id=m.id) }}">
+            <button type="submit" class="om-goster">{{ 'Göster' if m.ozel_gizli else 'Gizle' }}</button>
+          </form>
+          <form method="POST" action="{{ url_for('grup_ozel_mac_sil', grup_id=grup.id, mac_id=m.id) }}" onsubmit="return confirm('Bu maç ve ona girilen tüm tahminler kalıcı olarak silinsin mi? Geri alınamaz.');">
+            <button type="submit" class="om-sil">Sil</button>
+          </form>
+        </div>
       </div>
     </li>
   {% endfor %}
@@ -93,6 +107,15 @@
 .om-eylem{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap}
 .om-sonuc{display:flex; align-items:center; gap:6px; margin:0}
 .om-sonuc input{width:56px; margin:0; text-align:center}
+.om-eylem-2{margin-top:6px}
+.om-saat{display:flex; align-items:center; gap:6px; margin:0}
+.om-saat input{margin:0; width:auto}
+.om-sag{display:flex; gap:14px; margin-left:auto}
+.om-sag form{margin:0}
+.om-goster{background:none; border:0; color:var(--cim); font-weight:600; cursor:pointer; padding:6px 0}
+.om-gizli{background:#F4F5F4}
+.om-gizli strong{color:var(--gri)}
+.om-gizli-etiket{background:#E3E6E4; color:var(--gri)}
 .om-sil{background:none; border:0; color:#B3261E; font-weight:600; cursor:pointer; padding:6px 0}
 @media (max-width:520px){ .om-satir{grid-template-columns:1fr} }
 </style>
