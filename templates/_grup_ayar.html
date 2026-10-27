@@ -7,13 +7,12 @@
     <input type="checkbox" name="ligler" value="{{ k.id }}" {% if k.id in secili %}checked{% endif %}>
     <span class="lk-ust">
       <span class="lk-ad">{{ k.ad }}</span>
-      {% if k.yeni %}<span class="lk-yeni">Yeni</span>{% endif %}
-      <span class="lk-tik" aria-hidden="true">✓</span>
     </span>
+    <span class="lk-tik" aria-hidden="true">✓</span>
     <span class="lk-logolar" aria-hidden="true">
       {% for l in k.logolar %}<img src="{{ l.logo }}" alt="" loading="lazy" title="{{ l.ad }}" onerror="this.remove()">{% else %}<span class="lk-bos-logo">{{ k.ad[:1] }}</span>{% endfor %}
     </span>
-    <span class="lk-aciklama">{{ k.aciklama }}</span>
+    <span class="lk-aciklama">{% if k.yeni %}<span class="lk-yeni">Yeni</span> {% endif %}{{ k.aciklama }}</span>
   </label>
   {% endfor %}
 </div>
@@ -22,19 +21,20 @@
 .lk-kart{position:relative; display:flex; flex-direction:column; border:2px solid var(--cizgi); border-radius:14px; overflow:hidden; background:var(--kart); cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .1s; margin:0}
 .lk-kart:hover{transform:translateY(-1px)}
 .lk-kart input{position:absolute; opacity:0; pointer-events:none}
-.lk-ust{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--lk-renk); color:#fff}
-.lk-ad{font:700 18px/1.1 var(--baslik); letter-spacing:.3px}
-.lk-yeni{font-size:11px; font-weight:700; background:rgba(255,255,255,.22); padding:2px 7px; border-radius:999px}
-.lk-tik{margin-left:auto; width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; color:transparent}
+.lk-ust{display:flex; align-items:center; gap:8px; padding:10px 12px; min-height:52px; background:var(--lk-renk); color:#fff}
+.lk-ad{flex:1; min-width:0; font:700 17px/1.2 var(--baslik); letter-spacing:.2px; overflow-wrap:normal; word-break:normal}
+.lk-yeni{display:inline-block; vertical-align:1px; font-size:10.5px; margin-right:2px; font-weight:700; color:var(--lk-renk); background:#fff; border:1px solid currentColor; padding:1px 7px; border-radius:999px}
+.lk-tik{position:absolute; right:10px; top:64px; width:26px; height:26px; border-radius:50%; border:2px solid var(--cizgi); background:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; color:transparent}
 .lk-logolar{display:flex; gap:8px; padding:12px 12px 4px; min-height:52px; align-items:center}
 .lk-logolar img{width:34px; height:34px; object-fit:contain}
 .lk-bos-logo{width:34px; height:34px; border-radius:50%; background:var(--lk-renk); color:#fff; display:flex; align-items:center; justify-content:center; font:700 16px var(--baslik)}
 .lk-aciklama{padding:2px 12px 12px; font-size:13px; color:var(--gri); line-height:1.35}
 .lk-kart:has(input:checked){border-color:var(--lk-renk); box-shadow:0 4px 14px rgba(20,32,26,.12)}
-.lk-kart:has(input:checked) .lk-tik{background:#fff; color:var(--lk-renk); border-color:#fff}
+.lk-kart:has(input:checked) .lk-tik{background:var(--lk-renk); color:#fff; border-color:var(--lk-renk)}
 .lk-kart:has(input:focus-visible){outline:3px solid var(--cim); outline-offset:2px}
-.lk-kart.secili{border-color:var(--lk-renk)} .lk-kart.secili .lk-tik{background:#fff; color:var(--lk-renk); border-color:#fff}
-@media (max-width:480px){ .lk-izgara{grid-template-columns:1fr 1fr; gap:8px} .lk-ad{font-size:16px} .lk-logolar img{width:28px; height:28px} .lk-aciklama{font-size:12px} }
+.lk-kart.secili{border-color:var(--lk-renk)} .lk-kart.secili .lk-tik{background:var(--lk-renk); color:#fff; border-color:var(--lk-renk)}
+@media (max-width:480px){ .lk-izgara{grid-template-columns:1fr 1fr; gap:8px} .lk-ad{font-size:15px} .lk-ust{padding:8px 10px; min-height:48px} .lk-logolar{gap:6px; padding-right:38px} .lk-logolar img{width:26px; height:26px} .lk-logolar img:nth-child(n+4){display:none} .lk-tik{width:22px; height:22px; font-size:12px; top:58px; right:8px} }
+@media (max-width:360px){ .lk-ad{font-size:14px; letter-spacing:0} .lk-ust{padding:8px; gap:6px} .lk-logolar{gap:5px; padding:10px 34px 4px 10px} .lk-logolar img{width:22px; height:22px} .lk-tik{top:54px; right:7px} .lk-aciklama{font-size:12px} }
 </style>
 <script>
 /* :has() desteklemeyen eski tarayıcılar için */

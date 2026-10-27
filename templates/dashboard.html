@@ -35,6 +35,13 @@
 </a>
 {% endif %}
 
+{% set kurdugum = (gruplar or []) | selectattr('kurucu_id', 'equalto', current_user.id) | first %}
+{% if kurdugum %}
+{{ p.lig_duyurusu(url_for('grup_ayarlar', grup_id=kurdugum.id), "“" ~ kurdugum.ad ~ "” için lig ve kural seç", url_for('grup_kur'), "Yeni grup kur") }}
+{% else %}
+{{ p.lig_duyurusu(url_for('grup_kur'), "Yeni grup kur") }}
+{% endif %}
+
 {{ p.kelime_karti() }}
 
 <div class="serit">

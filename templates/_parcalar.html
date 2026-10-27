@@ -269,3 +269,40 @@
 @media (max-width:480px){ .kk{flex-wrap:wrap} .kk-btn{width:100%; text-align:center} }
 </style>
 {%- endmacro %}
+
+
+{% macro lig_duyurusu(hedef_url, hedef_metin, ikinci_url=none, ikinci_metin=none) -%}
+<section class="ld">
+  <span class="ld-rozet">Yeni</span>
+  <h2>Kendi ligini seç, kurallarını sen koy</h2>
+  <p>Grup kurarken hangi ligleri tahmin edeceğinizi ve puan kurallarını artık siz seçiyorsunuz.</p>
+  <ul class="ld-ligler" aria-label="Ligler">
+    <li style="--c:#C8102E">Süper Lig</li><li style="--c:#0B1F5C">Şampiyonlar Ligi</li><li style="--c:#E8721C">Avrupa/Konferans</li>
+    <li style="--c:#3D195B">Premier Lig <b>Yeni</b></li><li style="--c:#E03A3E">La Liga <b>Yeni</b></li>
+    <li style="--c:#0068A8">Serie A <b>Yeni</b></li><li style="--c:#D3010C">Bundesliga <b>Yeni</b></li>
+  </ul>
+  <ul class="ld-kurallar">
+    <li><strong>Skorbilen kuralları:</strong> tek bilene 10, beraberliğe bonus, girmeyene −1</li>
+    <li><strong>Klasik:</strong> tam skor 3, sonuç 1, sade</li>
+    <li><strong>Kendi kuralların:</strong> puanları ve bonusları sen belirle</li>
+  </ul>
+  <div class="ld-dugmeler">
+    <a class="btn" href="{{ hedef_url }}">{{ hedef_metin }}</a>
+    {% if ikinci_url %}<a class="btn btn-ikincil" href="{{ ikinci_url }}">{{ ikinci_metin }}</a>{% endif %}
+  </div>
+</section>
+<style>
+.ld{position:relative; background:linear-gradient(135deg,#0E3B2A,#14532D); color:#fff; border-radius:var(--r-buyuk); padding:18px 18px 16px; margin:0 0 16px; overflow:hidden}
+.ld h2{color:#fff; margin:6px 0 4px; font-size:23px; line-height:1.15}
+.ld p{margin:0 0 10px; opacity:.85; font-size:14.5px}
+.ld-rozet{display:inline-block; background:#F3C623; color:#14201A; font:700 12px var(--yazi); padding:2px 9px; border-radius:999px}
+.ld-ligler{list-style:none; display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px; padding:0}
+.ld-ligler li{background:var(--c); color:#fff; font:700 13px/1 var(--yazi); padding:7px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.25)}
+.ld-ligler b{font-size:10px; background:#F3C623; color:#14201A; padding:1px 5px; border-radius:999px; margin-left:4px; vertical-align:1px}
+.ld-kurallar{margin:0 0 14px; padding-left:18px; font-size:13.5px; opacity:.92}
+.ld-kurallar li{margin-bottom:3px}
+.ld-dugmeler{display:flex; flex-wrap:wrap; gap:8px}
+.ld .btn{background:#F3C623; color:#14201A; border-color:#F3C623}
+.ld .btn-ikincil{background:transparent; color:#fff; border-color:rgba(255,255,255,.5)}
+</style>
+{%- endmacro %}

@@ -244,6 +244,11 @@
 .mini-skor{font:700 17px/1 var(--baslik)}
 .kaydet-cubugu{position:sticky; bottom:12px; margin-top:16px; padding:12px; background:rgba(255,255,255,.96); border:1px solid var(--cizgi); border-radius:var(--r-buyuk); box-shadow:0 6px 24px rgba(20,32,26,.10)}
 .segment .kisa{display:none}
+/* Çok lig seçilince sekmeler sıkışıp üst üste binmesin: yazı sığacak kadar genişler, sığmazsa yana kayar */
+.segment[role="tablist"]{overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+.segment[role="tablist"]::-webkit-scrollbar{display:none}
+.segment[role="tablist"] button{flex:1 0 auto; padding:0 12px}
+.segment[role="tablist"].sag-var{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent); mask-image:linear-gradient(to right,#000 82%,transparent)}
 @media (max-width:480px){ .segment .uzun{display:none} .segment .kisa{display:inline} }
 @media (max-width:640px){
   .kaydet-cubugu{bottom:calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom)); padding:8px; margin-left:-8px; margin-right:-8px}
@@ -284,11 +289,17 @@
     butonlar.forEach(function(b){ b.setAttribute('aria-selected', b.dataset.sekme === kod ? 'true' : 'false'); });
     paneller.forEach(function(p){ p.hidden = p.dataset.panel !== kod; });
     try { sessionStorage.setItem('ligSekme_{{ grup.id }}', kod); } catch(e) {}
+    var secili = document.querySelector('.lig-sekme[data-sekme="' + kod + '"]'), seg = secili && secili.parentNode;
+    if (seg && seg.scrollWidth > seg.clientWidth) seg.scrollLeft = secili.offsetLeft - (seg.clientWidth - secili.offsetWidth) / 2;
   }
   butonlar.forEach(function(b){ b.addEventListener('click', function(){ sec(b.dataset.sekme); }); });
+  var seg = document.querySelector('.segment[role="tablist"]');
+  if (seg) { var kenar = function(){ seg.classList.toggle('sag-var', seg.scrollLeft + seg.clientWidth < seg.scrollWidth - 4); };
+    seg.addEventListener('scroll', kenar, {passive:true}); window.addEventListener('resize', kenar); setTimeout(kenar, 0); }
   try {
     var kayitli = sessionStorage.getItem('ligSekme_{{ grup.id }}');
     if (kayitli && document.querySelector('.lig-panel[data-panel="' + kayitli + '"]')) sec(kayitli);
+    else { var ilk = document.querySelector('.lig-sekme[aria-selected="true"]'); if (ilk) sec(ilk.dataset.sekme); }
   } catch(e) {}
 
   document.querySelectorAll('.skor-girdi').forEach(function(g){

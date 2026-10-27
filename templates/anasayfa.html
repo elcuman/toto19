@@ -3,19 +3,21 @@
 
 {% block title %}Tahmin Ligi · Arkadaşlarınla maç skoru tahmin et{% endblock %}
 {% block head %}
-<meta name="description" content="Tahmin Ligi: Süper Lig, Şampiyonlar Ligi ile Beşiktaş ve Trabzonspor'un Avrupa maçlarında skoru tahmin et, arkadaş grubunla puan yarışına gir. Parasız, bahissiz.">
+<meta name="description" content="Tahmin Ligi: Süper Lig, Şampiyonlar Ligi, Premier Lig, La Liga, Serie A ve Bundesliga maçlarında skoru tahmin et, arkadaş grubunla kendi kurallarınla puan yarışına gir. Parasız, bahissiz.">
 {% endblock %}
 
 {% block content %}
 
 <section class="karsilama">
   <h1>Maç başlamadan skoru yaz,<br>haftanın kralı ol.</h1>
-  <p class="alt">Tahmin Ligi, arkadaş grupları için parasız bir skor tahmin oyunu. Süper Lig, Şampiyonlar Ligi ile Beşiktaş ve Trabzonspor'un Avrupa maçlarına tahmin girersin; sonuçlar gelince puanlar kendiliğinden hesaplanır.</p>
+  <p class="alt">Tahmin Ligi, arkadaş grupları için parasız bir skor tahmin oyunu. Grubunu kur, Süper Lig'den Premier Lig'e hangi ligleri tahmin edeceğinizi ve puan kurallarınızı seçin; sonuçlar gelince puanlar kendiliğinden hesaplanır.</p>
   <div class="btn-dizi">
     <a class="btn" href="{{ url_for('kayit') }}">Ücretsiz hesap aç</a>
     <a class="btn btn-ikincil" href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır?</a>
   </div>
 </section>
+
+{{ p.lig_duyurusu(url_for('kayit'), "Ücretsiz hesap aç, grubunu kur", url_for('nasil_oynanir'), "Nasıl oynanır?") }}
 
 {{ p.haber_slider(haberler) }}
 
