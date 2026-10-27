@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "_grup_ayar.html" as ga with context %}
+
+{% block title %}Grup ayarları · {{ grup.ad }} · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('grup', grup_id=grup.id) }}">‹ {{ grup.ad }}</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Grup ayarları</h1>
+    <p class="alt">Grubun adını, liglerini ve puan kurallarını buradan değiştirebilirsin.</p>
+  </div>
+</div>
+
+<form method="POST">
+  <section class="panel">
+    <h2>Grup</h2>
+    <label for="ad">Grup adı</label>
+    <input id="ad" name="ad" maxlength="80" required value="{{ form.get('ad', grup.ad) }}">
+    <label for="aciklama">Grup kuralı ya da iddiası <span class="sessiz" style="font-weight:400">(isteğe bağlı)</span></label>
+    <textarea id="aciklama" name="aciklama" rows="2" maxlength="300">{{ form.get('aciklama', grup.aciklama or '') }}</textarea>
+  </section>
+
+  <section class="panel">
+    <h2>Ligler</h2>
+    <p class="sessiz kucuk" style="margin-top:-6px">Yeni eklediğin ligin maçları hemen grupta görünür. Çıkardığın ligin geçmiş puanları tabloda kalır.</p>
+    {{ ga.lig_secimi(kartlar, secili_ligler) }}
+  </section>
+
+  <section class="panel">
+    <h2>Puan kuralları</h2>
+    <p class="ga-not">⚠️ Kural değişikliği <strong>bundan sonra başlayan maçlara</strong> uygulanır. Oynanmış ve başlamış maçların puanı değişmez.</p>
+    {{ ga.kural_secimi(paketler, mevcut) }}
+  </section>
+
+  <div class="ga-kaydet"><button type="submit" class="btn btn-blok">Ayarları kaydet</button></div>
+</form>
+
+<style>
+.ga-not{font-size:14px; background:#FFF8E1; border:1px solid #F3E2A6; border-radius:10px; padding:8px 12px; margin:-4px 0 12px}
+.ga-kaydet{position:sticky; bottom:12px; margin:8px 0 24px}
+@media (max-width:640px){ .ga-kaydet{bottom:calc(var(--tabbar-h, 64px) + 8px + env(safe-area-inset-bottom))} }
+</style>
+{% endblock %}

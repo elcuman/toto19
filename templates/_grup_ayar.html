@@ -1,0 +1,129 @@
+{# Grup kurma sihirbazı ve grup ayarlarında ortak parçalar #}
+
+{% macro lig_secimi(kartlar, secili) -%}
+<div class="lk-izgara" role="group" aria-label="Ligler">
+  {% for k in kartlar %}
+  <label class="lk-kart" style="--lk-renk: {{ k.renk }}">
+    <input type="checkbox" name="ligler" value="{{ k.id }}" {% if k.id in secili %}checked{% endif %}>
+    <span class="lk-ust">
+      <span class="lk-ad">{{ k.ad }}</span>
+      {% if k.yeni %}<span class="lk-yeni">Yeni</span>{% endif %}
+      <span class="lk-tik" aria-hidden="true">✓</span>
+    </span>
+    <span class="lk-logolar" aria-hidden="true">
+      {% for l in k.logolar %}<img src="{{ l.logo }}" alt="" loading="lazy" title="{{ l.ad }}" onerror="this.remove()">{% else %}<span class="lk-bos-logo">{{ k.ad[:1] }}</span>{% endfor %}
+    </span>
+    <span class="lk-aciklama">{{ k.aciklama }}</span>
+  </label>
+  {% endfor %}
+</div>
+<style>
+.lk-izgara{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px}
+.lk-kart{position:relative; display:flex; flex-direction:column; border:2px solid var(--cizgi); border-radius:14px; overflow:hidden; background:var(--kart); cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .1s; margin:0}
+.lk-kart:hover{transform:translateY(-1px)}
+.lk-kart input{position:absolute; opacity:0; pointer-events:none}
+.lk-ust{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--lk-renk); color:#fff}
+.lk-ad{font:700 18px/1.1 var(--baslik); letter-spacing:.3px}
+.lk-yeni{font-size:11px; font-weight:700; background:rgba(255,255,255,.22); padding:2px 7px; border-radius:999px}
+.lk-tik{margin-left:auto; width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; color:transparent}
+.lk-logolar{display:flex; gap:8px; padding:12px 12px 4px; min-height:52px; align-items:center}
+.lk-logolar img{width:34px; height:34px; object-fit:contain}
+.lk-bos-logo{width:34px; height:34px; border-radius:50%; background:var(--lk-renk); color:#fff; display:flex; align-items:center; justify-content:center; font:700 16px var(--baslik)}
+.lk-aciklama{padding:2px 12px 12px; font-size:13px; color:var(--gri); line-height:1.35}
+.lk-kart:has(input:checked){border-color:var(--lk-renk); box-shadow:0 4px 14px rgba(20,32,26,.12)}
+.lk-kart:has(input:checked) .lk-tik{background:#fff; color:var(--lk-renk); border-color:#fff}
+.lk-kart:has(input:focus-visible){outline:3px solid var(--cim); outline-offset:2px}
+.lk-kart.secili{border-color:var(--lk-renk)} .lk-kart.secili .lk-tik{background:#fff; color:var(--lk-renk); border-color:#fff}
+@media (max-width:480px){ .lk-izgara{grid-template-columns:1fr 1fr; gap:8px} .lk-ad{font-size:16px} .lk-logolar img{width:28px; height:28px} .lk-aciklama{font-size:12px} }
+</style>
+<script>
+/* :has() desteklemeyen eski tarayıcılar için */
+document.querySelectorAll('.lk-kart input').forEach(function(i){
+  var f=function(){ i.closest('.lk-kart').classList.toggle('secili', i.checked); }; f(); i.addEventListener('change', f);
+});
+</script>
+{%- endmacro %}
+
+
+{% macro kural_satirlari(d) -%}
+<ul class="kr-satirlar">
+  {% if d.tek_tam %}<li><b>{{ d.tek_tam }}</b> Skoru grupta tek sen bildin</li>{% endif %}
+  {% if d.tek_sonuc %}<li><b>{{ d.tek_sonuc }}</b> Sonucu grupta tek sen bildin</li>{% endif %}
+  {% if d.ber_tam != d.tam %}<li><b>{{ d.ber_tam }}</b> Beraberliği skoruyla bildin</li>{% endif %}
+  <li><b>{{ d.tam }}</b> Skoru tam bildin</li>
+  {% if d.ber_sonuc != d.sonuc %}<li><b>{{ d.ber_sonuc }}</b> Beraberliği bildin</li>{% endif %}
+  {% if d.sonuc %}<li><b>{{ d.sonuc }}</b> Kazananı bildin</li>{% endif %}
+  {% if d.ceza %}<li class="kr-ceza"><b>{{ d.ceza }}</b> Tahmin girmedin</li>{% endif %}
+</ul>
+{%- endmacro %}
+
+
+{% macro kural_secimi(paketler, mevcut) -%}
+{% set secili_paket = mevcut.paket if mevcut.paket in ('skorbilen','klasik','ozel') else 'skorbilen' %}
+{% set od = mevcut.degerler if mevcut.paket == 'ozel' else {'tam':5,'sonuc':2,'ber_tam':5,'ber_sonuc':2,'tek_tam':0,'tek_sonuc':0,'ceza':0} %}
+<div class="kr-izgara" role="radiogroup" aria-label="Kural paketi">
+  {% for kod in ('skorbilen', 'klasik', 'ozel') %}
+  {% set pk = paketler[kod] %}
+  <label class="kr-kart">
+    <input type="radio" name="kural_paketi" value="{{ kod }}" {% if kod == secili_paket %}checked{% endif %}>
+    <span class="kr-bas"><span class="kr-radyo" aria-hidden="true"></span><strong>{{ pk.ad }}</strong>{% if kod == 'skorbilen' %}<span class="kr-oneri">Önerilen</span>{% endif %}</span>
+    <span class="kr-aciklama">{{ pk.aciklama }}</span>
+    {% if pk.degerler %}{{ kural_satirlari(pk.degerler) }}{% endif %}
+  </label>
+  {% endfor %}
+</div>
+
+<div class="kr-ozel" id="krOzel">
+  <div class="kr-ozel-sayilar">
+    <label>Tam skor puanı
+      <select name="ozel_tam">{% for i in range(1, 11) %}<option value="{{ i }}" {% if i == od.tam %}selected{% endif %}>{{ i }}</option>{% endfor %}</select>
+    </label>
+    <label>Sonuç (kazanan) puanı
+      <select name="ozel_sonuc">{% for i in range(0, 6) %}<option value="{{ i }}" {% if i == od.sonuc %}selected{% endif %}>{{ i }}</option>{% endfor %}</select>
+    </label>
+  </div>
+  <label class="kr-anahtar"><input type="checkbox" name="ozel_tek" value="1" {% if od.tek_tam %}checked{% endif %}><span><strong>Tek bilene 2 kat puan</strong><small>Grupta skoru ya da sonucu bir tek o kişi bildiyse puanı ikiye katlanır.</small></span></label>
+  <label class="kr-anahtar"><input type="checkbox" name="ozel_beraberlik" value="1" {% if od.ber_tam != od.tam %}checked{% endif %}><span><strong>Beraberliğe +1</strong><small>Beraberlik tahmini tuttuğunda 1 puan fazla.</small></span></label>
+  <label class="kr-anahtar"><input type="checkbox" name="ozel_ceza" value="1" {% if od.ceza %}checked{% endif %}><span><strong>Tahmin girmeyene −1</strong><small>Kimse tahmin girmeyi unutmasın.</small></span></label>
+</div>
+
+<style>
+.kr-izgara{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px}
+.kr-kart{position:relative; display:flex; flex-direction:column; gap:6px; border:2px solid var(--cizgi); border-radius:14px; padding:12px 14px; background:var(--kart); cursor:pointer; margin:0}
+.kr-kart input{position:absolute; opacity:0; pointer-events:none}
+.kr-bas{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.kr-bas strong{font:700 17px var(--baslik)}
+.kr-radyo{width:18px; height:18px; border-radius:50%; border:2px solid var(--gri-acik); flex:none}
+.kr-oneri{font-size:11px; font-weight:700; color:var(--cim); background:var(--cim-acik); padding:2px 7px; border-radius:999px}
+.kr-aciklama{font-size:13px; color:var(--gri); line-height:1.35}
+.kr-satirlar{list-style:none; margin:4px 0 0; padding:0; font-size:13px}
+.kr-satirlar li{display:flex; gap:8px; padding:3px 0; border-top:1px solid var(--cizgi)}
+.kr-satirlar li:first-child{border-top:0}
+.kr-satirlar b{min-width:22px; font-family:var(--baslik); color:var(--cim)}
+.kr-satirlar .kr-ceza b{color:#B3261E}
+.kr-kart:has(input:checked){border-color:var(--cim); background:#F5FBF7}
+.kr-kart:has(input:checked) .kr-radyo{border-color:var(--cim); box-shadow:inset 0 0 0 4px #fff; background:var(--cim)}
+.kr-kart.secili{border-color:var(--cim); background:#F5FBF7} .kr-kart.secili .kr-radyo{border-color:var(--cim); box-shadow:inset 0 0 0 4px #fff; background:var(--cim)}
+.kr-ozel{margin-top:12px; padding:14px; border:1px dashed var(--cizgi); border-radius:14px; display:none}
+.kr-ozel.acik{display:block}
+.kr-ozel-sayilar{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:6px}
+.kr-ozel-sayilar label{font-weight:600; font-size:14px}
+.kr-ozel-sayilar select{margin-top:4px}
+.kr-anahtar{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--cizgi); cursor:pointer; font-weight:400}
+.kr-anahtar input{width:20px; height:20px; margin:2px 0 0; flex:none; accent-color:var(--cim)}
+.kr-anahtar small{display:block; color:var(--gri); font-size:12.5px}
+@media (max-width:640px){ .kr-izgara{grid-template-columns:1fr} }
+</style>
+<script>
+(function(){
+  var ozel = document.getElementById('krOzel');
+  function guncelle(){
+    var s = document.querySelector('input[name="kural_paketi"]:checked');
+    document.querySelectorAll('.kr-kart').forEach(function(k){ k.classList.toggle('secili', k.querySelector('input').checked); });
+    ozel.classList.toggle('acik', !!s && s.value === 'ozel');
+  }
+  document.querySelectorAll('input[name="kural_paketi"]').forEach(function(r){ r.addEventListener('change', guncelle); });
+  guncelle();
+})();
+</script>
+{%- endmacro %}

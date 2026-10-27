@@ -149,6 +149,22 @@ LEAGUES = {
     AVRUPA_CODE: {"id": AVRUPA_ID, "ad": "Avrupa Kupaları (BJK & TS)", "provider": "espn-avrupa"},
 }
 
+# Grupların isteğe bağlı seçebildiği ek ligler (ESPN, anahtarsız). Genel sayfalarda
+# (ana sayfa, Robot Ziya sayfası, puan durumu) GÖSTERİLMEZ; sadece bu ligi seçen
+# gruplarda görünür. Hafta = takvim haftası (Cuma 12:00 – Cuma 12:00).
+PREMIER_LIG_ID, LA_LIGA_ID, SERIE_A_ID, BUNDESLIGA_ID = 2039, 2040, 2041, 2042
+EK_LIGLER = {
+    "PL": {"id": PREMIER_LIG_ID, "ad": "Premier Lig", "provider": "espn-genel", "slug": "eng.1"},
+    "LALIGA": {"id": LA_LIGA_ID, "ad": "La Liga", "provider": "espn-genel", "slug": "esp.1"},
+    "SERIEA": {"id": SERIE_A_ID, "ad": "Serie A", "provider": "espn-genel", "slug": "ita.1"},
+    "BUNDES": {"id": BUNDESLIGA_ID, "ad": "Bundesliga", "provider": "espn-genel", "slug": "ger.1"},
+}
+LEAGUES.update(EK_LIGLER)
+EK_LIG_ID_LISTESI = [l["id"] for l in EK_LIGLER.values()]
+LEAGUES_AD = {l["id"]: l["ad"] for l in LEAGUES.values()}
+# Hafta numarası yerine takvim haftası kullanan ligler (sekmede "X. hafta" yazılmaz)
+TAKVIM_HAFTALI_LIGLER = {AVRUPA_ID, *EK_LIG_ID_LISTESI}
+
 TAKIP_EDILEN_LIG_ID_LISTESI = [lig["id"] for lig in LEAGUES.values()]
 
 # Grup sayfasındaki lig sekmelerinde görünen kısa adlar.
@@ -157,6 +173,10 @@ LIG_KISA_ADLARI = {
     SUPER_LIG_ID: "Süper Lig",
     NATIONS_LEAGUE_ID: "Uluslar Ligi",
     AVRUPA_ID: "Avp/Konf",
+    PREMIER_LIG_ID: "Premier Lig",
+    LA_LIGA_ID: "La Liga",
+    SERIE_A_ID: "Serie A",
+    BUNDESLIGA_ID: "Bundesliga",
 }
 
 # Grup sayfasında "bu hafta" sayılan süre: bir ligin sıradaki maçı bu kadar
@@ -192,6 +212,49 @@ CHAMPIONS_LEAGUE_GORUNUM_BASLANGICI = datetime(2026, 10, 1)
 GIZLI_LIG_ID_LISTESI = [NATIONS_LEAGUE_ID]
 
 
+def secilebilir_lig_id_listesi():
+    """Grupların seçebildiği tüm ligler: varsayılanlar + ek ligler."""
+    return gosterilecek_lig_id_listesi() + [i for i in EK_LIG_ID_LISTESI]
+
+
+def grup_lig_idleri(grup):
+    """Grubun takip ettiği ligler. Seçim yapılmamış (eski) gruplarda varsayılan ligler."""
+    varsayilan = gosterilecek_lig_id_listesi()
+    if grup is None or not getattr(grup, "ligler", None):
+        return varsayilan
+    izinli = set(secilebilir_lig_id_listesi())
+    secili = [int(x) for x in str(grup.ligler).split(",") if x.strip().isdigit()]
+    return [i for i in secili if i in izinli] or varsayilan
+
+
+def grup_lig_haritasi():
+    """{grup_id: set(lig_id)} — istek başına bir kez hesaplanır."""
+    try:
+        from flask import g as _gg
+        onbellek = getattr(_gg, "grup_lig_haritasi", None)
+    except RuntimeError:
+        onbellek, _gg = None, None
+    if onbellek is not None:
+        return onbellek
+    harita = {gr.id: set(grup_lig_idleri(gr)) for gr in Grup.query.all()}
+    if _gg is not None:
+        try:
+            _gg.grup_lig_haritasi = harita
+        except RuntimeError:
+            pass
+    return harita
+
+
+def mac_grupta_mi(mac, grup_id, harita=None):
+    """Maç bu grubun maçı mı? (özel maç: sadece kendi grubu; normal maç: grubun ligleri)"""
+    if mac is None:
+        return False
+    if mac.ozel_grup_id:
+        return mac.ozel_grup_id == grup_id and not mac.ozel_gizli
+    harita = harita if harita is not None else grup_lig_haritasi()
+    return mac.lig_id in harita.get(grup_id, set(gosterilecek_lig_id_listesi()))
+
+
 def gosterilecek_lig_id_listesi():
     """Kullanıcıya gösterilecek lig id listesi.
 
@@ -199,7 +262,8 @@ def gosterilecek_lig_id_listesi():
     Ligi'nin CHAMPIONS_LEAGUE_GORUNUM_BASLANGICI tarihinden önce bu listeden
     çıkarılmasıdır (bkz. yukarıdaki not).
     """
-    liste = [lig_id for lig_id in TAKIP_EDILEN_LIG_ID_LISTESI if lig_id not in GIZLI_LIG_ID_LISTESI]
+    liste = [lig_id for lig_id in TAKIP_EDILEN_LIG_ID_LISTESI
+             if lig_id not in GIZLI_LIG_ID_LISTESI and lig_id not in EK_LIG_ID_LISTESI]
     if datetime.now(timezone.utc).replace(tzinfo=None) < CHAMPIONS_LEAGUE_GORUNUM_BASLANGICI:
         return [lig_id for lig_id in liste if lig_id != CHAMPIONS_LEAGUE_ID]
     return liste
@@ -435,6 +499,11 @@ class Grup(db.Model):
         db.ForeignKey("kullanicilar.id"),
         nullable=False
     )
+
+    # Grubun takip ettiği ligler ("2036,2001,2039"); boşsa varsayılan ligler (eski gruplar).
+    ligler = db.Column(db.Text, nullable=True)
+    # Grubun puan kuralları (JSON, sürümlü); boşsa sitenin standart kuralları.
+    kurallar = db.Column(db.Text, nullable=True)
 
     olusturulma = db.Column(
         db.DateTime,
@@ -1179,6 +1248,8 @@ def sync_league(competition_code, requested_season=None, aylar=None):
     if provider == "espn-nations":
         return sync_nations_league_espn(requested_season=requested_season, aylar=aylar)
 
+    if provider == "espn-genel":
+        return sync_espn_genel(competition_code, requested_season=requested_season, aylar=aylar)
     if provider == "espn-avrupa":
         return sync_avrupa_espn(requested_season=requested_season, aylar=aylar)
 
@@ -2144,6 +2215,72 @@ def sync_super_lig_api_football(requested_season=None):
     }
 
 
+def sync_espn_genel(kod, requested_season=None, aylar=None):
+    """Ek ligleri (Premier Lig, La Liga, Serie A, Bundesliga) ESPN'den çeker.
+    Maçlar external_id ile eşleşir; hafta = takvim haftası (Cuma 12:00 başlangıçlı)."""
+    bilgi = LEAGUES[kod]
+    simdi = datetime.now(timezone.utc)
+    sezon = requested_season or (simdi.year if simdi.month >= 7 else simdi.year - 1)
+    if not aylar:
+        aylar = [(sezon, a) for a in range(8, 13)] + [(sezon + 1, a) for a in range(1, 7)]
+    eventler, hatalar, basarili = {}, [], 0
+    for yil, ay in aylar:
+        try:
+            yanit = espn_get(bilgi["slug"], "scoreboard", params={"dates": f"{yil}{ay:02d}", "limit": 500})
+            basarili += 1
+        except Exception as e:
+            hatalar.append(f"{yil}-{ay:02d}: {e}")
+            continue
+        for e in yanit.get("events", []) or []:
+            if e.get("id"):
+                eventler[e["id"]] = e
+    if basarili == 0:
+        raise RuntimeError(f"ESPN {bilgi['ad']} istekleri başarısız: " + " | ".join(hatalar[:2]))
+    ext_idler = [ESPN_EXTERNAL_ID_OFFSET + int(i) for i in eventler]
+    mevcut = {m.external_id: m for m in Mac.query.filter(Mac.external_id.in_(ext_idler or [-1])).all()}
+    eklenen = guncellenen = 0
+    for eid, event in eventler.items():
+        tarih = parse_api_date(event.get("date"))
+        ev_c, dep_c = _espn_takim(event, "home"), _espn_takim(event, "away")
+        ev_t, dep_t = ev_c.get("team") or {}, dep_c.get("team") or {}
+        ext = ESPN_EXTERNAL_ID_OFFSET + int(eid)
+        mac = mevcut.get(ext)
+        if mac is None:
+            mac = Mac(external_id=ext)
+            db.session.add(mac)
+            eklenen += 1
+        else:
+            guncellenen += 1
+        mac.ev_sahibi = ev_t.get("displayName") or mac.ev_sahibi or "Bilinmeyen Takım"
+        mac.deplasman = dep_t.get("displayName") or mac.deplasman or "Bilinmeyen Takım"
+        mac.ev_logo = ev_t.get("logo") or mac.ev_logo
+        mac.deplasman_logo = dep_t.get("logo") or mac.deplasman_logo
+        mac.lig, mac.lig_id, mac.sezon = bilgi["ad"], bilgi["id"], sezon
+        if tarih is not None:
+            mac.baslangic = tarih
+        elle_saat_uygula(mac)
+        if mac.baslangic:
+            mac.hafta = hafta_anahtari(mac.baslangic).strftime("%Y-%m-%d")
+        if mac.api_status != "MANUEL":
+            status_type = ((event.get("status") or {}).get("type")) or {}
+            yeni_durum = map_espn_status(status_type)
+            if not (mac.durum == "bitti" and yeni_durum != "bitti"):
+                mac.durum = yeni_durum
+            mac.api_status = status_type.get("name")
+            for alan, c in (("ev_skor", ev_c), ("deplasman_skor", dep_c)):
+                skor = c.get("score")
+                if skor not in (None, "") and mac.durum in ("bitti", "oynaniyor"):
+                    try:
+                        setattr(mac, alan, int(skor))
+                    except (TypeError, ValueError):
+                        pass
+        mac.son_guncelleme = utc_now_naive()
+    db.session.commit()
+    recalculate_all_points()
+    return {"success": True, "lig_kodu": kod, "competition_id": bilgi["id"], "api_matches": len(eventler),
+            "inserted": eklenen, "updated": guncellenen, "hatalar": hatalar[:3]}
+
+
 def sync_champions_league(requested_season=None):
     """Geriye dönük uyumluluk için: sadece Şampiyonlar Ligi'ni senkronize eder."""
     return sync_league(CHAMPIONS_LEAGUE_CODE, requested_season=requested_season)
@@ -2184,6 +2321,136 @@ BERABERLIK_BASLANGIC_UTC = datetime(2026, 10, 21, 15, 0)   # 21.10.2026 18:00 T�
 # üyeden (Robot Ziya hariç, maçtan önce gruba katılmış olanlar) 1 puan düşülür.
 TAHMIN_YOK_CEZASI = -1
 TAHMIN_YOK_CEZA_BASLANGIC_UTC = datetime(2026, 10, 20, 9, 0)   # 20.10.2026 12:00 Türkiye saati
+
+
+# ------------------------------------------------------------
+# GRUP KURALLARI. Kurucu grubunun puan kurallarını seçer; değişiklik SADECE
+# değişiklikten sonra başlayan maçlara uygulanır (sürümlü). Kural seçilmemiş
+# (eski) gruplar sitenin standart kurallarıyla, tarih eşikleri dahil birebir
+# eskisi gibi puanlanır.
+#   tam / sonuc        : tam skor / sonuç (kazanan) puanı
+#   ber_tam / ber_sonuc: beraberlik maçında tam skor / beraberliği bilme puanı
+#   tek_tam / tek_sonuc: grupta tek bilen bonusu (0 = kapalı)
+#   ceza               : tahmin girmeyene (0 = kapalı, ör. -1)
+# ------------------------------------------------------------
+KURAL_PAKETLERI = {
+    "skorbilen": {"ad": "Skorbilen kuralları", "aciklama": "Tek bilene büyük bonus, beraberliğe ekstra puan, tahmin girmeyene −1. En rekabetçi paket.",
+                  "degerler": {"tam": 5, "sonuc": 3, "ber_tam": 6, "ber_sonuc": 4, "tek_tam": 10, "tek_sonuc": 8, "ceza": -1}},
+    "klasik": {"ad": "Klasik", "aciklama": "Tam skor 3, sonuç 1 puan. Bonus ve ceza yok. Herkesin bildiği sade sistem.",
+               "degerler": {"tam": 3, "sonuc": 1, "ber_tam": 3, "ber_sonuc": 1, "tek_tam": 0, "tek_sonuc": 0, "ceza": 0}},
+    "ozel": {"ad": "Kendi kurallarım", "aciklama": "Puanları ve bonusları sen belirle.", "degerler": None},
+}
+KURAL_ALANLARI = ("tam", "sonuc", "ber_tam", "ber_sonuc", "tek_tam", "tek_sonuc", "ceza")
+
+
+def standart_kural_degerleri(baslangic):
+    """Kural seçilmemiş gruplar: sitenin standart kuralları, maçın tarihine göre (eski davranış)."""
+    b = baslangic
+    ber = bool(b and b >= BERABERLIK_BASLANGIC_UTC)
+    return {"tam": TAM_SKOR_PUANI, "sonuc": SONUC_PUANI,
+            "ber_tam": BERABERLIK_TAM_PUANI if ber else TAM_SKOR_PUANI,
+            "ber_sonuc": BERABERLIK_SONUC_PUANI if ber else SONUC_PUANI,
+            "tek_tam": TEK_BILEN_PUANI if (b and b >= TEK_BILEN_BASLANGIC_UTC) else 0,
+            "tek_sonuc": TEK_SONUC_PUANI if (b and b >= TEK_SONUC_BASLANGIC_UTC) else 0,
+            "ceza": TAHMIN_YOK_CEZASI}
+
+
+def ozel_kural_degerleri(tam, sonuc, beraberlik_bonus, tek_bilen_bonus, ceza):
+    """'Kendi kurallarım' formundan değerler üretir."""
+    tam = max(1, min(20, int(tam)))
+    sonuc = max(0, min(tam, int(sonuc)))
+    return {"tam": tam, "sonuc": sonuc,
+            "ber_tam": tam + (1 if beraberlik_bonus else 0),
+            "ber_sonuc": sonuc + (1 if beraberlik_bonus else 0) if sonuc else 0,
+            "tek_tam": tam * 2 if tek_bilen_bonus else 0,
+            "tek_sonuc": sonuc * 2 if (tek_bilen_bonus and sonuc) else 0,
+            "ceza": -1 if ceza else 0}
+
+
+def grup_kural_surumleri(grup):
+    """[(baslangic_utc, paket, degerler), ...] eskiden yeniye; kural seçilmemişse []."""
+    ham = getattr(grup, "kurallar", None)
+    if not ham:
+        return []
+    try:
+        import json as _json
+        veri = _json.loads(ham)
+        sonuc = []
+        for s_ in veri.get("surumler", []):
+            d = {k: int(s_["degerler"][k]) for k in KURAL_ALANLARI}
+            sonuc.append((datetime.fromisoformat(s_["bas"]), s_.get("paket", "ozel"), d))
+        return sorted(sonuc, key=lambda x: x[0])
+    except Exception:
+        return []
+
+
+def grup_kural_haritasi():
+    """{grup_id: sürüm listesi} — istek başına bir kez."""
+    try:
+        from flask import g as _gg
+        onbellek = getattr(_gg, "grup_kural_haritasi", None)
+    except RuntimeError:
+        onbellek, _gg = None, None
+    if onbellek is not None:
+        return onbellek
+    harita = {gr.id: grup_kural_surumleri(gr) for gr in Grup.query.all()}
+    if _gg is not None:
+        try:
+            _gg.grup_kural_haritasi = harita
+        except RuntimeError:
+            pass
+    return harita
+
+
+def grup_onbellek_temizle():
+    """Grup ligleri/kuralları değişince (aynı istekte) önbelleği sıfırla."""
+    try:
+        from flask import g as _gg
+        _gg.pop("grup_lig_haritasi", None)
+        _gg.pop("grup_kural_haritasi", None)
+    except RuntimeError:
+        pass
+
+
+def mac_kurallari(grup_id, mac, harita=None):
+    """Bu grupta bu maç için geçerli kural değerleri."""
+    harita = harita if harita is not None else grup_kural_haritasi()
+    surumler = harita.get(grup_id) or []
+    if not surumler:
+        return standart_kural_degerleri(mac.baslangic if mac else None)
+    gecerli = surumler[0][2]
+    b = mac.baslangic if mac else None
+    for bas, _paket, d in surumler:
+        if b is None or bas <= b:
+            gecerli = d
+    return gecerli
+
+
+def grup_guncel_kurallari(grup):
+    """Grup sayfası/ayarlar için: şu an geçerli (en son) kural paketi ve değerleri."""
+    surumler = grup_kural_surumleri(grup)
+    if not surumler:
+        return {"paket": "standart", "ad": "Skorbilen kuralları", "degerler": standart_kural_degerleri(utc_now_naive())}
+    _bas, paket, d = surumler[-1]
+    return {"paket": paket, "ad": KURAL_PAKETLERI.get(paket, {}).get("ad", "Kendi kuralları"), "degerler": d}
+
+
+def grup_kurallarini_ayarla(grup, paket, degerler):
+    """Yeni kural sürümü ekler; şu andan sonra başlayan maçlara uygulanır."""
+    import json as _json
+    try:
+        veri = _json.loads(grup.kurallar) if grup.kurallar else {"surumler": []}
+    except Exception:
+        veri = {"surumler": []}
+    simdi = utc_now_naive().replace(microsecond=0)
+    if not veri["surumler"] and grup.olusturulma:
+        # İlk kez kural seçiliyor: grup kurulduğundan beri geçerli olsun
+        bas = min(simdi, grup.olusturulma.replace(microsecond=0))
+    else:
+        bas = simdi
+    veri["surumler"].append({"bas": bas.isoformat(), "paket": paket, "degerler": {k: int(degerler[k]) for k in KURAL_ALANLARI}})
+    grup.kurallar = _json.dumps(veri, ensure_ascii=False)
+    grup_onbellek_temizle()
 
 
 def calculate_points(prediction_home, prediction_away, actual_home, actual_away):
@@ -2241,6 +2508,8 @@ def recalculate_all_points():
     changed = False
     yeni_puanlar, tam_bilenler, sonuc_bilenler = {}, {}, {}
     tam_kategori, sonuc_kategori = set(), set()
+    kural_haritasi = grup_kural_haritasi()
+    kurallar = {}       # (grup_id, mac_id) -> kural değerleri
     for tahmin in predictions:
         mac = tahmin.mac
         if mac is not None and mac.ozel_grup_id and mac.ozel_gizli:
@@ -2248,51 +2517,52 @@ def recalculate_all_points():
             continue
         if not mac or not mac.bitti_mi() or mac.ev_skor is None or mac.deplasman_skor is None:
             continue
+        anahtar = (tahmin.grup_id, tahmin.mac_id)
+        R = kurallar.get(anahtar)
+        if R is None:
+            R = kurallar[anahtar] = mac_kurallari(tahmin.grup_id, mac, kural_haritasi)
 
         # "Puanları sıfırla" butonuna basıldıktan ÖNCE (ya da tam o anda)
-        # oynanmış maçlar için puan hep 0 kalmalı — yoksa yeni bir maç
-        # sonucu girildiğinde bu fonksiyon tekrar çalışıp eski/sıfırlanmış
-        # sezonun puanlarını geri getiriyordu. Ancak admin bir maçı MUAF
-        # olarak işaretlediyse (mac_muaf_mi), bu kurala takılmadan her
-        # zaman normal şekilde puanlanır.
+        # oynanmış maçlar için puan hep 0 kalmalı (muaf işaretli maçlar hariç).
         mac_tarihi = mac.baslangic or mac.son_guncelleme
         muaf_mi = mac.id in muaf_mac_id_seti
         if sifirlama_tarihi and mac_tarihi and mac_tarihi <= sifirlama_tarihi and not muaf_mi:
-            new_points = 0
+            temel = 0
         else:
-            new_points = calculate_points(tahmin.ev_skor, tahmin.deplasman_skor, mac.ev_skor, mac.deplasman_skor)
+            temel = calculate_points(tahmin.ev_skor, tahmin.deplasman_skor, mac.ev_skor, mac.deplasman_skor)
 
-        tam_mi = new_points == TAM_SKOR_PUANI
-        sonuc_mu = new_points == SONUC_PUANI
-        # Beraberlik maçlarında temel puan 5→6 (tam) ve 3→4 (sonuç)
-        if (mac.ev_skor == mac.deplasman_skor and mac.baslangic and mac.baslangic >= BERABERLIK_BASLANGIC_UTC):
-            if tam_mi:
-                new_points = BERABERLIK_TAM_PUANI
-            elif sonuc_mu:
-                new_points = BERABERLIK_SONUC_PUANI
+        tam_mi = temel == TAM_SKOR_PUANI
+        sonuc_mu = temel == SONUC_PUANI
+        beraberlik = mac.ev_skor == mac.deplasman_skor
+        if tam_mi:
+            new_points = R["ber_tam"] if beraberlik else R["tam"]
+        elif sonuc_mu:
+            new_points = R["ber_sonuc"] if beraberlik else R["sonuc"]
+        else:
+            new_points = 0
         yeni_puanlar[tahmin.id] = new_points
         if tam_mi:
             tam_kategori.add(tahmin.id)
         if sonuc_mu:
             sonuc_kategori.add(tahmin.id)
-        if tam_mi and mac.baslangic and mac.baslangic >= TEK_BILEN_BASLANGIC_UTC:
-            tam_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
-        if (tam_mi or sonuc_mu) and mac.baslangic and mac.baslangic >= TEK_SONUC_BASLANGIC_UTC:
-            sonuc_bilenler.setdefault((tahmin.grup_id, tahmin.mac_id), []).append(tahmin)
+        if tam_mi and R["tek_tam"]:
+            tam_bilenler.setdefault(anahtar, []).append(tahmin)
+        if (tam_mi or sonuc_mu) and R["tek_sonuc"]:
+            sonuc_bilenler.setdefault(anahtar, []).append(tahmin)
 
-    # Tek bilen kuralı: bir grupta skoru Robot Ziya dışında yalnızca bir kişi tam bildiyse 10 puan
+    # Tek bilen kuralı: bir grupta skoru Robot Ziya dışında yalnızca bir kişi tam bildiyse bonus
     yz = yz_kullanici_getir(olustur=False)
     yz_id = yz.id if yz else None
-    for liste in tam_bilenler.values():
+    for anahtar, liste in tam_bilenler.items():
         insanlar = [t for t in liste if t.kullanici_id != yz_id]
         if len(insanlar) == 1:
-            yeni_puanlar[insanlar[0].id] = TEK_BILEN_PUANI
+            yeni_puanlar[insanlar[0].id] = kurallar[anahtar]["tek_tam"]
     # Tek sonuç bilen: sonucu (tam skor dahil) Ziya hariç tek kişi bildiyse ve o kişi
-    # skoru tam tutmadıysa 8 puan (tam tutturduysa zaten yukarıda 10 aldı)
-    for liste in sonuc_bilenler.values():
+    # skoru tam tutmadıysa bonus (tam tutturduysa zaten yukarıda tek bilen bonusunu aldı)
+    for anahtar, liste in sonuc_bilenler.items():
         insanlar = [t for t in liste if t.kullanici_id != yz_id]
         if len(insanlar) == 1 and insanlar[0].id in sonuc_kategori:
-            yeni_puanlar[insanlar[0].id] = TEK_SONUC_PUANI
+            yeni_puanlar[insanlar[0].id] = kurallar[anahtar]["tek_sonuc"]
 
     for tahmin in predictions:
         if tahmin.id in yeni_puanlar and tahmin.puan != yeni_puanlar[tahmin.id]:
@@ -2313,35 +2583,43 @@ def tahmin_cezalarini_guncelle(tahminler=None, yz_id=None):
     maclar = Mac.query.filter(
         Mac.durum == "bitti", Mac.ev_skor.isnot(None), Mac.deplasman_skor.isnot(None),
         Mac.baslangic.isnot(None), Mac.baslangic >= TAHMIN_YOK_CEZA_BASLANGIC_UTC,
-        db.or_(db.and_(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), super_lig_takim_filtresi()),
+        db.or_(db.and_(Mac.lig_id.in_(secilebilir_lig_id_listesi()), super_lig_takim_filtresi()),
                db.and_(Mac.ozel_grup_id.isnot(None), Mac.ozel_gizli.is_(False))),
     ).all()
     mac_map = {m.id: m for m in maclar}
     if tahminler is None:
         tahminler = Tahmin.query.filter(Tahmin.mac_id.in_(list(mac_map) or [-1])).all()
     var_olan = {(t.grup_id, t.mac_id, t.kullanici_id) for t in tahminler if t.mac_id in mac_map}
-    gerekli = set()
+    gerekli = {}
+    kural_haritasi = grup_kural_haritasi()
     if mac_map:
+        harita = grup_lig_haritasi()
         uyelikler = GrupUyeligi.query.all()
         for m in maclar:
             for u in uyelikler:
                 if u.kullanici_id == yz_id:
                     continue
-                if m.ozel_grup_id and u.grup_id != m.ozel_grup_id:
-                    continue   # özel maç sadece kendi grubunu ilgilendirir
+                if not mac_grupta_mi(m, u.grup_id, harita):
+                    continue   # maç bu grubun liglerinde değil / başka grubun özel maçı
                 if u.katilma_tarihi and u.katilma_tarihi > m.baslangic:
                     continue   # maçtan sonra katılan cezalandırılmaz
                 if (u.grup_id, m.id, u.kullanici_id) not in var_olan:
-                    gerekli.add((u.grup_id, m.id, u.kullanici_id))
+                    ceza = mac_kurallari(u.grup_id, m, kural_haritasi)["ceza"]
+                    if ceza:
+                        gerekli[(u.grup_id, m.id, u.kullanici_id)] = ceza
     mevcut = {(c.grup_id, c.mac_id, c.kullanici_id): c for c in TahminCezasi.query.all()}
     degisti = False
-    for anahtar in gerekli - set(mevcut):
-        g, mid, kid = anahtar
-        db.session.add(TahminCezasi(grup_id=g, mac_id=mid, kullanici_id=kid, puan=TAHMIN_YOK_CEZASI))
-        degisti = True
+    for anahtar, puan in gerekli.items():
+        if anahtar not in mevcut:
+            g, mid, kid = anahtar
+            db.session.add(TahminCezasi(grup_id=g, mac_id=mid, kullanici_id=kid, puan=puan))
+            degisti = True
     for anahtar, c in mevcut.items():
         if anahtar not in gerekli:
             db.session.delete(c)
+            degisti = True
+        elif c.puan != gerekli[anahtar]:
+            c.puan = gerekli[anahtar]
             degisti = True
     if degisti:
         db.session.commit()
@@ -2437,6 +2715,11 @@ def initialize_database():
             db.session.rollback()
         try:
             kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("kullanicilar")}
+            grup_kolonlari = {k["name"] for k in db.inspect(db.engine).get_columns("gruplar")}
+            for kolon in ("ligler", "kurallar"):
+                if kolon not in grup_kolonlari:
+                    db.session.execute(db.text(f"ALTER TABLE gruplar ADD COLUMN {kolon} TEXT"))
+            db.session.commit()
             mac_kolonlari = {k["name"] for k in db.inspect(db.engine).get_columns("maclar")}
             if "ozel_gizli" not in mac_kolonlari and "ozel_grup_id" in mac_kolonlari:
                 db.session.execute(db.text("ALTER TABLE maclar ADD COLUMN ozel_gizli BOOLEAN NOT NULL DEFAULT FALSE"))
@@ -3483,13 +3766,14 @@ def cikis():
     return redirect(url_for("giris"))
 
 
-def aktif_hafta_maclari(now):
+def aktif_hafta_maclari(now, lig_idleri=None):
     """Grup sayfasında tahmin için gösterilen (bu haftanın) maçlar.
-    Döner: (maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu)"""
+    lig_idleri verilmezse varsayılan ligler. Döner: (maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu)"""
+    lig_idleri = list(lig_idleri) if lig_idleri is not None else gosterilecek_lig_id_listesi()
     pencere_sonu = now + timedelta(days=HAFTA_PENCERESI_GUN)
     aktif_haftalar = {}
     sonraki_mac_tarihleri = {}
-    for lig_id in gosterilecek_lig_id_listesi():
+    for lig_id in lig_idleri:
         # Haftanın son maçı BİTENE kadar o hafta gösterilsin: önce başlamış ama
         # henüz bitmemiş (oynanan / sonucu beklenen) maça bak, yoksa sıradaki maça.
         devam_eden = Mac.query.filter(
@@ -3525,7 +3809,7 @@ def aktif_hafta_maclari(now):
     if aktif_haftalar:
         kosullar = [db.and_(Mac.lig_id == lig_id, Mac.hafta == hafta) for lig_id, hafta in aktif_haftalar.items()]
         maclar = Mac.query.filter(
-            Mac.lig_id.in_(gosterilecek_lig_id_listesi()), db.or_(*kosullar),
+            Mac.lig_id.in_(lig_idleri), db.or_(*kosullar),
             Mac.baslangic <= pencere_sonu,
             super_lig_takim_filtresi(),
         ).order_by(Mac.baslangic.asc()).all()
@@ -3537,15 +3821,17 @@ def aktif_hafta_maclari(now):
 @login_required
 def dashboard():
     now = utc_now_naive()
+    _gruplarim = [u.grup for u in GrupUyeligi.query.filter_by(kullanici_id=current_user.id).all() if u.grup]
+    benim_ligler = sorted({l for gr in _gruplarim for l in grup_lig_idleri(gr)}) if _gruplarim else gosterilecek_lig_id_listesi()
     yaklasan_maclar = Mac.query.filter(
         Mac.baslangic.isnot(None), Mac.baslangic > now,
-        Mac.lig_id.in_(gosterilecek_lig_id_listesi()),
+        Mac.lig_id.in_(benim_ligler),
         ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
         super_lig_takim_filtresi(),
     ).order_by(Mac.baslangic.asc()).limit(10).all()
 
     biten_maclar = Mac.query.filter(
-        Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.durum == "bitti",
+        Mac.lig_id.in_(benim_ligler), Mac.durum == "bitti",
         super_lig_takim_filtresi(),
     ).order_by(Mac.baslangic.desc()).limit(5).all()
 
@@ -3561,7 +3847,7 @@ def dashboard():
         yaklasan_maclar=yaklasan_maclar,
         biten_maclar=biten_maclar,
         tahminler=tahminler,
-        tahmin_acik_maclar=[m for m in aktif_hafta_maclari(now)[0]
+        tahmin_acik_maclar=[m for m in aktif_hafta_maclari(now, benim_ligler)[0]
                             if m.baslangic and m.baslangic > now and m.durum not in ("bitti", "iptal", "ertelendi")]
                            + Mac.query.filter(
                                Mac.ozel_grup_id.in_([g.id for g in gruplar] or [-1]), Mac.ozel_gizli.is_(False), Mac.baslangic > now,
@@ -3595,16 +3881,125 @@ def grup_yonet():
     return render_template("gruplar.html", gruplar=[u.grup for u in uyelikler])
 
 
+# ------------------------------------------------------------
+# GRUP KURMA SİHİRBAZI ve GRUP AYARLARI: lig seçimi (görsel kartlar) + kurallar.
+# ------------------------------------------------------------
+LIG_KART_BILGI = {
+    SUPER_LIG_ID: {"renk": "#C8102E", "aciklama": "Türkiye'nin 18 takımı, her hafta 9 maç", "takimlar": ["Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor"]},
+    CHAMPIONS_LEAGUE_ID: {"renk": "#0B1F5C", "aciklama": "Avrupa'nın en büyükleri, salı-çarşamba geceleri", "takimlar": []},
+    AVRUPA_ID: {"renk": "#E8721C", "aciklama": "Türk takımlarının Avrupa Ligi ve Konferans Ligi maçları", "takimlar": []},
+    PREMIER_LIG_ID: {"renk": "#3D195B", "aciklama": "İngiltere: Arsenal, Liverpool, Man City…", "takimlar": ["Arsenal", "Liverpool", "Manchester City", "Chelsea"]},
+    LA_LIGA_ID: {"renk": "#E03A3E", "aciklama": "İspanya: Real Madrid, Barcelona, Atlético…", "takimlar": ["Real Madrid", "Barcelona", "Atlético Madrid", "Real Betis"]},
+    SERIE_A_ID: {"renk": "#0068A8", "aciklama": "İtalya: Inter, Milan, Juventus, Napoli…", "takimlar": ["Internazionale", "AC Milan", "Juventus", "Napoli"]},
+    BUNDESLIGA_ID: {"renk": "#D3010C", "aciklama": "Almanya: Bayern, Dortmund, Leverkusen…", "takimlar": ["Bayern Munich", "Borussia Dortmund", "Bayer Leverkusen", "RB Leipzig"]},
+}
+
+
+def lig_kartlari():
+    """Sihirbaz/ayarlar için seçilebilir ligler: ad, açıklama, renk ve takım logoları (veritabanından)."""
+    kartlar = []
+    for lig_id in secilebilir_lig_id_listesi():
+        bilgi = LIG_KART_BILGI.get(lig_id, {"renk": "#14532D", "aciklama": "", "takimlar": []})
+        logolar, gorulen = [], set()
+        sorgu = Mac.query.filter(Mac.lig_id == lig_id, Mac.ozel_grup_id.is_(None)).order_by(Mac.baslangic.desc()).limit(120).all()
+        for istenen in bilgi["takimlar"]:
+            for m in sorgu:
+                for ad, logo in ((m.ev_sahibi, m.ev_logo), (m.deplasman, m.deplasman_logo)):
+                    if logo and ad not in gorulen and istenen.lower() in (ad or "").lower():
+                        gorulen.add(ad); logolar.append({"ad": ad, "logo": logo_src(logo)})
+                        break
+                if any(istenen.lower() in a.lower() for a in gorulen):
+                    break
+        for m in sorgu:
+            if len(logolar) >= 4:
+                break
+            for ad, logo in ((m.ev_sahibi, m.ev_logo), (m.deplasman, m.deplasman_logo)):
+                if logo and ad not in gorulen and len(logolar) < 4:
+                    gorulen.add(ad); logolar.append({"ad": ad, "logo": logo_src(logo)})
+        kartlar.append({"id": lig_id, "ad": LIG_KISA_ADLARI.get(lig_id, LEAGUES_AD.get(lig_id, "Lig")),
+                        "aciklama": bilgi["aciklama"], "renk": bilgi["renk"], "logolar": logolar[:4],
+                        "yeni": lig_id in EK_LIG_ID_LISTESI})
+    return kartlar
+
+
+def _formdan_ligler():
+    izinli = set(secilebilir_lig_id_listesi())
+    return [int(x) for x in request.form.getlist("ligler") if x.isdigit() and int(x) in izinli]
+
+
+def _formdan_kurallar():
+    """(paket, degerler) ya da hata için (None, mesaj)."""
+    paket = request.form.get("kural_paketi", "skorbilen")
+    if paket in ("skorbilen", "klasik"):
+        return paket, dict(KURAL_PAKETLERI[paket]["degerler"])
+    if paket == "ozel":
+        try:
+            d = ozel_kural_degerleri(request.form.get("ozel_tam", 5), request.form.get("ozel_sonuc", 3),
+                                     bool(request.form.get("ozel_beraberlik")), bool(request.form.get("ozel_tek")),
+                                     bool(request.form.get("ozel_ceza")))
+        except (TypeError, ValueError):
+            return None, "Puanları doğru seç."
+        return "ozel", d
+    return None, "Bir kural paketi seç."
+
+
+def _ziya_arka_planda_tamamla():
+    """Yeni grup / yeni lig: Ziya eksik tahminlerini arka planda girsin."""
+    try:
+        _cron_arka_planda_baslat("ziya (grup ayarı)", lambda: {"yapay_zeka": _yz_guvenli_calistir(zorla=True)})
+    except Exception as e:
+        print("[ziya-tamamla] hata:", e)
+
+
+@app.route("/grup-kur", methods=["GET", "POST"])
+@login_required
+def grup_kur():
+    """3 adımlı sihirbaz: ad → ligler → kurallar."""
+    if request.method == "POST":
+        ad = " ".join((request.form.get("ad") or "").split())[:80]
+        aciklama = (request.form.get("aciklama") or "").strip()[:300]
+        ligler = _formdan_ligler()
+        paket, degerler = _formdan_kurallar()
+        if not ad:
+            flash("Grup adı gir.", "warning")
+        elif not ligler:
+            flash("En az bir lig seç.", "warning")
+        elif paket is None:
+            flash(degerler, "warning")
+        else:
+            grup = Grup(ad=ad, aciklama=aciklama or None, davet_kodu=generate_invite_code(), sezon=2026,
+                        kurucu_id=current_user.id, ligler=",".join(str(i) for i in ligler))
+            db.session.add(grup)
+            db.session.flush()
+            grup_kurallarini_ayarla(grup, paket, degerler)
+            db.session.add(GrupUyeligi(grup_id=grup.id, kullanici_id=current_user.id))
+            try:
+                db.session.add(GrupUyeligi(grup_id=grup.id, kullanici_id=yz_kullanici_getir().id))
+            except Exception:
+                pass
+            db.session.commit()
+            grup_onbellek_temizle()
+            _tahminleri_esitle_guvenli(current_user.id)
+            _ziya_arka_planda_tamamla()
+            flash("Grup kuruldu! Şimdi arkadaşlarını davet et. 🎉", "success")
+            return redirect(url_for("grup", grup_id=grup.id))
+    secili = [int(x) for x in request.form.getlist("ligler")] if request.method == "POST" else gosterilecek_lig_id_listesi()
+    return render_template("grup_kur.html", kartlar=lig_kartlari(), secili_ligler=secili,
+                           paketler=KURAL_PAKETLERI, mevcut={"paket": request.form.get("kural_paketi", "skorbilen"),
+                                                             "degerler": KURAL_PAKETLERI["skorbilen"]["degerler"]},
+                           form=request.form if request.method == "POST" else {})
+
+
 @app.route("/grup-olustur", methods=["POST"])
 @login_required
 def grup_olustur():
+    """Eski hızlı kurma formu: varsayılan ligler + Skorbilen kurallarıyla kurar."""
     ad = request.form.get("ad", "").strip()
-    aciklama = request.form.get("aciklama", "").strip()
     if not ad:
         flash("Grup adı girin.", "danger")
-        return redirect(url_for("grup_yonet"))
-
-    grup = Grup(ad=ad, aciklama=aciklama, davet_kodu=generate_invite_code(), sezon=2026, kurucu_id=current_user.id)
+        return redirect(url_for("grup_kur"))
+    grup = Grup(ad=ad[:80], aciklama=request.form.get("aciklama", "").strip() or None,
+                davet_kodu=generate_invite_code(), sezon=2026, kurucu_id=current_user.id)
     db.session.add(grup)
     db.session.flush()
     db.session.add(GrupUyeligi(grup_id=grup.id, kullanici_id=current_user.id))
@@ -3616,6 +4011,56 @@ def grup_olustur():
     _tahminleri_esitle_guvenli(current_user.id)
     flash("Grup oluşturuldu.", "success")
     return redirect(url_for("grup", grup_id=grup.id))
+
+
+def grup_ayar_yetkisi(grup_obj):
+    return bool(grup_obj and current_user.is_authenticated and
+                (grup_obj.kurucu_id == current_user.id or getattr(current_user, "admin", False)))
+
+
+@app.route("/grup/<int:grup_id>/ayarlar", methods=["GET", "POST"])
+@login_required
+def grup_ayarlar(grup_id):
+    grup_obj = db.session.get(Grup, grup_id)
+    if not grup_obj:
+        abort(404)
+    if not grup_ayar_yetkisi(grup_obj):
+        abort(403)
+    guncel = grup_guncel_kurallari(grup_obj)
+    if request.method == "POST":
+        ad = " ".join((request.form.get("ad") or "").split())[:80]
+        ligler = _formdan_ligler()
+        paket, degerler = _formdan_kurallar()
+        if not ad:
+            flash("Grup adı boş olamaz.", "warning")
+        elif not ligler:
+            flash("En az bir lig seç.", "warning")
+        elif paket is None:
+            flash(degerler, "warning")
+        else:
+            eski_ligler = set(grup_lig_idleri(grup_obj))
+            grup_obj.ad = ad
+            grup_obj.aciklama = (request.form.get("aciklama") or "").strip()[:300] or None
+            grup_obj.ligler = ",".join(str(i) for i in ligler)
+            kural_degisti = (paket != guncel["paket"]) or any(int(degerler[k]) != int(guncel["degerler"][k]) for k in KURAL_ALANLARI)
+            if kural_degisti:
+                grup_kurallarini_ayarla(grup_obj, paket, degerler)
+            db.session.commit()
+            grup_onbellek_temizle()
+            if set(ligler) - eski_ligler:
+                # Yeni lig eklendi: üyelerin diğer gruplarındaki tahminleri buraya da yansısın, Ziya da girsin
+                for (kid,) in db.session.query(GrupUyeligi.kullanici_id).filter_by(grup_id=grup_id).all():
+                    _tahminleri_esitle_guvenli(kid)
+                _ziya_arka_planda_tamamla()
+            recalculate_all_points()
+            mesaj = "Ayarlar kaydedildi."
+            if kural_degisti:
+                mesaj += " Yeni kurallar bundan sonra başlayan maçlara uygulanacak; oynanmış maçların puanı değişmedi."
+            flash(mesaj, "success")
+            return redirect(url_for("grup", grup_id=grup_id))
+    secili = [int(x) for x in request.form.getlist("ligler")] if request.method == "POST" else grup_lig_idleri(grup_obj)
+    return render_template("grup_ayarlar.html", grup=grup_obj, kartlar=lig_kartlari(), secili_ligler=secili,
+                           paketler=KURAL_PAKETLERI, mevcut=guncel, form=request.form if request.method == "POST" else {})
 
 
 # ------------------------------------------------------------
@@ -3633,9 +4078,11 @@ def tahmini_tum_gruplara_yaz(kullanici_id, mac_id, ev_skor, deplasman_skor, grup
     if grup_idleri is None:
         grup_idleri = kullanicinin_grup_idleri(kullanici_id)
     mac = db.session.get(Mac, mac_id)
-    if mac is not None and mac.ozel_grup_id:
-        # Gruba özel maç: tahmin sadece o gruba yazılır, diğer gruplara yansımaz
-        grup_idleri = [g for g in grup_idleri if g == mac.ozel_grup_id]
+    if mac is not None:
+        # Tahmin sadece maçın ait olduğu gruplara yazılır: özel maç → kendi grubu,
+        # normal maç → o ligi seçmiş gruplar.
+        harita = grup_lig_haritasi()
+        grup_idleri = [g for g in grup_idleri if mac_grupta_mi(mac, g, harita)]
     mevcut = {t.grup_id: t for t in Tahmin.query.filter(
         Tahmin.kullanici_id == kullanici_id, Tahmin.mac_id == mac_id,
         Tahmin.grup_id.in_(grup_idleri or [-1])).all()}
@@ -3662,7 +4109,10 @@ def tahminleri_gruplara_esitle(kullanici_id=None):
     if kullanici_id is not None:
         q = q.filter(Tahmin.kullanici_id == kullanici_id)
     en_son = {}
+    harita = grup_lig_haritasi()
+    mac_lig = {}
     for t in q.all():
+        mac_lig[t.mac_id] = t.mac
         anahtar = (t.kullanici_id, t.mac_id)
         z = t.guncellenme or t.olusturulma or datetime.min
         if anahtar not in en_son or z > en_son[anahtar][0]:
@@ -3678,10 +4128,11 @@ def tahminleri_gruplara_esitle(kullanici_id=None):
             continue
         if kid not in gruplar:
             gruplar[kid] = kullanicinin_grup_idleri(kid)
+        hedef = [gid for gid in gruplar[kid] if mac_grupta_mi(mac_lig.get(mid), gid, harita)]
         once = {(t.grup_id, t.ev_skor, t.deplasman_skor) for t in Tahmin.query.filter_by(kullanici_id=kid, mac_id=mid)}
-        if all((gid, ev, dep) in once for gid in gruplar[kid]):
+        if all((gid, ev, dep) in once for gid in hedef):
             continue
-        tahmini_tum_gruplara_yaz(kid, mid, ev, dep, gruplar[kid])
+        tahmini_tum_gruplara_yaz(kid, mid, ev, dep, hedef)
         degisen += 1
     db.session.commit()
     return degisen
@@ -3834,7 +4285,7 @@ def su_anki_hafta_liderligi_hesapla(grup_id, hafta_basi, hafta_sonu):
         .join(Mac, Tahmin.mac_id == Mac.id)
         .filter(
             Tahmin.grup_id == grup_id,
-            db.or_(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.ozel_grup_id == grup_id),
+            db.or_(Mac.lig_id.in_(grup_lig_idleri(db.session.get(Grup, grup_id))), Mac.ozel_grup_id == grup_id),
             Mac.baslangic >= hafta_basi,
             Mac.baslangic < hafta_sonu,
         )
@@ -3872,12 +4323,13 @@ def grup(grup_id):
     # SADECE BU HAFTANIN maçları: bir ligin sıradaki maçı önümüzdeki
     # HAFTA_PENCERESI_GUN gün içinde değilse o lig bu hafta boş gösterilir
     # (örn. Uluslar Ligi'nin bir sonraki maçı 1 ay sonraysa listelenmez).
-    maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu = aktif_hafta_maclari(now)
+    grup_ligleri = grup_lig_idleri(grup_obj)
+    maclar, aktif_haftalar, sonraki_mac_tarihleri, pencere_sonu = aktif_hafta_maclari(now, grup_ligleri)
 
-    # Lig sekmeleri: grup sayfasının üstünde her lig için ayrı bir buton.
+    # Lig sekmeleri: grup sayfasının üstünde her lig için ayrı bir buton (grubun seçtiği ligler).
     lig_sekmeleri = []
     for kod, bilgi in LEAGUES.items():
-        if bilgi["id"] not in gosterilecek_lig_id_listesi():
+        if bilgi["id"] not in grup_ligleri:
             continue
         lig_maclari = [m for m in maclar if m.lig_id == bilgi["id"]]
         lig_sekmeleri.append({
@@ -3885,7 +4337,7 @@ def grup(grup_id):
             "kod": kod,
             "ad": LIG_KISA_ADLARI.get(bilgi["id"], bilgi["ad"]),
             "maclar": lig_maclari,
-            "hafta": None if bilgi["id"] == AVRUPA_ID else aktif_haftalar.get(bilgi["id"]),
+            "hafta": None if bilgi["id"] in TAKVIM_HAFTALI_LIGLER else aktif_haftalar.get(bilgi["id"]),
             "sonraki_mac": sonraki_mac_tarihleri.get(bilgi["id"]),
             "acik_mac": sum(1 for m in lig_maclari if m.oynanabilir_mi()),
         })
@@ -3977,6 +4429,9 @@ def grup(grup_id):
         paylas_haftalar=_guvenli_paylas_haftalar(grup_id),
         ozel_mac_yetkisi=ozel_mac_yetkili_mi(grup_obj),
         grubu_silebilir=(grup_obj.kurucu_id == current_user.id or getattr(current_user, "admin", False)),
+        grup_kurallari=grup_guncel_kurallari(grup_obj),
+        grup_lig_adlari=[LIG_KISA_ADLARI.get(i, LEAGUES_AD.get(i, "")) for i in grup_ligleri],
+        ayar_yetkisi=grup_ayar_yetkisi(grup_obj),
     )
 
 
@@ -4133,7 +4588,7 @@ def tahminleri_kaydet(grup_id):
             continue
 
         mac = db.session.get(Mac, mac_id)
-        if not mac or not mac.oynanabilir_mi() or (mac.ozel_grup_id and (mac.ozel_gizli or mac.ozel_grup_id not in grup_idleri)):
+        if not mac or not mac.oynanabilir_mi() or not mac_grupta_mi(mac, grup_id):
             atlanan += 1
             continue
 
@@ -4159,7 +4614,7 @@ def tahmin(grup_id, mac_id):
     """Tek bir maç için tahmin girme/güncelleme sayfası (örn. geçmiş sayfasından tekil düzenleme için)."""
     membership = GrupUyeligi.query.filter_by(grup_id=grup_id, kullanici_id=current_user.id).first()
     mac = db.session.get(Mac, mac_id)
-    if not membership or not mac or (mac.ozel_grup_id and (mac.ozel_gizli or mac.ozel_grup_id != grup_id)):
+    if not membership or not mac or not mac_grupta_mi(mac, grup_id):
         abort(403)
 
     if not mac.oynanabilir_mi():
@@ -4390,7 +4845,7 @@ def grup_gecmis_maclar(grup_id):
         abort(403)
 
     bitmis_maclar = Mac.query.filter(
-        db.or_(db.and_(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), super_lig_takim_filtresi()),
+        db.or_(db.and_(Mac.lig_id.in_(grup_lig_idleri(grup_obj)), super_lig_takim_filtresi()),
                db.and_(Mac.ozel_grup_id == grup_id, Mac.ozel_gizli.is_(False))),
         Mac.durum == "bitti",
     ).order_by(Mac.baslangic.desc()).limit(100).all()
@@ -5438,8 +5893,8 @@ def _tr_tarih_araligi(bas, son):
     return f"{b.day} {TR_AYLAR[b.month - 1]} – {e.day} {TR_AYLAR[e.month - 1]}"
 
 
-def _haftada_biten_mac_sayisi(bas, son):
-    return Mac.query.filter(Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.durum == "bitti",
+def _haftada_biten_mac_sayisi(bas, son, lig_idleri=None):
+    return Mac.query.filter(Mac.lig_id.in_(lig_idleri or gosterilecek_lig_id_listesi()), Mac.durum == "bitti",
                             Mac.baslangic >= bas, Mac.baslangic < son).count()
 
 
@@ -5448,7 +5903,7 @@ def kral_karti_verisi(grup_id, bas):
     if not grup_obj:
         return None
     son = bas + timedelta(days=7)
-    if _haftada_biten_mac_sayisi(bas, son) == 0:
+    if _haftada_biten_mac_sayisi(bas, son, grup_lig_idleri(grup_obj)) == 0:
         return None
     siralama = su_anki_hafta_liderligi_hesapla(grup_id, bas, son)
     if not siralama:
@@ -5491,11 +5946,12 @@ def paylasilabilir_haftalar(grup_id):
     ve son tamamlanan hafta (son 4 hafta içinde maç oynanmış olan)."""
     simdi_bas, _ = bu_haftanin_araligi()
     sonuc = []
-    if _haftada_biten_mac_sayisi(simdi_bas, simdi_bas + timedelta(days=7)):
+    gl = grup_lig_idleri(db.session.get(Grup, grup_id))
+    if _haftada_biten_mac_sayisi(simdi_bas, simdi_bas + timedelta(days=7), gl):
         sonuc.append({"bas": simdi_bas, "etiket": "Şu anki lideri paylaş", "devam": True})
     for i in range(1, 5):
         b = simdi_bas - timedelta(days=7 * i)
-        if _haftada_biten_mac_sayisi(b, b + timedelta(days=7)):
+        if _haftada_biten_mac_sayisi(b, b + timedelta(days=7), gl):
             sonuc.append({"bas": b, "etiket": "Haftanın kralını paylaş" if i == 1 else "Son haftanın kralını paylaş",
                           "devam": False, "gecen_hafta": i == 1})
             break
@@ -6311,9 +6767,10 @@ def yz_tahminleri_uret(simdi=None, zorla=False):
         return sonuc
 
     # 1) Haftalık tahmin zamanı geldiyse yeni tahminleri üret
+    harita = grup_lig_haritasi()
     if sira_geldi:
         maclar = Mac.query.filter(
-            Mac.lig_id.in_(gosterilecek_lig_id_listesi()),
+            Mac.lig_id.in_(secilebilir_lig_id_listesi()),
             Mac.baslangic.isnot(None),
             Mac.baslangic > simdi,
             Mac.baslangic <= bitis,
@@ -6330,7 +6787,7 @@ def yz_tahminleri_uret(simdi=None, zorla=False):
         istatistikler = {}
         yapilacak = []
         for mac in maclar:
-            eksik = [gid for gid in grup_idleri if (gid, mac.id) not in var_olan]
+            eksik = [gid for gid in grup_idleri if (gid, mac.id) not in var_olan and mac_grupta_mi(mac, gid, harita)]
             if not eksik:
                 continue
             if mac.lig_id not in istatistikler:
@@ -6363,13 +6820,14 @@ def yz_tahminleri_uret(simdi=None, zorla=False):
         .filter(Tahmin.kullanici_id == yz.id, Mac.baslangic > simdi)
         .all()
     )
+    mac_nesne = {m.id: m for m in Mac.query.filter(Mac.id.in_({r[1] for r in mevcut} or {-1})).all()}
     skorlar, sahip = {}, set()
     for gid, mid, ev, dep in mevcut:
         skorlar.setdefault(mid, (ev, dep))
         sahip.add((gid, mid))
     for mid, (ev, dep) in skorlar.items():
         for gid in grup_idleri:
-            if (gid, mid) not in sahip:
+            if (gid, mid) not in sahip and mac_grupta_mi(mac_nesne.get(mid), gid, harita):
                 db.session.add(Tahmin(grup_id=gid, mac_id=mid, kullanici_id=yz.id, ev_skor=ev, deplasman_skor=dep))
                 sonuc["kopyalanan"] += 1
     db.session.commit()

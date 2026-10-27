@@ -18,7 +18,7 @@
     </select>
   </label>
   {% else %}<span></span>{% endif %}
-  <a class="btn btn-kucuk grup-kur-btn" href="{{ url_for('grup_yonet') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Yeni grup kur</a>
+  <a class="btn btn-kucuk grup-kur-btn" href="{{ url_for('grup_kur') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Yeni grup kur</a>
 </div>
 
 <div class="sayfa-bas">
@@ -35,6 +35,23 @@
   <a class="btn btn-ikincil btn-kucuk" target="_blank" rel="noopener" href="https://wa.me/?text={{ davet_mesaji | urlencode }}">WhatsApp'tan davet et</a>
   <button type="button" class="btn btn-ikincil btn-kucuk" id="linkKopyala" data-link="{{ davet_linki }}">Davet linkini kopyala</button>
 </div>
+
+{% import "_grup_ayar.html" as ga with context %}
+<details class="grup-kurallar">
+  <summary>
+    <span>⚙️ <strong>{{ grup_kurallari.ad }}</strong> · {{ grup_lig_adlari | join(', ') }}</span>
+    {% if ayar_yetkisi %}<a href="{{ url_for('grup_ayarlar', grup_id=grup.id) }}" class="gk-ayar" onclick="event.stopPropagation()">Ayarlar</a>{% endif %}
+  </summary>
+  {{ ga.kural_satirlari(grup_kurallari.degerler) }}
+</details>
+<style>
+.grup-kurallar{background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r); padding:0 14px; margin-bottom:14px; font-size:14px}
+.grup-kurallar summary{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; cursor:pointer; list-style:none; color:var(--gri)}
+.grup-kurallar summary::-webkit-details-marker{display:none}
+.grup-kurallar summary strong{color:var(--murekkep)}
+.grup-kurallar .kr-satirlar{margin:0 0 10px}
+.gk-ayar{font-weight:700; white-space:nowrap}
+</style>
 
 {% if grup.aciklama %}
 <div class="kural">
@@ -128,7 +145,7 @@
           <p class="mac-alt">
             {% if t %}
               Tahminin <strong>{{ t.ev_skor }}–{{ t.deplasman_skor }}</strong>
-              {% if mac.bitti_mi() %}&nbsp;{{ p.puan_etiketi(t.puan) }}{% endif %}
+              {% if mac.bitti_mi() %}&nbsp;{{ p.puan_etiketi(t.puan, t, mac) }}{% endif %}
             {% else %}
               Bu maça tahmin girmedin.{% if ceza_var(grup.id, mac.id, current_user.id) %} <span class="etiket etiket-ceza">−1</span>{% endif %}
             {% endif %}
@@ -148,7 +165,7 @@
                 <span>{{ member.kullanici.kullanici_adi }}{% if ziya_mi %} 🤖{% endif %}</span>
                 {% if mt %}
                   {% if mac.basladi_mi() or mac.ozel_grup_id %}
-                    <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong>{% if mac.bitti_mi() %} {{ p.puan_etiketi(mt.puan) }}{% endif %}</span>
+                    <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong>{% if mac.bitti_mi() %} {{ p.puan_etiketi(mt.puan, mt, mac) }}{% endif %}</span>
                   {% else %}
                     <span class="sessiz">Gizli, maç başlayınca açılır</span>
                   {% endif %}

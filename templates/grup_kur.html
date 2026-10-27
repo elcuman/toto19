@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% import "_grup_ayar.html" as ga with context %}
+
+{% block title %}Yeni grup kur · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<a class="geri" href="{{ url_for('grup_yonet') }}">‹ Gruplar</a>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Yeni grup kur</h1>
+    <p class="alt">Üç adımda grubunu kur, sonra arkadaşlarını davet et.</p>
+  </div>
+</div>
+
+<ol class="sh-adimlar" aria-label="Adımlar">
+  <li data-adim-gosterge="1" class="aktif"><span>1</span>Ad</li>
+  <li data-adim-gosterge="2"><span>2</span>Ligler</li>
+  <li data-adim-gosterge="3"><span>3</span>Kurallar</li>
+</ol>
+
+<form method="POST" id="sihirbaz" novalidate>
+  <section class="panel sh-adim" data-adim="1">
+    <h2>Grubunun adı ne?</h2>
+    <label for="ad">Grup adı</label>
+    <input id="ad" name="ad" maxlength="80" required placeholder="Örn. Ofis Ligi, Halı Saha Tayfası" value="{{ form.get('ad', '') }}">
+    <label for="aciklama">Grup kuralı ya da iddiası <span class="sessiz" style="font-weight:400">(isteğe bağlı)</span></label>
+    <textarea id="aciklama" name="aciklama" rows="2" maxlength="300" placeholder="Örn. Haftanın sonuncusu kahveleri ısmarlar ☕">{{ form.get('aciklama', '') }}</textarea>
+    <div class="sh-dugmeler"><span></span><button type="button" class="btn" data-ileri>İleri ›</button></div>
+  </section>
+
+  <section class="panel sh-adim" data-adim="2">
+    <h2>Hangi ligleri tahmin edeceksiniz?</h2>
+    <p class="sessiz kucuk" style="margin-top:-6px">Birden fazla seçebilirsin. Sonradan grup ayarlarından değiştirebilirsin.</p>
+    {{ ga.lig_secimi(kartlar, secili_ligler) }}
+    <p class="sh-hata" id="ligHata" hidden>En az bir lig seç.</p>
+    <div class="sh-dugmeler"><button type="button" class="btn btn-ikincil" data-geri>‹ Geri</button><button type="button" class="btn" data-ileri>İleri ›</button></div>
+  </section>
+
+  <section class="panel sh-adim" data-adim="3">
+    <h2>Puan kuralları</h2>
+    <p class="sessiz kucuk" style="margin-top:-6px">Hazır bir paket seç ya da kendi kurallarını yap. Sonradan değiştirirsen yeni kurallar sonraki maçlara uygulanır.</p>
+    {{ ga.kural_secimi(paketler, mevcut) }}
+    <div class="sh-dugmeler"><button type="button" class="btn btn-ikincil" data-geri>‹ Geri</button><button type="submit" class="btn">Grubu kur 🎉</button></div>
+  </section>
+</form>
+
+<style>
+.sh-adimlar{list-style:none; display:flex; gap:6px; padding:0; margin:0 0 14px; counter-reset:none}
+.sh-adimlar li{flex:1; display:flex; align-items:center; gap:8px; font-weight:600; color:var(--gri); font-size:14px; padding:8px 10px; border-radius:10px; background:var(--kart); border:1px solid var(--cizgi)}
+.sh-adimlar li span{width:24px; height:24px; border-radius:50%; background:var(--zemin); display:flex; align-items:center; justify-content:center; font-size:13px}
+.sh-adimlar li.aktif{color:var(--cim); border-color:var(--cim)}
+.sh-adimlar li.aktif span, .sh-adimlar li.bitti span{background:var(--cim); color:#fff}
+.sh-adim h2{margin:0 0 10px}
+.sh-dugmeler{display:flex; justify-content:space-between; gap:10px; margin-top:16px}
+.sh-hata{color:#B3261E; font-weight:600; margin:10px 0 0}
+.js .sh-adim{display:none}
+.js .sh-adim.aktif{display:block}
+</style>
+<script>
+(function(){
+  var f = document.getElementById('sihirbaz'); document.documentElement.classList.add('js');
+  var adimlar = f.querySelectorAll('.sh-adim'), gosterge = document.querySelectorAll('[data-adim-gosterge]'), su = 1;
+  function goster(n){
+    su = n;
+    adimlar.forEach(function(a){ a.classList.toggle('aktif', +a.dataset.adim === n); });
+    gosterge.forEach(function(g){ var i=+g.dataset.adimGosterge; g.classList.toggle('aktif', i===n); g.classList.toggle('bitti', i<n); });
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  function gecerli(n){
+    if (n === 1) { var ad = document.getElementById('ad'); if (!ad.value.trim()) { ad.focus(); ad.reportValidity && ad.reportValidity(); return false; } }
+    if (n === 2) { var var_ = f.querySelectorAll('input[name="ligler"]:checked').length > 0; document.getElementById('ligHata').hidden = var_; if (!var_) return false; }
+    return true;
+  }
+  f.addEventListener('click', function(e){
+    if (e.target.closest('[data-ileri]')) { if (gecerli(su)) goster(su + 1); }
+    if (e.target.closest('[data-geri]')) goster(su - 1);
+  });
+  f.addEventListener('submit', function(e){ if (!gecerli(1)) { e.preventDefault(); goster(1); } else if (!gecerli(2)) { e.preventDefault(); goster(2); } });
+  document.getElementById('ad').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); if (gecerli(1)) goster(2); } });
+  goster({{ 3 if form.get('ad') and secili_ligler else 1 }});
+})();
+</script>
+{% endblock %}

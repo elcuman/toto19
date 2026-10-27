@@ -29,7 +29,7 @@
           <li class="{{ 'ben' if member.kullanici_id == current_user.id else '' }}">
             <span>{{ member.kullanici.kullanici_adi }}</span>
             {% if mt %}
-              <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong> {{ p.puan_etiketi(mt.puan) }}</span>
+              <span><strong class="mini-skor">{{ mt.ev_skor }}–{{ mt.deplasman_skor }}</strong> {{ p.puan_etiketi(mt.puan, mt, mac) }}</span>
             {% else %}
               <span class="sessiz">Girmedi{% if ceza_var(grup.id, mac.id, member.kullanici_id) %} <span class="etiket etiket-ceza">−1</span>{% endif %}</span>
             {% endif %}

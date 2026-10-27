@@ -95,7 +95,7 @@
     <article class="mac">
       <div class="mac-ust">
         <span>{{ mac.lig }}</span>
-        {% if t %}{{ p.puan_etiketi(t.puan) }}{% elif mac.id in kullanici_ceza_maclari(current_user.id) %}<span class="etiket etiket-ceza">−1</span>{% endif %}
+        {% if t %}{{ p.puan_etiketi(t.puan, t, mac) }}{% elif mac.id in kullanici_ceza_maclari(current_user.id) %}<span class="etiket etiket-ceza">−1</span>{% endif %}
       </div>
       {{ p.fikstur(mac) }}
       <p class="mac-alt">{% if t %}Tahminin <strong>{{ t.ev_skor }}–{{ t.deplasman_skor }}</strong>{% else %}Bu maça tahmin girmedin.{% if mac.id in kullanici_ceza_maclari(current_user.id) %} 1 puan düşüldü.{% endif %}{% endif %}</p>

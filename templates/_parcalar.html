@@ -43,8 +43,19 @@
 {%- endmacro %}
 
 {# Puan etiketi (5 = tam isabet, 3 = sonuç) #}
-{% macro puan_etiketi(puan) -%}
-  {%- if puan == 10 -%}<span class="etiket etiket-tam">Tek bilen 🎯 +10</span>
+{% macro puan_etiketi(puan, t=none, mac=none) -%}
+  {#- Tahmin ve maç verilirse etiket NE OLDUĞUNA göre seçilir (gruplar farklı puan kuralları kullanabilir) -#}
+  {%- if t is not none and mac is not none and mac.ev_skor is not none and mac.deplasman_skor is not none -%}
+    {%- set tam = t.ev_skor == mac.ev_skor and t.deplasman_skor == mac.deplasman_skor -%}
+    {%- set ty = (t.ev_skor > t.deplasman_skor) - (t.ev_skor < t.deplasman_skor) -%}
+    {%- set my = (mac.ev_skor > mac.deplasman_skor) - (mac.ev_skor < mac.deplasman_skor) -%}
+    {%- set ber = mac.ev_skor == mac.deplasman_skor -%}
+    {%- if not puan -%}<span class="etiket">+0</span>
+    {%- elif tam -%}<span class="etiket etiket-tam">{% if puan == 10 %}Tek bilen 🎯{% elif ber %}Beraberlik tam isabet{% else %}Tam isabet{% endif %}, +{{ puan }}</span>
+    {%- elif ty == my -%}<span class="etiket etiket-sonuc">{% if puan == 8 %}Sonucu tek bilen 🎯{% elif ber %}Beraberliği bildin{% else %}Sonuç tuttu{% endif %}, +{{ puan }}</span>
+    {%- else -%}<span class="etiket etiket-sonuc">+{{ puan }}</span>
+    {%- endif -%}
+  {%- elif puan == 10 -%}<span class="etiket etiket-tam">Tek bilen 🎯 +10</span>
   {%- elif puan == 8 -%}<span class="etiket etiket-sonuc">Sonucu tek bilen 🎯 +8</span>
   {%- elif puan == 6 -%}<span class="etiket etiket-tam">Beraberlik tam isabet, +6</span>
   {%- elif puan == 5 -%}<span class="etiket etiket-tam">Tam isabet, +5</span>
