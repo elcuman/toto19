@@ -3967,6 +3967,7 @@ def grup(grup_id):
         oynanabilir_mac_var=oynanabilir_mac_var,
         paylas_haftalar=_guvenli_paylas_haftalar(grup_id),
         ozel_mac_yetkisi=ozel_mac_yetkili_mi(grup_obj),
+        grubu_silebilir=(grup_obj.kurucu_id == current_user.id or getattr(current_user, "admin", False)),
     )
 
 
@@ -4275,6 +4276,43 @@ def grup_ozel_mac_sil(grup_id, mac_id):
     recalculate_all_points()
     flash(f"Silindi: {ad}. Bu maçtan gelen puanlar tablolardan çıkarıldı.", "success")
     return redirect(url_for("grup_ozel_maclar", grup_id=grup_id))
+
+
+@app.route("/grup/<int:grup_id>/sil", methods=["POST"])
+@login_required
+def grup_sil(grup_id):
+    """Grubu kalıcı olarak siler: üyelikler, bu gruptaki tahminler, cezalar,
+    sohbet mesajları ve gruba özel maçlar. Sadece grubun kurucusu (ya da admin).
+    Üyelerin hesapları ve diğer gruplardaki tahminleri etkilenmez."""
+    grup_obj = db.session.get(Grup, grup_id)
+    if not grup_obj:
+        abort(404)
+    if not (grup_obj.kurucu_id == current_user.id or getattr(current_user, "admin", False)):
+        abort(403)
+    if (request.form.get("onay") or "").strip() != grup_obj.ad.strip():
+        flash("Silmek için grubun adını aynen yazmalısın.", "warning")
+        return redirect(url_for("grup", grup_id=grup_id) + "#grup-sil")
+    ad = grup_obj.ad
+    ozel_mac_idleri = [m.id for m in Mac.query.filter_by(ozel_grup_id=grup_id).all()]
+    try:
+        TahminCezasi.query.filter_by(grup_id=grup_id).delete(synchronize_session=False)
+        SohbetOkuma.query.filter_by(grup_id=grup_id).delete(synchronize_session=False)
+        Mesaj.query.filter_by(grup_id=grup_id).delete(synchronize_session=False)
+        Tahmin.query.filter_by(grup_id=grup_id).delete(synchronize_session=False)
+        if ozel_mac_idleri:
+            TahminCezasi.query.filter(TahminCezasi.mac_id.in_(ozel_mac_idleri)).delete(synchronize_session=False)
+            Tahmin.query.filter(Tahmin.mac_id.in_(ozel_mac_idleri)).delete(synchronize_session=False)
+            Mac.query.filter(Mac.id.in_(ozel_mac_idleri)).delete(synchronize_session=False)
+        GrupUyeligi.query.filter_by(grup_id=grup_id).delete(synchronize_session=False)
+        db.session.delete(grup_obj)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print("[grup-sil] hata:", e)
+        flash("Grup silinemedi, biraz sonra tekrar dene.", "danger")
+        return redirect(url_for("grup", grup_id=grup_id))
+    flash(f"'{ad}' grubu silindi.", "success")
+    return redirect(url_for("gruplar"))
 
 
 @app.route("/grup/<int:grup_id>/haftalik-liderlik")

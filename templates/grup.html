@@ -234,6 +234,28 @@
 }
 </style>
 
+{% if grubu_silebilir %}
+<details class="grup-sil" id="grup-sil">
+  <summary>Grubu sil</summary>
+  <p>Grup <strong>kalıcı olarak</strong> silinir: üyelikler, bu gruptaki tahminler ve puanlar, sohbet mesajları ve gruba özel maçlar. Üyelerin hesapları ve diğer gruplarındaki tahminleri etkilenmez. <strong>Geri alınamaz.</strong></p>
+  <form method="POST" action="{{ url_for('grup_sil', grup_id=grup.id) }}" onsubmit="return confirm('{{ grup.ad | replace("'", "") }} grubu ve içindeki her şey kalıcı olarak silinsin mi?');">
+    <label for="grupSilOnay">Onaylamak için grubun adını yaz: <strong>{{ grup.ad }}</strong></label>
+    <input id="grupSilOnay" name="onay" required autocomplete="off" data-ad="{{ grup.ad }}">
+    <button type="submit" class="btn btn-tehlike btn-blok" id="grupSilBtn" disabled>Grubu kalıcı olarak sil</button>
+  </form>
+</details>
+<style>
+.grup-sil{margin:28px 0 8px; border:1px solid #F0C9C5; border-radius:var(--r); background:#FDF5F4; padding:0 14px}
+.grup-sil summary{cursor:pointer; padding:12px 0; color:#B3261E; font-weight:700}
+.grup-sil p{font-size:14px; color:var(--gri); margin:0 0 10px}
+.grup-sil form{padding-bottom:14px}
+</style>
+<script>
+(function(){ var g=document.getElementById('grupSilOnay'), b=document.getElementById('grupSilBtn');
+  g.addEventListener('input', function(){ b.disabled = g.value.trim() !== g.dataset.ad.trim(); }); })();
+</script>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
