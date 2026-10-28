@@ -78,7 +78,7 @@
     <li>Sıran gelince ıstakandan bir harf seç, sonra yerleşeceği beyaz kutuya dokun.</li>
     <li><b>Doğru harf +1 puan.</b> O harfle bir kelime tamamlanırsa <b>kelimenin harf sayısı kadar bonus.</b></li>
     <li><b>Her turda 3 harf hakkın var.</b> Yanlış harf puan getirmez ama bir hakkını yer. 3 deneme bitince sıra rakibe geçer.</li>
-    <li><b>Turu bitir:</b> Haklarını kullanmadan sırayı rakibe verir. <b>Değiştir:</b> Turun başında ıstakandaki harfleri yeniler, sıra geçer.</li>
+    <li><b>Pas:</b> Oyun başına 1 kez, harf koymadan sırayı geçebilirsin. <b>Turu bitir:</b> Harf koyduktan sonra kalan haklarını kullanmadan sırayı verir. <b>Değiştir:</b> Turun başında ıstakandaki harfleri yeniler, sıra geçer.</li>
     <li><b>İpucu:</b> Istakandaki bir harfin doğru yerini gösterir. Oyun başına 1 hak.</li>
     <li>Bulmaca dolunca çok puanı olan kazanır.</li>
   </ul>
@@ -210,7 +210,9 @@
     raf.innerHTML = d.raf.map(function(h, i){ return '<button type="button" class="cd-tas' + (i === seciliTas ? ' secili' : '') + '" data-i="' + i + '"' + (bende ? '' : ' disabled') + '>' + esc(h) + '</button>'; }).join('');
     secilebilirleriIsaretle();
     var pasBtn = document.getElementById('cdPas');
-    pasBtn.disabled = !bende; pasBtn.textContent = (bende && hak < TH) ? 'Turu bitir' : 'Pas';
+    var turBitir = bende && hak < TH;
+    pasBtn.disabled = !bende || (!turBitir && !d.pas_kaldi);
+    pasBtn.textContent = turBitir ? 'Turu bitir' : (d.pas_kaldi ? 'Pas (' + d.pas_kaldi + ' hak)' : 'Pas hakkı bitti');
     document.getElementById('cdDegistir').disabled = !bende || d.torba === 0 || hak < TH;
     document.getElementById('cdIpucu').disabled = !bende || !d.ipucu_kaldi;
     // son hamleler

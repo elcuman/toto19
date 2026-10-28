@@ -3979,7 +3979,7 @@ def cengel_hamle(kod):
         if oyun.bot and d["sira"] == 1:
             _cengel.bot_oyna(d, 1, oyun.zorluk or "orta")
         elif not d["raf"][d["sira"]]:
-            _cengel.pas(d, d["sira"])
+            _cengel.pas(d, d["sira"], otomatik=True)
         else:
             break
     if d["bitti"]:

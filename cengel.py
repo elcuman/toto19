@@ -289,9 +289,22 @@ def degistir(d, oyuncu, rnd=None):
     return True, "degistir"
 
 
-def pas(d, oyuncu):
+PAS_HAKKI = 1   # oyun başına harf koymadan pas geçme hakkı
+
+
+def pas_kaldi(d, oyuncu):
+    return PAS_HAKKI - d.get("pas", [0, 0])[oyuncu]
+
+
+def pas(d, oyuncu, otomatik=False):
+    """otomatik: ıstaka boşken ya da robotun çaresiz kaldığı durumda sıra geçer, hak düşmez.
+    Harf koyduktan sonra turu bitirmek pas sayılmaz."""
     if d["bitti"] or d["sira"] != oyuncu:
         return False, "Sıra sende değil."
+    if not otomatik and tur_hakki(d) == TUR_HAKKI:
+        if pas_kaldi(d, oyuncu) <= 0:
+            return False, "Pas hakkını kullandın. Bir harf dene ya da harflerini değiştir."
+        d.setdefault("pas", [0, 0])[oyuncu] += 1
     _kayit(d, {"o": oyuncu, "t": "pas" if tur_hakki(d) == TUR_HAKKI else "bitir", "p": 0})
     _sira_gec(d)
     return True, "pas"
@@ -336,7 +349,7 @@ def bot_oyna(d, oyuncu=1, zorluk="orta", rnd=None):
     if d["bitti"] or d["sira"] != oyuncu:
         return
     if not d["raf"][oyuncu]:
-        pas(d, oyuncu)       # ıstaka boş: kalan harfler rakipte
+        pas(d, oyuncu, otomatik=True)       # ıstaka boş: kalan harfler rakipte
         return
     secenek = _dogru_hamleler(d, oyuncu)
     if secenek and rnd.random() < BOT_ZORLUK.get(zorluk, 0.68):
@@ -350,7 +363,7 @@ def bot_oyna(d, oyuncu=1, zorluk="orta", rnd=None):
         if d["torba"] and tur_hakki(d) == TUR_HAKKI:
             degistir(d, oyuncu, rnd)
         else:
-            pas(d, oyuncu)
+            pas(d, oyuncu, otomatik=True)
         return
     # Yanılma: yanlış bir kutuya harf dener
     for _ in range(20):
@@ -359,7 +372,7 @@ def bot_oyna(d, oyuncu=1, zorluk="orta", rnd=None):
         if d["bulmaca"]["cozum"][hucre] != d["raf"][oyuncu][i]:
             harf_koy(d, oyuncu, i, hucre, rnd)
             return
-    pas(d, oyuncu)
+    pas(d, oyuncu, otomatik=True)
 
 
 def istemci_gorunumu(d, oyuncu):
@@ -390,4 +403,5 @@ def istemci_gorunumu(d, oyuncu):
             "raf": d["raf"][oyuncu] if oyuncu in (0, 1) else [], "torba": len(d["torba"]),
             "ipucu_kaldi": (not d["ipucu"][oyuncu]) if oyuncu in (0, 1) else False,
             "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
+            "pas_kaldi": pas_kaldi(d, oyuncu) if oyuncu in (0, 1) else 0,
             "kalan": len(b["cozum"]) - len(d["dolu"])}
