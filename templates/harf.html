@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Harf Çarkı #{{ veri.numara }} · Günlük Alfabe Yarışı · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="Her gün yeni harf çarkı: alfabenin her harfi için bir ipucu, 5 dakika süre. Arkadaşlarınla günlük sıralamada yarış. Ücretsiz, üye olmadan da oynanır.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/harf">
+<meta property="og:title" content="Harf Çarkı #{{ veri.numara }} · Günlük alfabe yarışı">
+<meta property="og:description" content="29 harf, 29 ipucu, 5 dakika. Kaçını bilebilirsin?">
+<meta property="og:url" content="https://{{ ANA_DOMAIN_ADI }}/harf">
+{% endblock %}
+
+{% block content %}
+<div class="hc-bas">
+  <h1>Harf Çarkı <span>#{{ veri.numara }}</span></h1>
+  <button type="button" class="hc-yardim-btn" id="hcYardimBtn" aria-label="Nasıl oynanır">?</button>
+</div>
+
+<div class="hc-ust" id="hcUst">
+  <span class="hc-sayac" id="hcSayac" aria-label="Kalan süre">5:00</span>
+  <span class="hc-skor"><b class="hc-d" id="hcD">0</b> doğru · <b class="hc-y" id="hcY">0</b> yanlış · <b id="hcB">29</b> kaldı</span>
+</div>
+
+<div class="hc-cark" id="hcCark" aria-hidden="true">
+  <div class="hc-merkez" id="hcMerkez"><span class="hc-m-harf" id="hcMHarf">?</span><span class="hc-m-kural" id="hcMKural"></span></div>
+</div>
+
+<section class="panel hc-giris" id="hcBaslat"{% if veri.basladi %} hidden{% endif %}>
+  <h2>Hazır mısın?</h2>
+  <p>Alfabenin her harfi için bir ipucu var. Cevap o harfle başlar (<b>Ğ</b> için: Ğ harfini içerir). Toplam <b>5 dakikan</b> var; bilmediğin harfi pas geç, tur sonunda geri gelir. Her harfe <b>bir</b> cevap hakkın var.</p>
+  <button type="button" class="btn btn-blok" id="hcBasla">Başla</button>
+  {% if not current_user.is_authenticated %}<p class="sessiz kucuk" style="margin:8px 0 0">Üye olmadan oynayabilirsin. Sıralamaya girmek için <a href="{{ url_for('giris', next='/harf') }}">giriş yap</a>.</p>{% endif %}
+</section>
+
+<section class="panel hc-soru" id="hcSoru" hidden>
+  <div class="hc-s-ust"><span class="hc-s-harf" id="hcSHarf"></span><span class="hc-s-kural" id="hcSKural"></span><span class="hc-s-sayac" id="hcSSayac"></span></div>
+  <p class="hc-ipucu" id="hcIpucu"></p>
+  <p class="hc-uzunluk" id="hcUzunluk"></p>
+  <form id="hcForm" class="hc-form" autocomplete="off">
+    <input id="hcCevap" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="send" placeholder="Cevabını yaz" aria-label="Cevap">
+    <button type="submit" class="btn">Cevapla</button>
+  </form>
+  <div class="hc-dugmeler">
+    <button type="button" class="btn btn-ikincil" id="hcPas">Pas ›</button>
+    <button type="button" class="hc-bitir" id="hcBitir">Bitir</button>
+  </div>
+  <p class="hc-mesaj" id="hcMesaj" role="status" aria-live="polite"></p>
+</section>
+
+<section class="panel hc-sonuc" id="hcSonuc" hidden>
+  <h2 id="hcSonucBaslik"></h2>
+  <p class="hc-sonuc-ozet" id="hcSonucOzet"></p>
+  <div class="btn-dizi"><button type="button" class="btn" id="hcPaylas">Sonucu paylaş</button><a class="btn btn-ikincil" href="{{ url_for('oyunlar') }}">Diğer oyunlar</a></div>
+  <p class="sessiz kucuk">Yeni çark her gece 00:00'da.</p>
+  <details class="hc-cevaplar"><summary>Cevapları gör</summary><ol id="hcCevaplar"></ol></details>
+</section>
+
+<section class="panel hc-sira" id="hcSiraPanel"{% if not veri.bitti %} hidden{% endif %}>
+  <h2>🏆 Bugünün sıralaması</h2>
+  <p class="sessiz kucuk" style="margin-top:-4px">Önce çok doğru, eşitlikte az yanlış, sonra hızlı bitiren önde.</p>
+  <ol class="hc-sira-liste" id="hcSira"></ol>
+  <p class="hc-sira-not" id="hcSiraNot" hidden>🔒 {% if current_user.is_authenticated %}Sadece aynı grupta olduğun kişilerin isimleri görünür.{% else %}İsimleri görmek için <a href="{{ url_for('giris', next='/harf') }}">giriş yap</a>.{% endif %}</p>
+</section>
+
+<dialog class="hc-dlg" id="hcYardim">
+  <h2>Nasıl oynanır?</h2>
+  <ul>
+    <li>Çarkta alfabenin <b>29 harfi</b> var. Her harf için bir ipucu ve cevabın harf sayısı verilir.</li>
+    <li>Cevap o harfle <b>başlar</b>. Ğ ile kelime başlamadığı için Ğ'de cevap Ğ harfini <b>içerir</b>.</li>
+    <li>Her harfe tek cevap hakkın var: doğruysa yeşil, yanlışsa kırmızı olur.</li>
+    <li>Bilmediğin harfi <b>pas</b> geç; tur bitince pas geçtiklerine geri dönersin.</li>
+    <li>5 dakika dolunca ya da tüm harfler cevaplanınca oyun biter. Çok doğru yapan, eşitlikte az yanlış ve hızlı olan önde.</li>
+    <li>Her gün herkese aynı çark. Tahmin ligi puanlarına etkisi yok.</li>
+  </ul>
+  <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
+</dialog>
+
+<style>
+.hc-bas{display:flex; align-items:center; justify-content:space-between; margin:4px 0 6px}
+.hc-bas h1{margin:0; font-size:28px} .hc-bas h1 span{color:var(--gri); font-weight:600}
+.hc-yardim-btn{width:34px; height:34px; border-radius:9px; border:2px solid var(--murekkep); background:#fff; font:700 17px var(--yazi); cursor:pointer}
+.hc-ust{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 8px; font-size:14px; color:var(--gri)}
+.hc-sayac{font:800 26px/1 var(--baslik); color:var(--murekkep); font-variant-numeric:tabular-nums; min-width:70px}
+.hc-sayac.az{color:#B3261E}
+.hc-d{color:var(--cim)} .hc-y{color:#B3261E}
+.hc-cark{position:relative; width:min(100%, 400px); aspect-ratio:1; margin:0 auto 10px; container-type:inline-size}
+.hc-h{position:absolute; width:10.5cqi; height:10.5cqi; margin:-5.25cqi 0 0 -5.25cqi; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font:800 5cqi/1 var(--baslik); background:#2F5D8C; color:#fff; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .2s, background .2s}
+.hc-h.d{background:#1E8C4E} .hc-h.y{background:#C0392B}
+.hc-h.aktif{background:#F3C623; color:#14201A; transform:scale(1.28); z-index:2}
+.hc-h.pas{background:#7D97B3}
+.hc-merkez{position:absolute; inset:22%; border-radius:50%; background:var(--kart, #fff); border:2px solid var(--cizgi); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center}
+.hc-m-harf{font:800 22cqi/1 var(--baslik); color:var(--murekkep)}
+.hc-m-kural{font-size:3.6cqi; color:var(--gri); font-weight:600; margin-top:2px}
+.hc-giris h2{margin:0 0 6px; font-size:20px}
+.hc-soru{padding:14px 16px}
+.hc-s-ust{display:flex; align-items:center; gap:10px; margin:0 0 8px}
+.hc-s-harf{width:40px; height:40px; border-radius:50%; background:#F3C623; color:#14201A; display:flex; align-items:center; justify-content:center; font:800 22px var(--baslik); flex:none}
+.hc-s-kural{flex:1; color:var(--gri); font-size:14px; font-weight:600}
+.hc-s-sayac{font:800 20px var(--baslik); font-variant-numeric:tabular-nums}
+.hc-s-sayac.az{color:#B3261E}
+.hc-cark.oyunda{width:min(100%, 330px)}
+.hc-ipucu{font:700 20px/1.3 var(--baslik); margin:0 0 4px; min-height:26px}
+.hc-uzunluk{margin:0 0 10px; color:var(--gri); font-size:14px}
+.hc-form{display:flex; gap:8px}
+.hc-form input{flex:1; min-width:0; font-size:18px; text-transform:uppercase; letter-spacing:1px}
+.hc-dugmeler{display:flex; justify-content:space-between; align-items:center; margin-top:10px}
+.hc-bitir{background:none; border:0; color:var(--gri); text-decoration:underline; cursor:pointer; font-size:14px}
+.hc-mesaj{min-height:20px; margin:8px 0 0; font-weight:700}
+.hc-mesaj.d{color:var(--cim)} .hc-mesaj.y{color:#B3261E}
+.hc-sonuc h2{margin:0 0 4px}
+.hc-sonuc-ozet{font-size:17px; margin:0 0 12px}
+.hc-cevaplar{margin-top:10px} .hc-cevaplar summary{cursor:pointer; font-weight:700}
+.hc-cevaplar ol{list-style:none; padding:0; margin:8px 0 0; columns:2; column-gap:16px; font-size:14px}
+.hc-cevaplar li{break-inside:avoid; padding:3px 0}
+.hc-cevaplar .hf{display:inline-block; width:22px; height:22px; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-weight:800; font-size:12px; background:#7D97B3; margin-right:6px}
+.hc-cevaplar .hf.d{background:#1E8C4E} .hc-cevaplar .hf.y{background:#C0392B}
+.hc-cevaplar small{color:var(--gri)}
+.hc-sira h2{margin:0 0 6px; font-size:19px}
+.hc-sira-liste{list-style:none; margin:0; padding:0}
+.hc-sira-liste li{display:grid; grid-template-columns:28px 1fr auto 48px; gap:8px; align-items:center; padding:8px 4px; border-top:1px solid var(--cizgi); font-size:15px}
+.hc-sira-liste li:first-child{border-top:0}
+.hc-sira-liste .no{font-weight:800; color:var(--gri)} .hc-sira-liste li:nth-child(1) .no{color:#C99A0A}
+.hc-sira-liste .gizli{color:var(--gri); letter-spacing:1px}
+.hc-sira-liste .sk{font-variant-numeric:tabular-nums} .hc-sira-liste .su{color:var(--gri); font-size:13px; text-align:right}
+.hc-sira-not{font-size:12.5px; color:var(--gri); margin:8px 0 0}
+.hc-dlg{max-width:400px; border:0; border-radius:var(--r-buyuk); padding:20px}
+.hc-dlg::backdrop{background:rgba(0,0,0,.45)}
+.hc-dlg h2{margin:0 0 8px} .hc-dlg ul{padding-left:18px; font-size:14.5px} .hc-dlg li{margin-bottom:6px}
+@media (max-width:380px){ .hc-ipucu{font-size:18px} .hc-form .btn{padding-left:12px; padding-right:12px} }
+</style>
+
+<script>
+(function(){
+  var veri = {{ veri | tojson }}, siralama = {{ siralama | tojson }};
+  var aktif = null, mesgul = false, kalan = veri.kalan, sayacId = null, sonGosterildi = false;
+  var cark = document.getElementById('hcCark'), cevapEl = document.getElementById('hcCevap'), mesaj = document.getElementById('hcMesaj');
+  function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+  function sure(s){ return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+
+  // Çark: harfler daire üzerinde
+  var N = veri.sorular.length;
+  veri.sorular.forEach(function(s, i){
+    var a = -Math.PI / 2 + i * 2 * Math.PI / N, r = 44;
+    var e = document.createElement('span'); e.className = 'hc-h'; e.id = 'hcH' + i; e.textContent = s.h;
+    e.style.left = (50 + r * Math.cos(a)) + '%'; e.style.top = (50 + r * Math.sin(a)) + '%';
+    cark.appendChild(e);
+  });
+
+  function ciz(){
+    var pasGecilen = {};
+    veri.sorular.forEach(function(s, i){
+      var e = document.getElementById('hcH' + i);
+      e.className = 'hc-h' + (s.d ? ' ' + s.d : '') + (i === aktif && !veri.bitti ? ' aktif' : '');
+    });
+    document.getElementById('hcD').textContent = veri.dogru;
+    document.getElementById('hcY').textContent = veri.yanlis;
+    document.getElementById('hcB').textContent = veri.bos;
+    sayacYaz();
+    cark.classList.toggle('oyunda', veri.basladi && !veri.bitti);
+    document.getElementById('hcBaslat').hidden = veri.basladi;
+    document.getElementById('hcSoru').hidden = !veri.basladi || veri.bitti;
+    var s = aktif !== null ? veri.sorular[aktif] : null;
+    document.getElementById('hcMHarf').textContent = s && !veri.bitti ? s.h : (veri.bitti ? veri.dogru : '?');
+    document.getElementById('hcMKural').textContent = s && !veri.bitti ? (s.kural === 'icerir' ? 'harfini içerir' : 'ile başlar') : (veri.bitti ? 'doğru' : '');
+    if (s && !veri.bitti) {
+      document.getElementById('hcIpucu').textContent = s.i || '';
+      document.getElementById('hcUzunluk').textContent = s.n + ' harfli';
+      document.getElementById('hcSHarf').textContent = s.h;
+      document.getElementById('hcSKural').textContent = s.kural === 'icerir' ? s.h + ' harfini içerir' : s.h + ' ile başlar';
+    }
+    if (veri.bitti) sonuc();
+  }
+  function sayacYaz(){
+    var metin = veri.bitti ? 'Bitti' : sure(kalan), az = kalan <= 30 && veri.basladi && !veri.bitti;
+    ['hcSayac', 'hcSSayac'].forEach(function(id){ var e = document.getElementById(id); e.textContent = metin; e.classList.toggle('az', az); });
+  }
+  function sonraki(baslangic){
+    // baslangic'tan sonra cevaplanmamış ilk harf (çember)
+    for (var k = 1; k <= N; k++) { var i = (baslangic + k) % N; if (!veri.sorular[i].d) return i; }
+    return null;
+  }
+  function ilkBos(){ return veri.sorular[0] && !veri.sorular[0].d ? 0 : sonraki(0); }
+  function istek(islem, govde, sonra){
+    if (mesgul) return; mesgul = true;
+    fetch('/harf/' + islem, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify(govde || {})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ mesgul = false; if (j.sorular) { veri = j; kalan = j.kalan; } if (j.siralama) siralama = j.siralama; if (sonra) sonra(j); ciz(); })
+      .catch(function(){ mesgul = false; mesaj.className = 'hc-mesaj y'; mesaj.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  }
+  function sayacBaslat(){
+    if (sayacId || veri.bitti || !veri.basladi) return;
+    var son = Date.now() + kalan * 1000;
+    sayacId = setInterval(function(){
+      kalan = Math.max(0, Math.round((son - Date.now()) / 1000));
+      sayacYaz();
+      if (kalan <= 0) { clearInterval(sayacId); sayacId = null; istek('durum'); }
+    }, 250);
+  }
+  document.getElementById('hcBasla').addEventListener('click', function(){
+    istek('basla', {}, function(){ aktif = ilkBos(); sayacBaslat(); setTimeout(function(){ cevapEl.focus(); }, 50); });
+  });
+  document.getElementById('hcForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    if (aktif === null || veri.bitti) return;
+    var c = cevapEl.value.trim();
+    if (!c) { mesaj.className = 'hc-mesaj'; mesaj.textContent = 'Bir cevap yaz ya da pas geç.'; return; }
+    var h = veri.sorular[aktif].h, simdiki = aktif;
+    istek('cevap', {h: h, cevap: c}, function(j){
+      if (j.hata) { mesaj.className = 'hc-mesaj y'; mesaj.textContent = j.hata; return; }
+      mesaj.className = 'hc-mesaj ' + j.sonuc; mesaj.textContent = j.sonuc === 'd' ? '✓ Doğru!' : '✗ Yanlış';
+      cevapEl.value = ''; aktif = sonraki(simdiki);
+    });
+    cevapEl.focus();
+  });
+  document.getElementById('hcPas').addEventListener('click', function(){
+    if (aktif === null) return;
+    var s = sonraki(aktif); if (s !== null) aktif = s;
+    cevapEl.value = ''; mesaj.className = 'hc-mesaj'; mesaj.textContent = 'Pas geçtin, tur sonunda geri gelecek.';
+    ciz(); cevapEl.focus();
+  });
+  document.getElementById('hcBitir').addEventListener('click', function(){
+    if (confirm('Oyunu şimdi bitirmek istiyor musun? Cevaplamadığın harfler boş sayılır.')) istek('bitir');
+  });
+
+  function sonuc(){
+    if (sayacId) { clearInterval(sayacId); sayacId = null; }
+    var p = document.getElementById('hcSonuc'); p.hidden = false;
+    var gecen = veri.sure - veri.kalan;
+    document.getElementById('hcSonucBaslik').textContent = veri.dogru >= 25 ? '🔥 Muhteşem!' : (veri.dogru >= 18 ? '👏 Çok iyi!' : (veri.dogru >= 10 ? '👍 Fena değil' : 'Yarın tekrar dene 💪'));
+    document.getElementById('hcSonucOzet').innerHTML = '✅ <b>' + veri.dogru + '</b> doğru · ❌ <b>' + veri.yanlis + '</b> yanlış · ⏭ <b>' + veri.bos + '</b> boş · ⏱ ' + sure(gecen);
+    document.getElementById('hcCevaplar').innerHTML = veri.sorular.map(function(s){
+      return '<li><span class="hf ' + (s.d || '') + '">' + esc(s.h) + '</span><b>' + esc(s.k) + '</b>' + (s.d === 'y' && s.v ? ' <small>(senin: ' + esc(s.v) + ')</small>' : '') + '</li>';
+    }).join('');
+    var sp = document.getElementById('hcSiraPanel'); sp.hidden = false;
+    var ol = document.getElementById('hcSira');
+    ol.innerHTML = siralama.length ? siralama.map(function(s){
+      return '<li><span class="no">' + s.sira + '</span><span class="' + (s.gizli ? 'gizli' : '') + '">' + esc(s.ad) + '</span><span class="sk">✅' + s.dogru + ' ❌' + s.yanlis + '</span><span class="su">' + esc(s.sure) + '</span></li>';
+    }).join('') : '<li style="display:block" class="sessiz">{{ "Sıralamaya girmek için giriş yap." if not current_user.is_authenticated else "Bugün henüz kimse bitirmedi." }}</li>';
+    document.getElementById('hcSiraNot').hidden = !siralama.some(function(s){ return s.gizli; });
+    if (!sonGosterildi) { sonGosterildi = true; if (veri.basladi) p.scrollIntoView({behavior:'smooth', block:'start'}); }
+  }
+  document.getElementById('hcPaylas').addEventListener('click', function(){
+    var dizi = veri.sorular.map(function(s){ return s.d === 'd' ? '🟩' : (s.d === 'y' ? '🟥' : '⬜'); }).join('');
+    var metin = 'Harf Çarkı #' + veri.numara + '\n✅ ' + veri.dogru + ' ❌ ' + veri.yanlis + ' ⏭ ' + veri.bos + ' ⏱ ' + sure(veri.sure - veri.kalan) + '\n' + dizi + '\nskorbilen.com/harf';
+    if (navigator.share) navigator.share({text: metin}).catch(function(){});
+    else if (navigator.clipboard) navigator.clipboard.writeText(metin).then(function(){ document.getElementById('hcPaylas').textContent = 'Kopyalandı ✓'; });
+  });
+
+  if (veri.basladi && !veri.bitti) { aktif = ilkBos(); sayacBaslat(); }
+  ciz();
+
+  var dlg = document.getElementById('hcYardim');
+  document.getElementById('hcYardimBtn').addEventListener('click', function(){ dlg.showModal(); });
+})();
+</script>
+{% endblock %}

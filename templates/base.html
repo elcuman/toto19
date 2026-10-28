@@ -351,7 +351,7 @@ tr:last-child td{border-bottom:0}
       <a href="{{ url_for('gruplar') }}" {% if ep.startswith('grup') and not sohbette %}aria-current="page"{% endif %}>Gruplar</a>
       <a href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
       {% set orz = oyun_rozeti() %}
-      <a href="{{ url_for('oyunlar') }}" {% if ep in ('oyunlar', 'kelime_oyunu') or ep.startswith('cengel') %}aria-current="page"{% endif %}>Oyunlar{% if orz %} <span class="ust-rozet">{{ orz }}</span>{% endif %}</a>
+      <a href="{{ url_for('oyunlar') }}" {% if ep in ('oyunlar', 'kelime_oyunu') or ep.startswith('cengel') or ep.startswith('harf') %}aria-current="page"{% endif %}>Oyunlar{% if orz %} <span class="ust-rozet">{{ orz }}</span>{% endif %}</a>
       <a href="{{ url_for('profil') }}" {% if ep == 'profil' %}aria-current="page"{% endif %}>Profil</a>
       <a href="{{ url_for('sohbetler') }}" {% if sohbette %}aria-current="page"{% endif %}>Sohbet{% if toplam_okunmamis %} <span class="ust-rozet">{{ toplam_okunmamis }}</span>{% endif %}</a>
       {% if current_user.admin %}<a href="{{ url_for('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>Admin{% if admin_rozet %} <span class="ust-rozet">{{ admin_rozet }}</span>{% endif %}</a>{% endif %}
@@ -359,7 +359,7 @@ tr:last-child td{border-bottom:0}
     </nav>
     {% else %}
     <nav class="ustmenu-acik" aria-label="Ana menü">
-      <a href="{{ url_for('oyunlar') }}" {% if ep in ('oyunlar', 'kelime_oyunu') or ep.startswith('cengel') %}aria-current="page"{% endif %}>Oyunlar</a>
+      <a href="{{ url_for('oyunlar') }}" {% if ep in ('oyunlar', 'kelime_oyunu') or ep.startswith('cengel') or ep.startswith('harf') %}aria-current="page"{% endif %}>Oyunlar</a>
       <a class="gizle-mobil" href="{{ url_for('ziya_tahminleri') }}" {% if ep == 'ziya_tahminleri' %}aria-current="page"{% endif %}>Ziya'nın tahminleri</a>
       <a class="gizle-mobil" href="{{ url_for('puan_durumu') }}" {% if ep == 'puan_durumu' %}aria-current="page"{% endif %}>Puan durumu</a>
       <a class="gizle-mobil" href="{{ url_for('nasil_oynanir') }}" {% if ep == 'nasil_oynanir' %}aria-current="page"{% endif %}>Nasıl oynanır</a>
@@ -396,6 +396,7 @@ tr:last-child td{border-bottom:0}
   <nav aria-label="Site bağlantıları">
     <a href="{{ url_for('oyunlar') }}">Oyunlar</a>
     <a href="{{ url_for('kelime_oyunu') }}">Günlük kelime oyunu</a>
+    <a href="{{ url_for('harf_oyunu') }}">Harf Çarkı</a>
     <a href="{{ url_for('cengel_lobi') }}">Çengel Düello</a>
     <a href="{{ url_for('ziya_tahminleri') }}">Robot Ziya'nın tahminleri</a>
     <a href="{{ url_for('puan_durumu') }}">Puan durumu</a>
@@ -418,7 +419,7 @@ tr:last-child td{border-bottom:0}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.2 4.4 1.9 5 5.4"/></svg>
     Gruplar
   </a>
-  <a href="{{ url_for('oyunlar') }}" {% if ep in ('oyunlar', 'kelime_oyunu') or ep.startswith('cengel') %}aria-current="page"{% endif %}>
+  <a href="{{ url_for('oyunlar') }}" {% if ep in ('oyunlar', 'kelime_oyunu') or ep.startswith('cengel') or ep.startswith('harf') %}aria-current="page"{% endif %}>
     <span class="tab-ikon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="11" rx="5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><path d="M15.5 11.5h.01M18 13.5h.01" stroke-width="2.6"/></svg>
       {% set torz = oyun_rozeti() %}{% if torz %}<span class="tab-rozet">{{ torz }}</span>{% endif %}

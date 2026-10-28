@@ -967,6 +967,22 @@ class KelimeOyunu(db.Model):
         return [t for t in (self.tahminler or "").split(",") if t]
 
 
+class HarfOyunu(db.Model):
+    """Harf Çarkı (günlük alfabe yarışı). Üyelerin oyunu burada, misafirinki oturum çerezinde."""
+    __tablename__ = "harf_oyunlari"
+    __table_args__ = (db.UniqueConstraint("kullanici_id", "gun", name="uq_harf_kullanici_gun"),)
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    gun = db.Column(db.Date, nullable=False, index=True)
+    cevaplar = db.Column(db.Text, nullable=False, default="{}")     # {harf: [durum, verilen]}
+    baslangic = db.Column(db.DateTime)
+    bitis = db.Column(db.DateTime)
+    bitti = db.Column(db.Boolean, nullable=False, default=False)
+    dogru = db.Column(db.Integer, nullable=False, default=0)
+    yanlis = db.Column(db.Integer, nullable=False, default=0)
+    kullanici = db.relationship("Kullanici")
+
+
 class CengelOyun(db.Model):
     """Çengel Düello: iki kişilik (ya da Robot Ziya'ya karşı) oklu bulmaca harf yarışı."""
     __tablename__ = "cengel_oyunlari"
@@ -2798,6 +2814,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE destek_mesajlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE kelime_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE cengel_oyunlari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE harf_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -2903,8 +2920,8 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/",
+        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /harf$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/", "Disallow: /harf/",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2913,7 +2930,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/oyunlar", "/kelime", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/oyunlar", "/kelime", "/harf", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -3642,6 +3659,19 @@ def _kelime_durumu():
     return {"tahminler": m.get("t", []), "bitti": m.get("b", False), "kazandi": m.get("k", False), "oyun": None}
 
 
+def siralama_gorunur_idler():
+    """Günlük oyun sıralamalarında isimler sadece aynı grupta olduğun kişilerde (ve kendinde)
+    görünür; misafir ve grup dışı kişiler sadece sırayı görür. Gizli isim sunucudan hiç gönderilmez."""
+    gorunur = set()
+    if current_user.is_authenticated:
+        gorunur.add(current_user.id)
+        gidler = kullanicinin_grup_idleri(current_user.id)
+        if gidler:
+            gorunur |= {kid for (kid,) in db.session.query(GrupUyeligi.kullanici_id)
+                        .filter(GrupUyeligi.grup_id.in_(gidler)).all()}
+    return gorunur
+
+
 def kelime_siralamasi(gun=None):
     gun = gun or kelime_bugun()
     oyunlar = (KelimeOyunu.query.options(db.joinedload(KelimeOyunu.kullanici))
@@ -3652,15 +3682,7 @@ def kelime_siralamasi(gun=None):
             return max(0, int((o.bitis - o.baslangic).total_seconds()))
         return 10 ** 9
     oyunlar.sort(key=lambda o: (not o.kazandi, len(o.liste()) if o.kazandi else 99, sure(o)))
-    # İsimler sadece aynı grupta olduğun kişilerde (ve kendinde) görünür; misafir
-    # ve grup dışı kişiler sadece sırayı görür. Gizli isim sunucudan hiç gönderilmez.
-    gorunur = set()
-    if current_user.is_authenticated:
-        gorunur.add(current_user.id)
-        gidler = kullanicinin_grup_idleri(current_user.id)
-        if gidler:
-            gorunur |= {kid for (kid,) in db.session.query(GrupUyeligi.kullanici_id)
-                        .filter(GrupUyeligi.grup_id.in_(gidler)).all()}
+    gorunur = siralama_gorunur_idler()
     liste, sira = [], 0
     for o in oyunlar:
         if not o.kullanici or yz_mi(o.kullanici):
@@ -3786,6 +3808,195 @@ app.jinja_env.globals["POPUPLAR_ACIK"] = POPUPLAR_ACIK
 @app.route("/kelime/siralama")
 def kelime_siralama_json():
     return jsonify({"siralama": kelime_siralamasi()})
+
+
+# ------------------------------------------------------------
+# HARF ÇARKI: günlük alfabe yarışı (her harf için bir ipucu, 5 dakika).
+# Sorular harf.py'de seçilir; cevaplar oyun bitene kadar istemciye gitmez.
+# ------------------------------------------------------------
+import harf as _harf
+import json as _hjson
+
+
+def harf_numarasi(gun=None):
+    return kelime_numarasi(gun)
+
+
+def _harf_sorulari():
+    return _harf.gunun_sorulari(harf_numarasi())
+
+
+def _harf_durumu():
+    """{'cevaplar': {harf: [durum, verilen]}, 'bas': datetime|None, 'bitis', 'bitti', 'oyun'}"""
+    gun = kelime_bugun()
+    if current_user.is_authenticated:
+        o = HarfOyunu.query.filter_by(kullanici_id=current_user.id, gun=gun).first()
+        if not o:
+            return {"cevaplar": {}, "bas": None, "bitis": None, "bitti": False, "oyun": None}
+        return {"cevaplar": _hjson.loads(o.cevaplar or "{}"), "bas": o.baslangic, "bitis": o.bitis,
+                "bitti": o.bitti, "oyun": o}
+    m = session.get("harf") or {}
+    if m.get("gun") != gun.isoformat():
+        m = {}
+    def tarih(x):
+        return datetime.fromisoformat(x) if x else None
+    return {"cevaplar": m.get("c", {}), "bas": tarih(m.get("bas")), "bitis": tarih(m.get("bitis")),
+            "bitti": m.get("b", False), "oyun": None}
+
+
+def _harf_kaydet(d):
+    say = lambda t: sum(1 for v in d["cevaplar"].values() if v[0] == t)
+    if current_user.is_authenticated:
+        o = d["oyun"]
+        if o is None:
+            o = HarfOyunu(kullanici_id=current_user.id, gun=kelime_bugun())
+            db.session.add(o)
+            d["oyun"] = o
+        o.cevaplar = _hjson.dumps(d["cevaplar"], ensure_ascii=False)
+        o.baslangic, o.bitis, o.bitti = d["bas"], d["bitis"], d["bitti"]
+        o.dogru, o.yanlis = say("d"), say("y")
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return False
+    else:
+        session["harf"] = {"gun": kelime_bugun().isoformat(), "c": d["cevaplar"], "b": d["bitti"],
+                           "bas": d["bas"].isoformat() if d["bas"] else None,
+                           "bitis": d["bitis"].isoformat() if d["bitis"] else None}
+        session.permanent = True
+    return True
+
+
+def _harf_sure_kontrol(d, sorular):
+    """Süre dolduysa ya da her harf cevaplandıysa oyunu bitirir. Değişiklik olduysa True."""
+    if d["bitti"] or not d["bas"]:
+        return False
+    simdi = utc_now_naive()
+    hepsi = all(s["h"] in d["cevaplar"] for s in sorular)
+    if hepsi or (simdi - d["bas"]).total_seconds() >= _harf.SURE:
+        d["bitti"] = True
+        d["bitis"] = min(simdi, d["bas"] + timedelta(seconds=_harf.SURE))
+        return True
+    return False
+
+
+def _harf_yanit(d, sorular):
+    kalan = _harf.SURE
+    if d["bas"]:
+        bitis = d["bitis"] if d["bitti"] and d["bitis"] else utc_now_naive()
+        kalan = max(0, _harf.SURE - int((bitis - d["bas"]).total_seconds()))
+    liste = []
+    for s in sorular:
+        c = d["cevaplar"].get(s["h"])
+        oge = {"h": s["h"], "kural": s["kural"], "n": len(s["k"]), "d": c[0] if c else ""}
+        if d["bas"]:
+            oge["i"] = s["i"]          # ipuçları oyun başlayınca gönderilir
+        if d["bitti"]:
+            oge["k"] = s["k"]
+            oge["v"] = c[1] if c else ""
+        liste.append(oge)
+    dogru = sum(1 for v in d["cevaplar"].values() if v[0] == "d")
+    yanlis = sum(1 for v in d["cevaplar"].values() if v[0] == "y")
+    return {"sorular": liste, "basladi": bool(d["bas"]), "bitti": d["bitti"], "kalan": kalan,
+            "sure": _harf.SURE, "dogru": dogru, "yanlis": yanlis, "bos": len(sorular) - dogru - yanlis,
+            "numara": harf_numarasi()}
+
+
+def harf_siralamasi(gun=None):
+    gun = gun or kelime_bugun()
+    oyunlar = (HarfOyunu.query.options(db.joinedload(HarfOyunu.kullanici))
+               .filter(HarfOyunu.gun == gun, HarfOyunu.bitti.is_(True)).all())
+
+    def sure(o):
+        if o.baslangic and o.bitis:
+            return max(0, int((o.bitis - o.baslangic).total_seconds()))
+        return 10 ** 9
+    oyunlar.sort(key=lambda o: (-o.dogru, o.yanlis, sure(o)))
+    gorunur = siralama_gorunur_idler()
+    liste, sira = [], 0
+    for o in oyunlar:
+        if not o.kullanici or yz_mi(o.kullanici):
+            continue
+        sira += 1
+        s = sure(o)
+        acik = o.kullanici_id in gorunur
+        liste.append({"sira": sira, "ad": o.kullanici.kullanici_adi if acik else "Oyuncu" + "•" * (3 + o.id % 5),
+                      "gizli": not acik, "dogru": o.dogru, "yanlis": o.yanlis,
+                      "sure": f"{s // 60}:{s % 60:02d}" if s < 10 ** 9 else ""})
+    return liste
+
+
+@app.route("/harf")
+def harf_oyunu():
+    sorular = _harf_sorulari()
+    d = _harf_durumu()
+    if _harf_sure_kontrol(d, sorular):
+        _harf_kaydet(d)
+    return render_template("harf.html", veri=_harf_yanit(d, sorular),
+                           siralama=harf_siralamasi() if d["bitti"] else [])
+
+
+@app.route("/harf/<islem>", methods=["POST"])
+def harf_islem(islem):
+    if islem not in ("basla", "cevap", "bitir", "durum"):
+        abort(404)
+    sorular = _harf_sorulari()
+    d = _harf_durumu()
+    degisti = _harf_sure_kontrol(d, sorular)
+    hata, sonuc = None, None
+    if islem == "basla" and not d["bas"] and not d["bitti"]:
+        d["bas"] = utc_now_naive()
+        degisti = True
+    elif islem == "cevap":
+        veri = request.get_json(silent=True) or {}
+        h = veri.get("h")
+        soru = next((s for s in sorular if s["h"] == h), None)
+        if d["bitti"]:
+            hata = "Süre doldu."
+        elif not d["bas"]:
+            hata = "Önce oyunu başlat."
+        elif not soru:
+            hata = "Geçersiz harf."
+        elif h in d["cevaplar"]:
+            hata = "Bu harfi zaten cevapladın."
+        elif not _harf.normalle(veri.get("cevap")):
+            hata = "Bir cevap yaz ya da pas geç."
+        else:
+            verilen = (veri.get("cevap") or "").strip()[:40]
+            sonuc = "d" if _harf.dogru_mu(soru, verilen) else "y"
+            d["cevaplar"][h] = [sonuc, verilen]
+            _harf_sure_kontrol(d, sorular)
+            degisti = True
+    elif islem == "bitir" and d["bas"] and not d["bitti"]:
+        d["bitti"] = True
+        d["bitis"] = utc_now_naive()
+        degisti = True
+    if degisti and not _harf_kaydet(d):
+        return jsonify({"hata": "Kaydedilemedi, sayfayı yenileyip tekrar dene."}), 409
+    yanit = _harf_yanit(d, sorular)
+    if sonuc:
+        yanit["sonuc"] = sonuc
+    if d["bitti"]:
+        yanit["siralama"] = harf_siralamasi()
+    if hata:
+        yanit["hata"] = hata
+        return jsonify(yanit), 400
+    return jsonify(yanit)
+
+
+def harf_karti_bilgisi():
+    bilgi = {"numara": harf_numarasi(), "oynayan": 0, "bitirdi": False}
+    try:
+        bilgi["oynayan"] = HarfOyunu.query.filter_by(gun=kelime_bugun(), bitti=True).count()
+        d = _harf_durumu()
+        bilgi["bitirdi"] = bool(d["bitti"])
+    except Exception:
+        db.session.rollback()
+    return bilgi
+
+
+app.jinja_env.globals["harf_karti_bilgisi"] = harf_karti_bilgisi
 
 
 # ------------------------------------------------------------

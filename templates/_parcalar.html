@@ -271,6 +271,35 @@
 {%- endmacro %}
 
 
+{% macro harf_karti() -%}
+{% set hb = harf_karti_bilgisi() %}
+<a class="hk" href="{{ url_for('harf_oyunu') }}">
+  <span class="hk-cark" aria-hidden="true">{% for h in 'ABCÇDEFGH' %}<i style="--a:{{ loop.index0 * 40 }}deg">{{ h }}</i>{% endfor %}<b>A</b></span>
+  <span class="hk-metin">
+    <strong>Harf Çarkı #{{ hb.numara }} <em>Yeni</em></strong>
+    <span>29 harf, 29 ipucu, 5 dakika. Her gün yeni çark, günlük sıralama.{% if not current_user.is_authenticated %} Üye olmadan da oynanır.{% endif %}</span>
+    {% if hb.oynayan %}<small>Bugün {{ hb.oynayan }} kişi oynadı</small>{% endif %}
+  </span>
+  <span class="hk-btn">{{ 'Sonucuna bak' if hb.bitirdi else 'Oyna' }} ›</span>
+</a>
+<style>
+.hk{display:flex; align-items:center; gap:14px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg,#EAF1F8,#F3FAF5); border:1px solid #CFDCEA; text-decoration:none; color:var(--murekkep)}
+.hk:hover{color:var(--murekkep); border-color:#AFC4DB}
+.hk-cark{position:relative; width:84px; height:84px; flex:none}
+.hk-cark i{position:absolute; left:50%; top:50%; width:20px; height:20px; margin:-10px; border-radius:50%; background:#2F5D8C; color:#fff; font:800 10px/20px var(--baslik); font-style:normal; text-align:center; transform:rotate(var(--a)) translateY(-32px) rotate(calc(-1 * var(--a)))}
+.hk-cark i:nth-child(2), .hk-cark i:nth-child(5){background:#1E8C4E} .hk-cark i:nth-child(7){background:#C0392B} .hk-cark i:first-child{background:#F3C623; color:#14201A}
+.hk-cark b{position:absolute; inset:24px; border-radius:50%; background:#fff; border:2px solid var(--cizgi); display:flex; align-items:center; justify-content:center; font:800 18px var(--baslik)}
+.hk-metin{flex:1; min-width:0}
+.hk-metin strong{display:block; font:700 19px/1.2 var(--baslik)}
+.hk-metin strong em{font-style:normal; font:700 10.5px var(--yazi); color:var(--cim); background:#fff; border:1px solid currentColor; padding:1px 7px; border-radius:999px; vertical-align:3px; margin-left:4px}
+.hk-metin span{display:block; font-size:13.5px; color:var(--gri); margin-top:2px}
+.hk-metin small{display:inline-block; margin-top:4px; font-size:12px; font-weight:600; color:#2F5D8C}
+.hk-btn{flex:none; background:#2F5D8C; color:#fff; font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; white-space:nowrap}
+@media (max-width:480px){ .hk{flex-wrap:wrap} .hk-btn{width:100%; text-align:center} }
+</style>
+{%- endmacro %}
+
+
 {% macro cengel_karti() -%}
 {% set sb = cengel_sira_bende_sayisi() %}
 {% set cdv = cengel_gelen_davetler()|length %}

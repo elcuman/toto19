@@ -1,0 +1,134 @@
+# Harf Çarkı ek kelimeleri (çengel kelime bankasına ek): KELİME|ipucu
+JETON|Ankesörlü telefonun parası
+JÜRİ|Yarışmayı değerlendiren kurul
+JANDARMA|Kırsal güvenlik gücü
+JİLET|Tıraş bıçağı
+JEST|İnce, kibar davranış
+JOKEY|Yarış atı binicisi
+JÖLE|Saç şekillendirici
+JAKUZİ|Köpüklü küvet
+JAGUAR|Benekli Amerika kedisi
+JANT|Tekerlek çemberi
+JARGON|Meslek dili
+JEOLOJİ|Yer bilimi
+JİMNASTİK|Takla ve denge sporu
+JUDO|Japon güreşi
+JÜPON|Etek altına giyilen
+JELATİN|Kemikten elde edilen kıvam verici
+JENERATÖR|Elektrik üreten makine
+JOKER|Kartlarda her yere uyan
+JEOTERMAL|Yer ısısından elde edilen
+ILIK|Ne sıcak ne soğuk
+IŞIK|Aydınlık
+ISPANAK|Yeşil yapraklı kış sebzesi
+IZGARA|Közde pişirme teli
+IHLAMUR|Kış çayı yapılan ağaç
+ISIRGAN|Yakıcı tüylü ot
+ISLIK|Dudakla çalınan ses
+IRGAT|Tarım işçisi
+IŞILDAK|Projektör
+ISSIZ|Tenha
+IRAK|Uzak ya da Bağdat'ın ülkesi
+IZBANDUT|İri yarı korkutucu adam
+ILICA|Kaplıca
+ISKARTA|Elden çıkarılan
+ÜTÜ|Buruşukluk giderir
+ÜNİFORMA|Resmi giysi
+ÜÇGEN|Üç kenarlı şekil
+ÜMİT|Umut
+ÜRÜN|Mahsul
+ÜCRET|Emeğin karşılığı para
+ÜNLÜ|Şöhretli
+ÜZENGİ|Ayağın bastığı eyer halkası
+ÜSKÜDAR|Katibim türküsündeki semt
+ÜRDÜN|Amman'ın ülkesi
+ÜLKÜ|İdeal
+ÜSLUP|Tarz, anlatım biçimi
+ÜZÜNTÜ|Keder
+ÜNİVERSİTE|Yükseköğretim kurumu
+UĞUR|Talih
+UYUM|Ahenk
+UYARI|İkaz
+UCUZ|Pahalı olmayan
+UFUK|Göğün yerle birleştiği çizgi
+UÇURUM|Sarp derinlik
+USTA|Zanaatkar
+UYDU|Gezegen çevresinde dönen
+URGAN|Kalın ip
+UŞAK|Halısıyla ünlü il
+UMMAN|Okyanus
+UNSUR|Öğe
+USUL|Yöntem
+UTANÇ|Mahcubiyet
+UYGARLIK|Medeniyet
+UYRUK|Tabiiyet
+UZMAN|Mütehassıs
+VAKİT|Zaman
+VEZNE|Para ödenen gişe
+VERGİ|Devlete ödenen
+VİŞNE|Ekşi kiraz
+VAZO|Çiçek kabı
+VİTRİN|Camekan
+VARLIK|Servet ya da mevcudiyet
+VERİM|Randıman
+VİCDAN|İç ses
+VALİ|İl yöneticisi
+VİRAJ|Yol dönemeci
+VEKİL|Birinin yerine bakan
+VAAZ|Camide verilen öğüt
+ÖDÜL|Mükafat
+ÖKSÜZ|Anasız kalmış çocuk
+ÖKÜZ|Saban çeken
+ÖNLÜK|Okul giysisi
+ÖZGÜR|Hür
+ÖMÜR|Hayat süresi
+ÖVGÜ|Methiye
+ÖZÜR|Af dileme
+ÖĞRENCİ|Talebe
+LİSE|Ortaöğretim okulu
+LÜGAT|Sözlük
+LAKAP|Takma ad
+LEKE|Kir izi
+LAVANTA|Mor kokulu bitki
+LİDER|Önder
+LOKANTA|Esnaf yemekhanesi
+LİSAN|Dil
+LAHANA|Sarması yapılan sebze
+LAPA|Yumuşak pilav
+REÇEL|Meyve konservesi
+RAHAT|Huzurlu
+REHBER|Kılavuz
+RAKİP|Hasım
+RAPOR|Durum belgesi
+RÜTBE|Askeri derece
+REÇETE|İlaç yazısı
+RIHTIM|İskele
+RİSK|Tehlike ihtimali
+NİŞAN|Söz sonrası tören
+NUMARA|Sayı
+NAZİK|Kibar
+NİNNİ|Uyku şarkısı
+NAMLU|Silah borusu
+NAKİT|Peşin para
+NEFES|Soluk
+NÖBET|Sırayla bekleme
+NİYET|Maksat
+CEYLAN|Ahu
+CÜZDAN|Para kesesi
+CESARET|Yiğitlik
+CİMRİ|Pinti
+CEVHER|Öz
+ZIMBA|Delgeç
+ZEMİN|Taban
+ZİYARET|Görmeye gitme
+İLHAM|Esin
+İHTİYAÇ|Gereksinim
+İKRAM|Sunma
+İPEK|Koza ürünü kumaş
+İSKELET|Kemik çatısı
+FIRSAT|Elverişli an
+FİYAT|Eder
+FIRÇA|Boya aracı
+FİLİZ|Sürgün
+OLİMPİYAT|Dört yılda bir yapılan oyunlar
+ORKESTRA|Topluca çalan müzisyenler
