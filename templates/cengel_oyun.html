@@ -68,15 +68,17 @@
 {% endif %}
 
 {% if not oyun.bot %}
-<section class="cd-sohbet" id="cdSohbet"{% if oyun.durum == 'bitti' %} hidden{% endif %}>
-  <h2>💬 Sohbet <small>oyun bitince silinir</small></h2>
+<section class="cd-sohbet" id="cdSohbet"{% if oyun.durum not in ('aktif', 'bitti') %} hidden{% endif %}>
+  <h2>💬 Sohbet <small>ikiniz de oyundan çıkınca silinir</small></h2>
   <div class="cd-mesajlar" id="cdMesajlar" aria-live="polite"><p class="cd-m-bos">Rakibine bir şey yaz 👋</p></div>
   <form class="cd-s-form" id="cdSForm" autocomplete="off">
     <input id="cdSGiris" type="text" maxlength="200" placeholder="Mesaj yaz…" aria-label="Mesaj" enterkeyhint="send">
     <button type="submit" class="btn btn-kucuk">Gönder</button>
   </form>
+  <p class="cd-s-not" id="cdSNot" hidden>Rakibin oyundan çıktı, sohbet kapandı.</p>
   <div class="cd-hizli" id="cdHizli">{% for t in ['👏 Güzel hamle', '😅 Şanslısın', '🔥', '😂', 'Hadi sıra sende!', 'İyi oyundu 🤝'] %}<button type="button">{{ t }}</button>{% endfor %}</div>
 </section>
+<button type="button" class="cd-yeni-mesaj" id="cdYeniMesaj" hidden><span class="cd-ym-nokta"></span><span id="cdYeniMesajMetin">Yeni mesaj</span></button>
 {% endif %}
 
 <dialog class="cd-dlg" id="cdSonuc">
@@ -133,7 +135,7 @@
 .cd-durum{text-align:center; font-weight:700; min-height:24px; margin:4px 0 8px; font-size:15px}
 .cd-durum.bende{color:var(--cim)}
 .cd-tahta{display:grid; gap:2px; background:#B9CDBE; border:2px solid #B9CDBE; border-radius:8px; overflow:hidden; width:min(100%, 470px); margin:0 auto; touch-action:manipulation; container-type:inline-size}
-.cd-h{position:relative; aspect-ratio:1; background:#fff; display:flex; align-items:center; justify-content:center; user-select:none}
+.cd-h{position:relative; aspect-ratio:1; min-width:0; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center; user-select:none}
 .cd-h.harf{cursor:pointer}
 .cd-h.harf .cd-hrf{font:800 clamp(18px, 6.4cqi, 30px)/1 var(--baslik)}
 .cd-h.o0 .cd-hrf{color:#0E7A4C} .cd-h.o1 .cd-hrf{color:#2F5D8C}
@@ -179,6 +181,16 @@
 .cd-s-form{display:flex; gap:6px} .cd-s-form input{flex:1; min-width:0}
 .cd-hizli{display:flex; gap:6px; overflow-x:auto; padding-top:8px; scrollbar-width:none}
 .cd-hizli button{flex:none; border:1px solid var(--cizgi); background:#F6F8F7; border-radius:999px; padding:5px 10px; font-size:13px; cursor:pointer; white-space:nowrap}
+.cd-s-not{margin:6px 0 0; color:var(--gri); font-size:13px; text-align:center}
+.cd-yeni-mesaj{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom)); z-index:30; max-width:min(92vw, 420px);
+  display:flex; align-items:center; gap:8px; padding:10px 16px; border:0; border-radius:999px; background:#D93025; color:#fff; font-weight:700; font-size:14.5px;
+  box-shadow:0 6px 18px rgba(217,48,37,.35); cursor:pointer; animation:cdYm .35s ease}
+.cd-yeni-mesaj[hidden], .cd-sohbet[hidden], .cd-s-form[hidden], .cd-hizli[hidden]{display:none}
+.cd-yeni-mesaj #cdYeniMesajMetin{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cd-ym-nokta{width:9px; height:9px; border-radius:50%; background:#fff; flex:none; animation:cdNabizN 1s ease infinite alternate}
+@keyframes cdYm{from{opacity:0; transform:translate(-50%, 12px)}}
+@keyframes cdNabizN{to{opacity:.3}}
+@media (max-width:640px){ body.girisli .cd-yeni-mesaj{bottom:calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom))} }
 .cd-dlg{max-width:380px; border:0; border-radius:var(--r-buyuk); padding:20px}
 .cd-dlg::backdrop{background:rgba(0,0,0,.45)}
 .cd-dlg h2{margin:0 0 8px}
@@ -204,12 +216,36 @@
     return (L > 26 || en > 9) ? ' u3' : (L > 18 || en > 7) ? ' u2' : (L > 11 || en > 6) ? ' u1' : ''; }
   function BUYUK(h){ return (h||'').toLocaleUpperCase('tr-TR'); }
 
-  var sonSohbet = '';
+  var sonSohbet = '', gorulenRakip = null, sohbetGorunur = false;
+  var ym = document.getElementById('cdYeniMesaj');
+  if (ym && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function(g){ sohbetGorunur = g[0].isIntersecting; if (sohbetGorunur) mesajGoruldu(); }, {threshold: 0.35}).observe(document.getElementById('cdSohbet'));
+  }
+  if (ym) ym.addEventListener('click', function(){ document.getElementById('cdSohbet').scrollIntoView({behavior:'smooth', block:'center'}); mesajGoruldu(); });
+  function mesajGoruldu(){
+    if (!ym || !durum) return;
+    gorulenRakip = (durum.sohbet || []).filter(function(m){ return m.o !== BEN; }).length;
+    ym.hidden = true;
+  }
   function sohbetCiz(d){
     var kutu = document.getElementById('cdMesajlar'); if (!kutu) return;
     var bolum = document.getElementById('cdSohbet');
-    if (d.bitti || d.durum === 'bitti') { bolum.hidden = true; return; }
+    if (!d.sohbet_acik) { bolum.hidden = true; ym.hidden = true; return; }
     bolum.hidden = false;
+    var kapali = !!d.rakip_ayrildi;
+    document.getElementById('cdSNot').hidden = !kapali;
+    document.getElementById('cdSForm').hidden = kapali; document.getElementById('cdHizli').hidden = kapali;
+    // Rakipten yeni mesaj geldiyse ve sohbet ekranda değilse kırmızı uyarı
+    var rakipMesaj = (d.sohbet || []).filter(function(m){ return m.o !== BEN; });
+    if (gorulenRakip === null) gorulenRakip = rakipMesaj.length;
+    if (rakipMesaj.length > gorulenRakip) {
+      if (sohbetGorunur && !document.hidden) gorulenRakip = rakipMesaj.length;
+      else {
+        var yeni = rakipMesaj.length - gorulenRakip, son = rakipMesaj[rakipMesaj.length - 1];
+        document.getElementById('cdYeniMesajMetin').textContent = (yeni > 1 ? yeni + ' yeni mesaj: ' : '💬 ') + son.m;
+        ym.hidden = false;
+      }
+    }
     var liste = d.sohbet || [], imza = liste.length + '|' + (liste.length ? liste[liste.length - 1].t + liste[liste.length - 1].m : '');
     if (imza === sonSohbet) return; sonSohbet = imza;
     var altta = kutu.scrollHeight - kutu.scrollTop - kutu.clientHeight < 40;
@@ -249,7 +285,7 @@
       durumEl.innerHTML = 'Sıra sende · ' + hak + ' harf hakkın var <span class="cd-haklar" aria-hidden="true">' + noktalar + '</span>'; }
     else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…'));
     // tahta
-    tahta.style.gridTemplateColumns = 'repeat(' + C + ', 1fr)';
+    tahta.style.gridTemplateColumns = 'repeat(' + C + ', minmax(0, 1fr))';
     var tamam = {}; d.tamam.forEach(function(x){ tamam[x] = 1; });
     var sonX = {}, yanlisX = {};
     if (!ilk && d.hamle > sonHamle) {
@@ -359,16 +395,20 @@
 
   function yokla(){
     if (document.hidden || mesgul) return;
-    var sohbetli = durum && !durum.bot && durum.durum === 'aktif' && !durum.bitti;
+    var sohbetli = durum && !durum.bot && durum.sohbet_acik && !durum.rakip_ayrildi;
     var bekle = !durum || durum.durum === 'bekliyor' || (!durum.bitti && durum.sira !== BEN) || sohbetli;
     if (!bekle) return;
     fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
       if (!durum || d.hamle !== durum.hamle || d.durum !== durum.durum) ciz(d);
-      else { durum.sohbet = d.sohbet; sohbetCiz(d); }
+      else { durum.sohbet = d.sohbet; durum.rakip_ayrildi = d.rakip_ayrildi; durum.sohbet_acik = d.sohbet_acik; sohbetCiz(d); }
     }).catch(function(){});
   }
   fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(ciz);
   setInterval(yokla, 3000);
+  // Bitmiş düellodan çıkınca sunucuya bildir; iki oyuncu da çıkınca sohbet silinir
+  window.addEventListener('pagehide', function(){
+    if (durum && !durum.bot && durum.durum === 'bitti' && navigator.sendBeacon) navigator.sendBeacon('/cengel/' + KOD + '/ayril');
+  });
 })();
 </script>
 {% endif %}

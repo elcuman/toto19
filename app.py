@@ -4101,7 +4101,40 @@ def _cengel_json(oyun, ben):
         g["kazanan"] = _cengel.kazanan(d)
     if ben is not None and not oyun.bot:
         g["sohbet"] = d.get("sohbet", [])
+        g["rakip_ayrildi"] = (1 - ben) in d.get("ayrilan", [])
+        g["sohbet_acik"] = oyun.durum in ("aktif", "bitti")
     return g
+
+
+CENGEL_SOHBET_OMUR = timedelta(hours=2)   # bitmiş oyunda kimse çıkmasa bile en geç bu kadar sonra silinir
+
+
+def _cengel_sohbet_temizle(oyun, d):
+    """Bitmiş düelloda iki oyuncu da oyundan çıktıysa (ya da uzun süre geçtiyse) sohbet silinir."""
+    if oyun.durum not in ("bitti", "reddedildi") or "sohbet" not in d:
+        return False
+    if len(set(d.get("ayrilan", []))) >= 2 or (oyun.guncelleme and datetime.utcnow() - oyun.guncelleme > CENGEL_SOHBET_OMUR):
+        d.pop("sohbet", None)
+        return True
+    return False
+
+
+@app.route("/cengel/<kod>/ayril", methods=["POST"])
+def cengel_ayril(kod):
+    """Oyuncu bitmiş düello sayfasından çıktı (tarayıcı sendBeacon ile bildirir)."""
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    ben = _cengel_oyuncu_no(oyun)
+    if ben is None or oyun.bot or oyun.durum != "bitti":
+        return ("", 204)
+    d = _cjson.loads(oyun.veri)
+    ayrilan = set(d.get("ayrilan", []))
+    if ben not in ayrilan:
+        ayrilan.add(ben)
+        d["ayrilan"] = sorted(ayrilan)
+        _cengel_sohbet_temizle(oyun, d)
+        oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+        db.session.commit()
+    return ("", 204)
 
 
 CENGEL_SOHBET_UZUNLUK = 200
@@ -4120,14 +4153,17 @@ def cengel_sohbet(kod):
     ben = _cengel_oyuncu_no(oyun)
     if ben is None or oyun.bot:
         abort(403)
-    if oyun.durum != "aktif":
+    if oyun.durum not in ("aktif", "bitti"):
         db.session.rollback()
-        return jsonify({"hata": "Sohbet sadece oyun sürerken açık."}), 400
+        return jsonify({"hata": "Sohbet şu an kapalı."}), 400
     metin = _re.sub(r"\s+", " ", ((request.get_json(silent=True) or {}).get("m") or "")).strip()[:CENGEL_SOHBET_UZUNLUK]
     if not metin:
         db.session.rollback()
         return jsonify({"hata": "Boş mesaj gönderilemez."}), 400
     d = _cjson.loads(oyun.veri)
+    if (1 - ben) in d.get("ayrilan", []) and oyun.durum == "bitti":
+        db.session.rollback()
+        return jsonify({"hata": "Rakibin oyundan çıktı, mesajı göremez."}), 400
     sohbet = d.get("sohbet", [])
     simdi = datetime.utcnow()
     son = next((x for x in reversed(sohbet) if x["o"] == ben), None)
@@ -4268,6 +4304,15 @@ def cengel_yeni():
 def cengel_oyun(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
     ben = _cengel_oyuncu_no(oyun)
+    if ben is not None and not oyun.bot and oyun.durum == "bitti":
+        d = _cjson.loads(oyun.veri)
+        degisti = _cengel_sohbet_temizle(oyun, d)
+        if ben in d.get("ayrilan", []) and "sohbet" in d:     # sayfayı yeniledi, hâlâ oyunda
+            d["ayrilan"] = [x for x in d["ayrilan"] if x != ben]
+            degisti = True
+        if degisti:
+            oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+            db.session.commit()
     davet_linki = url_for("cengel_oyun", kod=oyun.kod, _external=True)
     return render_template("cengel_oyun.html", oyun=oyun, ben=ben, davet_linki=davet_linki,
                            isimler=_cengel_isimler(oyun),
@@ -4300,7 +4345,6 @@ def cengel_iptal(kod):
         ok, _ = _cengel.cekil(d, ben)
         if ok:
             oyun.durum = "bitti"
-            d.pop("sohbet", None)          # oyun bitince sohbet silinir
             oyun.veri = _cjson.dumps(d, ensure_ascii=False)
             oyun.guncelleme = datetime.utcnow()
             db.session.commit()
@@ -4341,6 +4385,11 @@ def cengel_katil(kod):
 @app.route("/cengel/<kod>/durum")
 def cengel_durum(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    if oyun.durum == "bitti" and not oyun.bot:
+        d = _cjson.loads(oyun.veri)
+        if _cengel_sohbet_temizle(oyun, d):
+            oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+            db.session.commit()
     return jsonify(_cengel_json(oyun, _cengel_oyuncu_no(oyun)))
 
 
@@ -4391,7 +4440,6 @@ def cengel_hamle(kod):
             break
     if d["bitti"]:
         oyun.durum = "bitti"
-        d.pop("sohbet", None)              # oyun bitince sohbet silinir
     oyun.veri = _cjson.dumps(d, ensure_ascii=False)
     oyun.guncelleme = datetime.utcnow()
     db.session.commit()
