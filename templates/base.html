@@ -203,6 +203,13 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--cim);
   background:var(--cim-acik); color:var(--cim-koyu); border:1px solid #CBE5D7;
 }
 .flash-danger, .flash-error{background:var(--kirmizi-acik); color:#9E2B21; border-color:#F2CAC5}
+.cdb{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 14px; margin:0 0 14px; border-radius:14px; background:#FDF1E2; border:1px solid #E8D0AE; animation:cdbGel .35s ease}
+@keyframes cdbGel{from{opacity:0; transform:translateY(-6px)}}
+.cdb-ikon{font-size:22px}
+.cdb-metin{flex:1; min-width:180px; font-size:15px}
+.cdb-dugmeler{display:flex; gap:8px; align-items:center}
+.cdb-dugmeler form{margin:0}
+.cdb-red{background:none; border:0; color:var(--gri); text-decoration:underline; cursor:pointer; font-size:14px; padding:6px}
 .flash-warning{background:var(--sari-acik); color:#7A5D00; border-color:#F2E2A6}
 
 /* ---------- Etiketler ---------- */
@@ -363,6 +370,19 @@ tr:last-child td{border-bottom:0}
       <div class="flash flash-{{ category }}" role="status">{{ message }}</div>
     {% endfor %}
   {% endwith %}
+
+  {% if current_user.is_authenticated and ep not in ('cengel_oyun', 'cengel_lobi') %}
+  {% set cdavetler = cengel_gelen_davetler() %}
+  {% if cdavetler %}{% set cd = cdavetler[0] %}
+  <div class="cdb" role="status">
+    <span class="cdb-ikon" aria-hidden="true">⚔️</span>
+    <span class="cdb-metin"><b>{{ cd.oyuncu1.kullanici_adi if cd.oyuncu1 else 'Bir üye' }}</b> seni <b>Çengel Düello</b>'ya davet etti{% if cdavetler|length > 1 %} <a href="{{ url_for('cengel_lobi') }}">+{{ cdavetler|length - 1 }} davet daha</a>{% endif %}</span>
+    <span class="cdb-dugmeler">
+      <form method="POST" action="{{ url_for('cengel_katil', kod=cd.kod) }}"><button class="btn btn-kucuk" type="submit">Kabul et</button></form>
+      <form method="POST" action="{{ url_for('cengel_reddet', kod=cd.kod) }}"><input type="hidden" name="geri" value="{{ request.path }}"><button class="cdb-red" type="submit">Reddet</button></form>
+    </span>
+  </div>
+  {% endif %}{% endif %}
 
   {% block content %}{% endblock %}
 </main>

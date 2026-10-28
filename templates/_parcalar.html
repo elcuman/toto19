@@ -273,14 +273,15 @@
 
 {% macro cengel_karti() -%}
 {% set sb = cengel_sira_bende_sayisi() %}
+{% set cdv = cengel_gelen_davetler()|length %}
 <a class="ck" href="{{ url_for('cengel_lobi') }}">
   <span class="ck-izgara" aria-hidden="true"><i class="ip">▶</i><i>Ç</i><i>E</i><i class="d">N</i><i class="ip">▼</i><i class="d">G</i></span>
   <span class="ck-metin">
     <strong>Çengel Düello <em>Yeni</em></strong>
     <span>Sıran gelince 3 harf koy: doğru harf +1, kelimeyi bitirene harf sayısı kadar bonus. Robot Ziya'ya ya da arkadaşına karşı.{% if not current_user.is_authenticated %} Üye olmadan da oynanır.{% endif %}</span>
-    {% if sb %}<small>{{ sb }} oyunda sıra sende!</small>{% endif %}
+    {% if cdv %}<small>⚔️ {{ cdv }} düello davetin var!</small> {% endif %}{% if sb %}<small>{{ sb }} oyunda sıra sende!</small>{% endif %}
   </span>
-  <span class="ck-btn">{{ 'Sıra sende' if sb else 'Oyna' }} ›</span>
+  <span class="ck-btn">{{ 'Davete bak' if cdv else ('Sıra sende' if sb else 'Oyna') }} ›</span>
 </a>
 <style>
 .ck{display:flex; align-items:center; gap:14px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg,#FDF1E2,#EAF6EE); border:1px solid #E8D9C3; text-decoration:none; color:var(--murekkep)}

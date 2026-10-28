@@ -8,6 +8,19 @@
   <p class="alt">Aynı bulmacayı paylaşıyorsunuz. Sıran gelince <b>3 harf</b> koyarsın. Doğru harf <b>+1</b>, kelimeyi tamamlayan <b>harf sayısı kadar bonus</b> alır. Bulmaca dolunca çok puanı olan kazanır.</p>
 </div>
 
+{% if gelen_davetler %}
+<h2 class="cl-baslik" style="margin-top:0">Sana gelen davetler</h2>
+<section class="panel cl-davetler">
+  {% for o in gelen_davetler %}
+  <div class="cl-davet">
+    <span class="cl-rakip">⚔️ <b>{{ o.oyuncu1.kullanici_adi if o.oyuncu1 else 'Bir üye' }}</b> seni düelloya çağırıyor</span>
+    <form method="POST" action="{{ url_for('cengel_katil', kod=o.kod) }}"><button class="btn btn-kucuk" type="submit">Kabul et</button></form>
+    <form method="POST" action="{{ url_for('cengel_reddet', kod=o.kod) }}"><button class="cl-red" type="submit">Reddet</button></form>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 {% if not current_user.is_authenticated %}
 <div class="cl-misafir panel">
   <label for="clAd">Takma adın <small>(isteğe bağlı)</small></label>
@@ -37,7 +50,14 @@
     <span class="cl-ikon" aria-hidden="true">⚔️</span>
     <h2>Arkadaşına meydan oku</h2>
     <p class="sessiz kucuk">Düello linki oluştur, WhatsApp'tan gönder. Arkadaşın linke tıklayınca sırayla oynarsınız.</p>
-    <button type="submit" class="btn btn-blok">Düello daveti oluştur</button>
+    {% if davet_edilebilirler %}
+    <label class="cl-sec-etiket" for="clRakip">ya da bir üyeye doğrudan gönder <small>(sitede bildirim görür)</small></label>
+    <select id="clRakip" name="rakip">
+      <option value="">Link oluştur (herkes katılabilir)</option>
+      {% for k in davet_edilebilirler %}<option value="{{ k.id }}" {% if secili_rakip == k.id %}selected{% endif %}>{{ k.kullanici_adi }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <button type="submit" class="btn btn-blok" id="clDavetBtn">Düello daveti oluştur</button>
   </form>
 </div>
 
@@ -54,7 +74,7 @@
       <a href="{{ url_for('cengel_oyun', kod=a.o.kod) }}">
         <span class="cl-rakip">{{ '🤖 Robot Ziya' if a.o.bot else ('⚔️ ' ~ (a.isimler[1 - a.ben] or 'Rakip bekleniyor…')) }}{% if a.o.bot %} <small>({{ a.o.zorluk }})</small>{% endif %}</span>
         <span class="cl-skor">{{ a.puan[a.ben] }} – {{ a.puan[1 - a.ben] }}</span>
-        {% if a.o.durum == 'bekliyor' %}<span class="etiket">Davet bekliyor</span>
+        {% if a.o.durum == 'bekliyor' %}<span class="etiket">{{ a.davetli ~ ' bekleniyor' if a.davetli else 'Davet bekliyor' }}</span>
         {% elif a.sira_bende %}<span class="etiket etiket-tam">Sıra sende</span>
         {% else %}<span class="etiket">Rakipte</span>{% endif %}
       </a>
@@ -71,9 +91,10 @@
     {% for a in biten %}
     <li>
       <a href="{{ url_for('cengel_oyun', kod=a.o.kod) }}">
-        <span class="cl-rakip">{{ '🤖 Robot Ziya' if a.o.bot else ('⚔️ ' ~ (a.isimler[1 - a.ben] or '?')) }}</span>
+        <span class="cl-rakip">{{ '🤖 Robot Ziya' if a.o.bot else ('⚔️ ' ~ (a.isimler[1 - a.ben] or a.davetli or '?')) }}</span>
+        {% if a.sonuc == 'reddedildi' %}<span class="etiket">Reddedildi</span>{% else %}
         <span class="cl-skor">{{ a.puan[a.ben] }} – {{ a.puan[1 - a.ben] }}</span>
-        <span class="etiket {{ 'etiket-tam' if a.sonuc == 'kazandın' else ('etiket-ceza' if a.sonuc == 'kaybettin' else '') }}">{{ a.sonuc | capitalize }}</span>
+        <span class="etiket {{ 'etiket-tam' if a.sonuc == 'kazandın' else ('etiket-ceza' if a.sonuc == 'kaybettin' else '') }}">{{ a.sonuc | capitalize }}</span>{% endif %}
       </a>
     </li>
     {% endfor %}
@@ -81,6 +102,10 @@
 </section>
 {% endif %}
 
+<script>
+(function(){ var s = document.getElementById('clRakip'), b = document.getElementById('clDavetBtn'); if (!s) return;
+  function g(){ b.textContent = s.value ? 'Davet gönder: ' + s.options[s.selectedIndex].text : 'Düello daveti oluştur'; } s.addEventListener('change', g); g(); })();
+</script>
 {% if not current_user.is_authenticated %}
 <script>
 document.querySelectorAll('.cl-kart').forEach(function(f){ f.addEventListener('submit', function(){
@@ -89,6 +114,13 @@ document.querySelectorAll('.cl-kart').forEach(function(f){ f.addEventListener('s
 {% endif %}
 
 <style>
+.cl-davetler{padding:0}
+.cl-davet{display:flex; align-items:center; gap:10px; padding:12px 16px; border-top:1px solid var(--cizgi); flex-wrap:wrap}
+.cl-davet:first-child{border-top:0}
+.cl-davet form{margin:0}
+.cl-red{background:none; border:0; color:var(--gri); text-decoration:underline; cursor:pointer}
+.cl-sec-etiket{font-weight:600; font-size:13.5px; margin:0} .cl-sec-etiket small{font-weight:400; color:var(--gri)}
+.cl-kart select{margin-bottom:6px}
 .cl-misafir{margin:0 0 12px; padding:12px 16px}
 .cl-misafir label{font-weight:700; display:block; margin-bottom:4px}
 .cl-misafir label small{font-weight:400; color:var(--gri)}

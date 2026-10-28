@@ -979,6 +979,8 @@ class CengelOyun(db.Model):
     misafir2 = db.Column(db.String(64), index=True)
     misafir1_ad = db.Column(db.String(24))
     misafir2_ad = db.Column(db.String(24))
+    # Belirli bir üyeye gönderilen davet: sadece o katılabilir, ona bildirim gösterilir
+    davetli_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="SET NULL"), nullable=True, index=True)
     bot = db.Column(db.Boolean, nullable=False, default=False)
     zorluk = db.Column(db.String(10))
     durum = db.Column(db.String(12), nullable=False, default="bekliyor")    # bekliyor / aktif / bitti
@@ -988,6 +990,7 @@ class CengelOyun(db.Model):
     guncelleme = db.Column(db.DateTime, default=lambda: datetime.utcnow(), index=True)
     oyuncu1 = db.relationship("Kullanici", foreign_keys=[oyuncu1_id])
     oyuncu2 = db.relationship("Kullanici", foreign_keys=[oyuncu2_id])
+    davetli = db.relationship("Kullanici", foreign_keys=[davetli_id])
 
 
 class FormMaci(db.Model):
@@ -2721,6 +2724,14 @@ def initialize_database():
         # Sonradan eklenen kolonlar (create_all var olan tabloya kolon eklemez)
         try:
             kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("cengel_oyunlari")}
+            if "misafir1" in kolonlar and "davetli_id" not in kolonlar:
+                db.session.execute(db.text("ALTER TABLE cengel_oyunlari ADD COLUMN davetli_id INTEGER REFERENCES kullanicilar(id) ON DELETE SET NULL"))
+                db.session.execute(db.text("CREATE INDEX IF NOT EXISTS ix_cengel_oyunlari_davetli_id ON cengel_oyunlari (davetli_id)"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
+            kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("cengel_oyunlari")}
             if "misafir1" not in kolonlar:
                 for kolon, tur in (("misafir1", "VARCHAR(64)"), ("misafir2", "VARCHAR(64)"),
                                    ("misafir1_ad", "VARCHAR(24)"), ("misafir2_ad", "VARCHAR(24)")):
@@ -3866,6 +3877,10 @@ def cengel_lobi():
         ben = _cengel_oyuncu_no(o)
         if ben is None:
             continue
+        if o.durum == "reddedildi":
+            biten.append({"o": o, "isimler": _cengel_isimler(o), "puan": d["puan"], "ben": ben, "sonuc": "reddedildi",
+                          "davetli": o.davetli.kullanici_adi if o.davetli else None})
+            continue
         bilgi = {"o": o, "isimler": _cengel_isimler(o), "puan": d["puan"], "ben": ben,
                  "sira_bende": o.durum == "aktif" and d["sira"] == ben}
         if o.durum == "bitti":
@@ -3876,9 +3891,51 @@ def cengel_lobi():
             biten.append(bilgi)
         else:
             aktif.append(bilgi)
+    for b in aktif:
+        b["davetli"] = b["o"].davetli.kullanici_adi if b["o"].davetli else None
     return render_template("cengel_lobi.html", aktif=aktif, biten=biten[:10],
                            karne={"g": galibiyet, "m": maglubiyet, "b": beraberlik},
-                           misafir_ad=session.get("cengel_ad", ""))
+                           misafir_ad=session.get("cengel_ad", ""),
+                           gelen_davetler=cengel_gelen_davetler(),
+                           davet_edilebilirler=_cengel_davet_edilebilirler() if current_user.is_authenticated else [],
+                           secili_rakip=request.args.get("rakip", type=int))
+
+
+def _cengel_davet_edilebilirler():
+    """Davet gönderilebilecek üyeler: aynı gruptaki arkadaşlar ve daha önce oynadığın rakipler."""
+    try:
+        gruplarim = db.session.query(GrupUyeligi.grup_id).filter(GrupUyeligi.kullanici_id == current_user.id)
+        idler = {i for (i,) in db.session.query(GrupUyeligi.kullanici_id).filter(GrupUyeligi.grup_id.in_(gruplarim)).distinct()}
+        for a, b in db.session.query(CengelOyun.oyuncu1_id, CengelOyun.oyuncu2_id).filter(
+                CengelOyun.bot.is_(False), db.or_(CengelOyun.oyuncu1_id == current_user.id,
+                                                   CengelOyun.oyuncu2_id == current_user.id)).limit(200):
+            idler.update({a, b})
+        idler.discard(current_user.id); idler.discard(None)
+        if not idler:
+            return []
+        return (Kullanici.query.filter(Kullanici.id.in_(idler))
+                .order_by(db.func.lower(Kullanici.kullanici_adi)).limit(300).all())
+    except Exception:
+        db.session.rollback()
+        return []
+
+
+def cengel_gelen_davetler():
+    """Giriş yapmış üyeye gönderilmiş, henüz yanıtlanmamış düello davetleri (istek başına bir kez sorgulanır)."""
+    if not current_user.is_authenticated:
+        return []
+    if "cengel_davetler" not in _g:
+        try:
+            _g.cengel_davetler = (CengelOyun.query.filter(CengelOyun.davetli_id == current_user.id,
+                                                          CengelOyun.durum == "bekliyor")
+                                  .order_by(CengelOyun.olusturulma.desc()).limit(5).all())
+        except Exception:
+            db.session.rollback()
+            _g.cengel_davetler = []
+    return _g.cengel_davetler
+
+
+app.jinja_env.globals["cengel_gelen_davetler"] = cengel_gelen_davetler
 
 
 @app.route("/cengel/yeni", methods=["POST"])
@@ -3891,14 +3948,24 @@ def cengel_yeni():
         _cengel_eskileri_temizle()
     d = _cengel.yeni_oyun(haric=_cengel_son_bulmacalar())
     uye = current_user.is_authenticated
+    davetli = None
+    if tip == "davet" and uye and request.form.get("rakip"):
+        rakip_id = request.form.get("rakip", type=int)
+        davetli = next((k for k in _cengel_davet_edilebilirler() if k.id == rakip_id), None)
+        if not davetli:
+            flash("Sadece grup arkadaşlarını ya da önceki rakiplerini davet edebilirsin.", "warning")
+            return redirect(url_for("cengel_lobi"))
     oyun = CengelOyun(kod=_csecrets.token_urlsafe(8)[:10], oyuncu1_id=current_user.id if uye else None,
                       misafir1=None if uye else _cengel_misafir_ozeti(olustur=True),
                       misafir1_ad=None if uye else _cengel_misafir_adi(),
                       bot=(tip == "bot"), zorluk=zorluk if tip == "bot" else None,
                       durum="aktif" if tip == "bot" else "bekliyor",
+                      davetli_id=davetli.id if davetli else None,
                       veri=_cjson.dumps(d, ensure_ascii=False), bulmaca_no=d["bulmaca"].get("no"))
     db.session.add(oyun)
     db.session.commit()
+    if davetli:
+        flash(f"Davet {davetli.kullanici_adi} kullanıcısına gönderildi. Siteye girdiğinde bildirim görecek.", "success")
     return redirect(url_for("cengel_oyun", kod=oyun.kod))
 
 
@@ -3909,15 +3976,35 @@ def cengel_oyun(kod):
     davet_linki = url_for("cengel_oyun", kod=oyun.kod, _external=True)
     return render_template("cengel_oyun.html", oyun=oyun, ben=ben, davet_linki=davet_linki,
                            isimler=_cengel_isimler(oyun),
-                           katilabilir=(ben is None and oyun.durum == "bekliyor" and not oyun.bot),
+                           katilabilir=(ben is None and oyun.durum == "bekliyor" and not oyun.bot
+                                        and _cengel_katilabilir_mi(oyun)),
                            misafir_ad=session.get("cengel_ad", ""))
+
+
+def _cengel_katilabilir_mi(oyun):
+    """Üyeye özel davete sadece davet edilen üye katılabilir; link davetine herkes."""
+    if oyun.davetli_id:
+        return current_user.is_authenticated and current_user.id == oyun.davetli_id
+    return True
+
+
+@app.route("/cengel/<kod>/reddet", methods=["POST"])
+@login_required
+def cengel_reddet(kod):
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    if oyun.durum == "bekliyor" and oyun.davetli_id == current_user.id:
+        oyun.durum = "reddedildi"
+        oyun.guncelleme = datetime.utcnow()
+        db.session.commit()
+        flash("Davet reddedildi.", "info")
+    return redirect(request.form.get("geri") or url_for("cengel_lobi"))
 
 
 @app.route("/cengel/<kod>/katil", methods=["POST"])
 def cengel_katil(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
     if (oyun.durum == "bekliyor" and not oyun.bot and _cengel_oyuncu_no(oyun) is None
-            and not oyun.oyuncu2_id and not oyun.misafir2):
+            and not oyun.oyuncu2_id and not oyun.misafir2 and _cengel_katilabilir_mi(oyun)):
         if current_user.is_authenticated:
             oyun.oyuncu2_id = current_user.id
         else:

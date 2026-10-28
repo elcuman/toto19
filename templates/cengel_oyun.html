@@ -21,6 +21,8 @@
     <button class="btn btn-blok" type="submit">Düelloya katıl</button>
   </form>
 </section>
+{% elif ben is none and oyun.durum == 'bekliyor' and oyun.davetli %}
+<div class="bos"><strong>Bu davet {{ oyun.davetli.kullanici_adi }} için gönderildi.</strong>{% if not current_user.is_authenticated %}Sen {{ oyun.davetli.kullanici_adi }} isen <a href="{{ url_for('giris', next=request.path) }}">giriş yap</a>. {% endif %}Kendi düellonu <a href="{{ url_for('cengel_lobi') }}">buradan</a> başlatabilirsin.</div>
 {% elif ben is none %}
 <div class="bos"><strong>Bu düello iki kişi arasında oynanıyor.</strong>Kendi düellonu <a href="{{ url_for('cengel_lobi') }}">buradan</a> başlatabilirsin. Üye olmadan da oynanır.</div>
 {% else %}
@@ -35,8 +37,13 @@
 
 {% if oyun.durum == 'bekliyor' and ben == 0 %}
 <section class="panel cd-davet" id="cdDavet">
+  {% if oyun.davetli %}
+  <h2>Davet {{ oyun.davetli.kullanici_adi }} kullanıcısına gitti</h2>
+  <p class="sessiz kucuk">Siteye girdiğinde bildirim görecek. Kabul edince oyun başlar, sen başlarsın. İstersen linki ona WhatsApp'tan da gönder.</p>
+  {% else %}
   <h2>Düello linkin hazır</h2>
   <p class="sessiz kucuk">Arkadaşın linke tıklayıp katılınca oyun başlar. Sen başlarsın.</p>
+  {% endif %}
   <div class="btn-dizi">
     <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Çengel Düello: seni bulmaca düellosuna çağırıyorum! ⚔️ ' ~ davet_linki) | urlencode }}">WhatsApp'tan gönder</a>
     <button type="button" class="btn btn-ikincil" id="cdKopyala" data-link="{{ davet_linki }}">Linki kopyala</button>
@@ -63,6 +70,8 @@
     <form method="POST" action="{{ url_for('cengel_yeni') }}">
       <input type="hidden" name="tip" value="{{ 'bot' if oyun.bot else 'davet' }}">
       <input type="hidden" name="zorluk" value="{{ oyun.zorluk or 'orta' }}">
+      {% set rakip_id = (oyun.oyuncu2_id if ben == 0 else oyun.oyuncu1_id) %}
+      {% if not oyun.bot and current_user.is_authenticated and rakip_id %}<input type="hidden" name="rakip" value="{{ rakip_id }}">{% endif %}
       <button class="btn btn-blok" type="submit">{{ 'Tekrar oyna' if oyun.bot else 'Rövanş daveti oluştur' }}</button>
     </form>
     <a class="btn btn-ikincil btn-blok" href="{{ url_for('cengel_lobi') }}">Lobiye dön</a>
