@@ -67,6 +67,18 @@
 <form method="POST" action="{{ url_for('cengel_iptal', kod=oyun.kod) }}" class="cd-cekil" id="cdCekil" onsubmit="return confirm('Oyundan çekilirsen kaybetmiş sayılırsın. Emin misin?')"><button type="submit" class="cd-kapat">Oyundan çekil</button></form>
 {% endif %}
 
+{% if not oyun.bot %}
+<section class="cd-sohbet" id="cdSohbet"{% if oyun.durum == 'bitti' %} hidden{% endif %}>
+  <h2>💬 Sohbet <small>oyun bitince silinir</small></h2>
+  <div class="cd-mesajlar" id="cdMesajlar" aria-live="polite"><p class="cd-m-bos">Rakibine bir şey yaz 👋</p></div>
+  <form class="cd-s-form" id="cdSForm" autocomplete="off">
+    <input id="cdSGiris" type="text" maxlength="200" placeholder="Mesaj yaz…" aria-label="Mesaj" enterkeyhint="send">
+    <button type="submit" class="btn btn-kucuk">Gönder</button>
+  </form>
+  <div class="cd-hizli" id="cdHizli">{% for t in ['👏 Güzel hamle', '😅 Şanslısın', '🔥', '😂', 'Hadi sıra sende!', 'İyi oyundu 🤝'] %}<button type="button">{{ t }}</button>{% endfor %}</div>
+</section>
+{% endif %}
+
 <dialog class="cd-dlg" id="cdSonuc">
   <h2 id="cdSonucBaslik"></h2>
   <p class="cd-sonuc-skor" id="cdSonucSkor"></p>
@@ -157,6 +169,16 @@
 .cd-yan-ikon{width:52px; height:52px; border-radius:50%; border:2px solid var(--murekkep); display:flex; align-items:center; justify-content:center; font:700 22px var(--baslik); color:var(--murekkep); background:#fff}
 .cd-yan:disabled{opacity:.4; cursor:default}
 .cd-son{text-align:center; color:var(--gri); font-size:13.5px; min-height:20px; margin:10px 0 0}
+.cd-sohbet{width:min(100%, 470px); margin:18px auto 0; border:1px solid var(--cizgi); border-radius:14px; background:#fff; padding:10px 12px}
+.cd-sohbet h2{margin:0 0 8px; font-size:16px} .cd-sohbet h2 small{font-weight:400; color:var(--gri); font-size:12px; margin-left:4px}
+.cd-mesajlar{max-height:190px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; padding:2px 0 6px}
+.cd-m{max-width:80%; padding:6px 10px; border-radius:14px; font-size:14.5px; line-height:1.35; overflow-wrap:anywhere; align-self:flex-start; background:#EEF3F8; color:#14201A}
+.cd-m.ben{align-self:flex-end; background:var(--cim); color:#fff}
+.cd-m small{display:block; font-size:10.5px; opacity:.7; margin-top:1px}
+.cd-m-bos{margin:6px 0; color:var(--gri); font-size:13.5px; text-align:center}
+.cd-s-form{display:flex; gap:6px} .cd-s-form input{flex:1; min-width:0}
+.cd-hizli{display:flex; gap:6px; overflow-x:auto; padding-top:8px; scrollbar-width:none}
+.cd-hizli button{flex:none; border:1px solid var(--cizgi); background:#F6F8F7; border-radius:999px; padding:5px 10px; font-size:13px; cursor:pointer; white-space:nowrap}
 .cd-dlg{max-width:380px; border:0; border-radius:var(--r-buyuk); padding:20px}
 .cd-dlg::backdrop{background:rgba(0,0,0,.45)}
 .cd-dlg h2{margin:0 0 8px}
@@ -182,8 +204,35 @@
     return (L > 26 || en > 9) ? ' u3' : (L > 18 || en > 7) ? ' u2' : (L > 11 || en > 6) ? ' u1' : ''; }
   function BUYUK(h){ return (h||'').toLocaleUpperCase('tr-TR'); }
 
+  var sonSohbet = '';
+  function sohbetCiz(d){
+    var kutu = document.getElementById('cdMesajlar'); if (!kutu) return;
+    var bolum = document.getElementById('cdSohbet');
+    if (d.bitti || d.durum === 'bitti') { bolum.hidden = true; return; }
+    bolum.hidden = false;
+    var liste = d.sohbet || [], imza = liste.length + '|' + (liste.length ? liste[liste.length - 1].t + liste[liste.length - 1].m : '');
+    if (imza === sonSohbet) return; sonSohbet = imza;
+    var altta = kutu.scrollHeight - kutu.scrollTop - kutu.clientHeight < 40;
+    kutu.innerHTML = liste.length ? liste.map(function(m){
+      var saat = new Date(m.t + 'Z').toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+      return '<div class="cd-m' + (m.o === BEN ? ' ben' : '') + '">' + esc(m.m) + '<small>' + (m.o === BEN ? 'Sen' : esc(d.isimler[m.o] || 'Rakip')) + ' · ' + saat + '</small></div>';
+    }).join('') : '<p class="cd-m-bos">Rakibine bir şey yaz 👋</p>';
+    if (altta || liste.length && liste[liste.length - 1].o === BEN) kutu.scrollTop = kutu.scrollHeight;
+  }
+  function sohbetGonder(metin){
+    metin = (metin || '').trim(); if (!metin) return;
+    fetch('/cengel/' + KOD + '/sohbet', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({m: metin})})
+      .then(function(r){ return r.json(); }).then(function(j){ if (j.sohbet) { durum.sohbet = j.sohbet; sohbetCiz(j); } else if (j.hata) cubuk.textContent = j.hata; }).catch(function(){});
+  }
+  var sForm = document.getElementById('cdSForm');
+  if (sForm) {
+    sForm.addEventListener('submit', function(e){ e.preventDefault(); var g = document.getElementById('cdSGiris'); sohbetGonder(g.value); g.value = ''; });
+    document.getElementById('cdHizli').addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) sohbetGonder(b.textContent); });
+  }
+
   function ciz(d){
     durum = d;
+    sohbetCiz(d);
     var R = d.satir, C = d.sutun, rakip = 1 - BEN;
     document.getElementById('cdP0').textContent = d.puan[BEN];
     document.getElementById('cdP1').textContent = d.puan[rakip];
@@ -227,7 +276,7 @@
     var pasBtn = document.getElementById('cdPas');
     var turBitir = bende && hak < TH;
     pasBtn.disabled = !bende || (!turBitir && !d.pas_kaldi);
-    pasBtn.textContent = turBitir ? 'Turu bitir' : (d.pas_kaldi ? 'Pas (' + d.pas_kaldi + ' hak)' : 'Pas hakkı bitti');
+    pasBtn.textContent = turBitir ? 'Turu bitir' : (d.pas_kaldi ? 'Pas (' + d.pas_kaldi + ')' : 'Pas bitti');
     document.getElementById('cdDegistir').disabled = !bende || d.torba === 0 || hak < TH;
     document.getElementById('cdIpucu').disabled = !bende || !d.ipucu_kaldi;
     // son hamleler
@@ -310,9 +359,13 @@
 
   function yokla(){
     if (document.hidden || mesgul) return;
-    var bekle = !durum || durum.durum === 'bekliyor' || (!durum.bitti && durum.sira !== BEN);
+    var sohbetli = durum && !durum.bot && durum.durum === 'aktif' && !durum.bitti;
+    var bekle = !durum || durum.durum === 'bekliyor' || (!durum.bitti && durum.sira !== BEN) || sohbetli;
     if (!bekle) return;
-    fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){ if (!durum || d.hamle !== durum.hamle || d.durum !== durum.durum) ciz(d); }).catch(function(){});
+    fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+      if (!durum || d.hamle !== durum.hamle || d.durum !== durum.durum) ciz(d);
+      else { durum.sohbet = d.sohbet; sohbetCiz(d); }
+    }).catch(function(){});
   }
   fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(ciz);
   setInterval(yokla, 3000);
