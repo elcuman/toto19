@@ -271,6 +271,35 @@
 {%- endmacro %}
 
 
+{% macro cengel_karti() -%}
+{% set sb = cengel_sira_bende_sayisi(current_user.id) if current_user.is_authenticated else 0 %}
+<a class="ck" href="{{ url_for('cengel_lobi') }}">
+  <span class="ck-izgara" aria-hidden="true"><i class="ip">▶</i><i>Ç</i><i>E</i><i class="d">N</i><i class="ip">▼</i><i class="d">G</i></span>
+  <span class="ck-metin">
+    <strong>Çengel Düello <em>Yeni</em></strong>
+    <span>Bulmacayı sırayla doldur: doğru harf +1, kelimeyi bitirene harf sayısı kadar bonus. Robot Ziya'ya ya da arkadaşına karşı.</span>
+    {% if sb %}<small>{{ sb }} oyunda sıra sende!</small>{% endif %}
+  </span>
+  <span class="ck-btn">{{ 'Sıra sende' if sb else 'Oyna' }} ›</span>
+</a>
+<style>
+.ck{display:flex; align-items:center; gap:14px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg,#FDF1E2,#EAF6EE); border:1px solid #E8D9C3; text-decoration:none; color:var(--murekkep)}
+.ck:hover{color:var(--murekkep); border-color:#D9C2A0}
+.ck-izgara{display:grid; grid-template-columns:repeat(3,26px); gap:3px; flex:none}
+.ck-izgara i{width:26px; height:26px; display:flex; align-items:center; justify-content:center; font:800 15px var(--baslik); font-style:normal; border-radius:5px; background:#FAD9B3; border:1.5px solid #14201A; color:#14201A}
+.ck-izgara i.ip{background:#DDF1E3; font-size:10px; border-color:#B9CDBE}
+.ck-izgara i.d{color:#2F5D8C}
+.ck-metin{flex:1; min-width:0}
+.ck-metin strong{display:block; font:700 19px/1.2 var(--baslik)}
+.ck-metin strong em{font-style:normal; font:700 10.5px var(--yazi); color:var(--cim); background:#fff; border:1px solid currentColor; padding:1px 7px; border-radius:999px; vertical-align:3px; margin-left:4px}
+.ck-metin span{display:block; font-size:13.5px; color:var(--gri); margin-top:2px}
+.ck-metin small{display:inline-block; margin-top:4px; font-size:12px; font-weight:700; color:#B3261E}
+.ck-btn{flex:none; background:var(--murekkep); color:#fff; font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; white-space:nowrap}
+@media (max-width:480px){ .ck{flex-wrap:wrap} .ck-btn{width:100%; text-align:center} }
+</style>
+{%- endmacro %}
+
+
 {% macro lig_duyurusu(hedef_url, hedef_metin, ikinci_url=none, ikinci_metin=none) -%}
 <section class="ld">
   <span class="ld-rozet">Yeni</span>

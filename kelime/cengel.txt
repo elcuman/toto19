@@ -1,0 +1,407 @@
+# Çengel düello kelime bankası: KELİME|ipucu  (ipucu tek emoji ise resimli ipucu olarak gösterilir)
+AT|🐎
+AV|Avcının işi
+EL|✋
+EV|🏠
+EN|Genişlik
+ON|Dokuzdan sonra
+OT|Çayırda biten
+SU|💧
+AY|🌙
+İP|İnce halat
+UÇ|Sivri kısım
+ÜÇ|İkiden sonra
+AN|Çok kısa süre
+AL|Kırmızı
+AK|Beyaz
+ER|Asker
+OK|Yayın fırlattığı
+ÖN|Arkanın karşıtı
+ÜN|Şöhret
+İN|Ayının barınağı
+İŞ|Meslek, görev
+UN|Ekmeğin ana maddesi
+ET|🥩
+İZ|Belirti, işaret
+ÇİL|Yüzdeki küçük leke
+DİZ|Bacağın ortasındaki eklem
+KOL|💪
+DAĞ|⛰️
+GÖL|Durgun su birikintisi
+KUM|Çölün toprağı
+TAŞ|Kaya parçası
+BAŞ|Vücudun en üst kısmı
+YAŞ|Ömür süresi
+KAŞ|Gözün üstündeki kıllar
+DİŞ|🦷
+KAR|❄️
+BAL|🍯
+SÜT|🥛
+ÇAY|🍵
+NAR|Taneli kırmızı meyve
+KUŞ|🐦
+TOP|⚽
+SAZ|Telli halk çalgısı
+TEN|Deri rengi
+YÜZ|Doksan dokuzdan sonra
+GÖZ|👁️
+KEL|Saçsız
+KÖK|Bitkinin toprak altı
+DAL|Ağacın kolu
+BAĞ|Üzüm yetiştirilen yer
+TAT|Lezzet
+ATA|Dede, cet
+ANA|Anne
+ADA|🏝️
+ODA|Evin bölümü
+YIL|On iki ay
+GÜN|Yirmi dört saat
+ŞAL|Omuza atılan örtü
+KAZ|Kanatlı kümes hayvanı
+KAP|İçine bir şey konan eşya
+SAP|Tutacak
+KAS|Vücudu hareket ettiren doku
+SİS|Görüşü kapatan buğu
+SES|Kulağın duyduğu
+ZİL|🔔
+KİL|Çömlek toprağı
+TEL|İnce metal şerit
+MUZ|🍌
+TUZ|🧂
+MUM|🕯️
+ÇAN|Kilise zili
+KOÇ|Erkek koyun
+YOL|Gidilen güzergâh
+MOR|Menekşe rengi
+GRİ|Kül rengi
+BİR|Sayıların ilki
+İKİ|Birden sonra
+BEŞ|Dörtten sonra
+BİN|Dokuz yüz doksan dokuzdan sonra
+YAZ|☀️ mevsimi
+KIŞ|Soğuk mevsim
+DİL|👅
+SAÇ|Başı örten kıllar
+ÇÖL|🏜️
+KÖY|Küçük yerleşim yeri
+İLÇE|İlin bölümü
+ACI|Tatlının karşıtı
+BOŞ|Dolunun karşıtı
+ÜST|Altın karşıtı
+ALT|Üstün karşıtı
+SAĞ|Solun karşıtı
+SOL|Sağın karşıtı
+FİL|🐘
+AYI|🐻
+ARI|🐝
+KEK|Fırında pişen tatlı
+ÖYKÜ|Hikâye
+SÖZ|Kelam
+AKIL|Us
+ÇARE|Çözüm yolu
+UMUT|Ümit
+ONUR|Şeref
+ÇABA|Gayret
+EMEK|Alın teri
+EKŞİ|Limonun tadı
+ESKİ|Yeninin karşıtı
+YENİ|Eskinin karşıtı
+UZUN|Kısanın karşıtı
+KISA|Uzunun karşıtı
+İNCE|Kalının karşıtı
+AÇIK|Kapalının karşıtı
+GENÇ|Yaşlının karşıtı
+DOLU|Boşun karşıtı
+ARKA|Önün karşıtı
+DOĞU|Güneşin doğduğu yön
+BATI|Güneşin battığı yön
+DÖRT|Üçten sonra
+ALTI|Beşten sonra
+YEDİ|Altıdan sonra
+MAVİ|Gökyüzü rengi
+SARI|Limon rengi
+KARA|Siyah
+OMUZ|Kolun gövdeye bağlandığı yer
+AYAK|🦶
+AĞIZ|👄
+KALP|❤️
+MİDE|Sindirim organı
+SALI|Pazartesiden sonra
+CUMA|Perşembeden sonra
+OCAK|Yılın ilk ayı
+MART|Baharın ilk ayı
+EKİM|Eylülden sonra
+DERE|Küçük akarsu
+TEPE|Küçük dağ
+KAYA|Büyük taş
+KUZU|🐑
+İNEK|🐄
+KEÇİ|🐐
+DEVE|🐫
+KURT|🐺
+UÇAK|✈️
+GEMİ|🚢
+TREN|🚆
+SAAT|⏰
+KAPI|🚪
+MASA|Üzerinde yemek yenen eşya
+KALE|Surlarla çevrili yapı
+KULE|Yüksek yapı
+CAMİ|🕌
+AĞAÇ|🌳
+LALE|🌷
+ELMA|🍎
+ÜZÜM|🍇
+KUPA|🏆
+TAÇ|👑
+ATEŞ|🔥
+ŞİİR|Dizelerden oluşan eser
+KOLA|Gazlı içecek
+KAHVE|☕
+ÇORBA|🍲
+LİMON|🍋
+KİRAZ|🍒
+ÇİLEK|🍓
+ARMUT|🍐
+BİBER|🌶️
+SOĞAN|🧅
+HAVUÇ|🥕
+MISIR|🌽
+EKMEK|🍞
+PASTA|🎂
+BALON|🎈
+ROKET|🚀
+KİTAP|📖
+KALEM|✏️
+MAKAS|✂️
+ÇEKİÇ|🔨
+GİTAR|🎸
+DAVUL|🥁
+KEMAN|🎻
+ÇADIR|⛺
+ÇİÇEK|🌸
+KUZEY|Pusulanın gösterdiği yön
+GÜNEY|Kuzeyin karşıtı
+GÜNEŞ|Dünyamızı ısıtan yıldız
+BULUT|☁️
+DÜNYA|🌍
+DENİZ|🌊
+NEHİR|Büyük akarsu
+IRMAK|Nehir
+ORMAN|🌲
+LİMAN|Gemilerin yanaştığı yer
+ŞEHİR|Kent
+ASLAN|🦁
+BALIK|🐟
+KÖPEK|🐶
+TİLKİ|🦊
+TAVUK|🐔
+PANDA|🐼
+YILAN|🐍
+TAVŞAN|🐇
+ZÜRAFA|🦒
+BAYKUŞ|🦉
+YUNUS|🐬
+MAYMUN|🐒
+KEDİ|🐱
+ARABA|🚗
+KÖPRÜ|🌉
+EYLÜL|Okulların açıldığı ay
+KASIM|Ekimden sonra
+NİSAN|Martın ardından gelen ay
+MAYIS|Nisandan sonra
+ŞUBAT|Yılın en kısa ayı
+BAHAR|İlkyaz
+SEKİZ|Yediden sonra
+DOKUZ|Sekizden sonra
+YEŞİL|Çimen rengi
+PEMBE|Açık kırmızı tonu
+BEYAZ|Kar rengi
+SİYAH|Gece rengi
+BACAK|Kalçadan ayağa uzanan uzuv
+BOYUN|Başı gövdeye bağlayan kısım
+KULAK|👂
+BURUN|👃
+HAYAT|Yaşam
+SEVGİ|Muhabbet
+BARIŞ|Savaşın karşıtı
+ZAFER|Utku
+TATLI|Acının karşıtı
+SICAK|Soğuğun karşıtı
+SOĞUK|Sıcağın karşıtı
+BÜYÜK|Küçüğün karşıtı
+KÜÇÜK|Büyüğün karşıtı
+KALIN|İncenin karşıtı
+HIZLI|Yavaşın karşıtı
+YAVAŞ|Hızlının karşıtı
+YAŞLI|Gencin karşıtı
+ZENGİN|Fakirin karşıtı
+FAKİR|Zenginin karşıtı
+KAPALI|Açığın karşıtı
+PAZAR|Haftanın son günü
+TEMMUZ|Hazirandan sonra
+ARALIK|Yılın son ayı
+YILDIZ|⭐
+YAĞMUR|🌧️
+ŞEKER|Tatlandırıcı
+PEYNİR|🧀
+LOKUM|Türk tatlısı, ikram şekeri
+SİMİT|Susamlı halka
+GÖZLÜK|👓
+HEDİYE|🎁
+KAKTÜS|🌵
+MANTAR|🍄
+PİYANO|🎹
+ANKARA|Türkiye'nin başkenti
+İZMİR|Ege'nin incisi
+BURSA|Yeşil şehir
+ADANA|Kebabıyla ünlü il
+SİVAS|Kangal köpeğiyle ünlü il
+VAN|Kedisiyle ünlü il
+RİZE|Çayıyla ünlü il
+ORDU|Asker topluluğu
+AĞRI|Sızı
+BOLU|Abant Gölü'nün ili
+KARS|Kaşarıyla ünlü il
+KONYA|Mevlana'nın şehri
+HATAY|Künefesiyle ünlü il
+AYDIN|Aydınlık
+TOKAT|Şamar
+ÇORUM|Leblebisiyle ünlü il
+MARDİN|Taş evleriyle ünlü il
+EDİRNE|Selimiye'nin şehri
+MUŞ|Doğu'da bir il
+KİM|Soru zamiri
+NE|Soru sözcüğü
+İLE|Bağlaç
+DE|Söyle
+YE|Yemek ye!
+NİNE|Büyükanne
+DEDE|Büyükbaba
+ABLA|Büyük kız kardeş
+AMCA|Babanın erkek kardeşi
+DAYI|Annenin erkek kardeşi
+TEYZE|Annenin kız kardeşi
+HALA|Babanın kız kardeşi
+EŞ|Karı ya da koca
+BEBEK|👶
+OKUL|🏫
+SINIF|Dersliğin diğer adı
+DERS|Öğretmenin anlattığı
+SINAV|İmtihan
+ÖDEV|Evde yapılan çalışma
+DEFTER|📓
+SİLGİ|Kalem izini çıkaran
+TAHTA|Ağaçtan kesilmiş levha
+OYUN|🎲
+MÜZİK|🎵
+ŞARKI|Söylenen beste
+RESİM|🖼️
+SANAT|Güzel yaratma uğraşı
+FİLM|🎬
+TİYATRO|🎭
+ROMAN|Uzun anlatı türü
+MASAL|Bir varmış bir yokmuş
+FIKRA|Kısa güldürü
+TELEFON|📱
+RADYO|📻
+LAMBA|💡
+YATAK|🛏️
+DOLAP|Eşya saklanan mobilya
+HALI|Yere serilen dokuma
+PERDE|Pencereyi örten kumaş
+AYNA|🪞
+TARAK|Saç düzelten araç
+SABUN|🧼
+HAVLU|Kurulanma bezi
+FIRIN|Ekmek pişirilen yer
+TABAK|🍽️
+ÇATAL|Yemek takımından biri
+KAŞIK|🥄
+BIÇAK|🔪
+BARDAK|Su içilen kap
+ŞİŞE|🍾
+KUTU|📦
+ÇANTA|👜
+CEKET|🧥
+GÖMLEK|👔
+ETEK|Kadın giysisi
+ÇORAP|🧦
+ŞAPKA|🎩
+ELDİVEN|🧤
+ATKI|Boyna sarılan örgü
+KAZAK|Yün giysi
+ÇİZME|👢
+TERZİ|Elbise diken
+BERBER|Saç kesen
+AŞÇI|Yemek pişiren
+ÇİFTÇİ|Toprağı ekip biçen
+ÇOBAN|Sürüyü güden
+DOKTOR|Hekim
+HEMŞİRE|Sağlık çalışanı
+POLİS|👮
+ASKER|Er
+PİLOT|Uçak süren
+HAKİM|Yargıç
+AVUKAT|Savunman
+ÖĞRETMEN|Ders veren
+BALKON|Evin dışa açılan bölümü
+DAMLA|Su tanesi
+DALGA|Denizin kabarması
+KUMSAL|Plaj
+KIYI|Sahil
+BOĞAZ|İki denizi bağlayan su yolu
+VADİ|İki dağ arası
+YAYLA|Yazın çıkılan yer
+OVA|Düz ve geniş arazi
+TARLA|Ekin yeri
+BAHÇE|Evin çiçekli alanı
+ÇİMEN|Yeşil örtü
+YAPRAK|🍃
+TOHUM|Bitkinin özü
+FİDAN|Genç ağaç
+ODUN|Yakacak ağaç
+KÖMÜR|Kara elmas
+DEMİR|Paslanan metal
+ALTIN|🥇
+GÜMÜŞ|🥈
+BAKIR|Kızıl metal
+ELMAS|💎
+İNCİ|İstiridyenin hazinesi
+MERMER|Beyaz taş
+TUĞLA|🧱
+ÇİVİ|Çekiçle çakılan
+VİDA|Tornavidayla sıkılan
+HALAT|Kalın ip
+ZİNCİR|⛓️
+ANAHTAR|🔑
+KİLİT|🔒
+PARA|💰
+BANKA|🏦
+ÇEK|Banka ödeme belgesi
+PUL|Mektuba yapıştırılan
+MEKTUP|✉️
+HABER|Bildirim
+GAZETE|📰
+DERGİ|Süreli yayın
+SORU|❓
+CEVAP|Yanıt
+FİKİR|Düşünce
+RÜYA|Uykuda görülen
+UYKU|😴
+GÜLÜŞ|😄
+GÖZYAŞI|😢
+KORKU|😱
+NEŞE|Sevinç
+HUZUR|Dirlik
+ÖZLEM|Hasret
+DOST|Yakın arkadaş
+KOMŞU|Yan evde oturan
+MİSAFİR|Konuk
+DÜĞÜN|💒
+BAYRAM|Kutlama günü
+TATİL|Dinlenme zamanı
+GEZİ|Seyahat
+HARİTA|🗺️
+PUSULA|🧭
+ÇAYDANLIK|Çay demlenen

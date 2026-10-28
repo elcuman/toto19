@@ -967,6 +967,24 @@ class KelimeOyunu(db.Model):
         return [t for t in (self.tahminler or "").split(",") if t]
 
 
+class CengelOyun(db.Model):
+    """Çengel Düello: iki kişilik (ya da Robot Ziya'ya karşı) oklu bulmaca harf yarışı."""
+    __tablename__ = "cengel_oyunlari"
+    id = db.Column(db.Integer, primary_key=True)
+    kod = db.Column(db.String(16), unique=True, nullable=False, index=True)
+    oyuncu1_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    oyuncu2_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=True, index=True)
+    bot = db.Column(db.Boolean, nullable=False, default=False)
+    zorluk = db.Column(db.String(10))
+    durum = db.Column(db.String(12), nullable=False, default="bekliyor")    # bekliyor / aktif / bitti
+    veri = db.Column(db.Text, nullable=False)                                # oyun durumu (JSON, çözüm dahil)
+    bulmaca_no = db.Column(db.Integer)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    guncelleme = db.Column(db.DateTime, default=lambda: datetime.utcnow(), index=True)
+    oyuncu1 = db.relationship("Kullanici", foreign_keys=[oyuncu1_id])
+    oyuncu2 = db.relationship("Kullanici", foreign_keys=[oyuncu2_id])
+
+
 class FormMaci(db.Model):
     """Sadece "son maçlar" formu için tutulan, tahmine açılmayan maç sonuçları
     (örn. Avrupa kupalarında Beşiktaş/Trabzonspor'un rakiplerinin diğer maçları)."""
@@ -2750,6 +2768,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE destek_konusmalari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE destek_mesajlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE kelime_oyunlari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE cengel_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -3722,6 +3741,201 @@ app.jinja_env.globals["POPUPLAR_ACIK"] = POPUPLAR_ACIK
 @app.route("/kelime/siralama")
 def kelime_siralama_json():
     return jsonify({"siralama": kelime_siralamasi()})
+
+
+# ------------------------------------------------------------
+# ÇENGEL DÜELLO: Robot Ziya'ya karşı ya da davet linkiyle arkadaşa karşı.
+# Kurallar ve bulmaca üretimi cengel.py'de. Çözüm hiçbir zaman istemciye gitmez.
+# ------------------------------------------------------------
+import cengel as _cengel
+import json as _cjson
+import secrets as _csecrets
+
+
+def _cengel_oyuncu_no(oyun):
+    if not current_user.is_authenticated:
+        return None
+    if oyun.oyuncu1_id == current_user.id:
+        return 0
+    if oyun.oyuncu2_id == current_user.id:
+        return 1
+    return None
+
+
+def _cengel_isimler(oyun):
+    ad1 = oyun.oyuncu1.kullanici_adi if oyun.oyuncu1 else "?"
+    if oyun.bot:
+        ad2 = "Robot Ziya"
+    else:
+        ad2 = oyun.oyuncu2.kullanici_adi if oyun.oyuncu2 else None
+    return [ad1, ad2]
+
+
+def _cengel_json(oyun, ben):
+    d = _cjson.loads(oyun.veri)
+    g = _cengel.istemci_gorunumu(d, ben if ben is not None else -1)
+    g.update({"kod": oyun.kod, "durum": oyun.durum, "bot": oyun.bot, "zorluk": oyun.zorluk,
+              "isimler": _cengel_isimler(oyun), "izleyici": ben is None})
+    if oyun.durum == "bitti":
+        p = d["puan"]
+        g["kazanan"] = -1 if p[0] == p[1] else (0 if p[0] > p[1] else 1)
+    return g
+
+
+def _cengel_son_bulmacalar(kullanici_id, adet=40):
+    return [n for (n,) in db.session.query(CengelOyun.bulmaca_no).filter(
+        db.or_(CengelOyun.oyuncu1_id == kullanici_id, CengelOyun.oyuncu2_id == kullanici_id),
+        CengelOyun.bulmaca_no.isnot(None)).order_by(CengelOyun.id.desc()).limit(adet).all()]
+
+
+@app.route("/cengel")
+@login_required
+def cengel_lobi():
+    oyunlar = (CengelOyun.query.filter(db.or_(CengelOyun.oyuncu1_id == current_user.id,
+                                              CengelOyun.oyuncu2_id == current_user.id))
+               .order_by(CengelOyun.guncelleme.desc()).limit(30).all())
+    aktif, biten = [], []
+    galibiyet = maglubiyet = beraberlik = 0
+    for o in oyunlar:
+        d = _cjson.loads(o.veri)
+        ben = 0 if o.oyuncu1_id == current_user.id else 1
+        bilgi = {"o": o, "isimler": _cengel_isimler(o), "puan": d["puan"], "ben": ben,
+                 "sira_bende": o.durum == "aktif" and d["sira"] == ben}
+        if o.durum == "bitti":
+            p = d["puan"]
+            bilgi["sonuc"] = "berabere" if p[0] == p[1] else ("kazandın" if p[ben] > p[1 - ben] else "kaybettin")
+            galibiyet += bilgi["sonuc"] == "kazandın"; maglubiyet += bilgi["sonuc"] == "kaybettin"
+            beraberlik += bilgi["sonuc"] == "berabere"
+            biten.append(bilgi)
+        else:
+            aktif.append(bilgi)
+    return render_template("cengel_lobi.html", aktif=aktif, biten=biten[:10],
+                           karne={"g": galibiyet, "m": maglubiyet, "b": beraberlik})
+
+
+@app.route("/cengel/yeni", methods=["POST"])
+@login_required
+def cengel_yeni():
+    tip = request.form.get("tip", "bot")
+    zorluk = request.form.get("zorluk", "orta")
+    if zorluk not in _cengel.BOT_ZORLUK:
+        zorluk = "orta"
+    d = _cengel.yeni_oyun(haric=_cengel_son_bulmacalar(current_user.id))
+    oyun = CengelOyun(kod=_csecrets.token_urlsafe(8)[:10], oyuncu1_id=current_user.id,
+                      bot=(tip == "bot"), zorluk=zorluk if tip == "bot" else None,
+                      durum="aktif" if tip == "bot" else "bekliyor",
+                      veri=_cjson.dumps(d, ensure_ascii=False), bulmaca_no=d["bulmaca"].get("no"))
+    db.session.add(oyun)
+    db.session.commit()
+    return redirect(url_for("cengel_oyun", kod=oyun.kod))
+
+
+@app.route("/cengel/<kod>")
+def cengel_oyun(kod):
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    if not current_user.is_authenticated:
+        return redirect(url_for("giris", next=request.path))
+    ben = _cengel_oyuncu_no(oyun)
+    davet_linki = url_for("cengel_oyun", kod=oyun.kod, _external=True)
+    return render_template("cengel_oyun.html", oyun=oyun, ben=ben, davet_linki=davet_linki,
+                           isimler=_cengel_isimler(oyun),
+                           katilabilir=(ben is None and oyun.durum == "bekliyor" and not oyun.bot))
+
+
+@app.route("/cengel/<kod>/katil", methods=["POST"])
+@login_required
+def cengel_katil(kod):
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    if oyun.durum == "bekliyor" and not oyun.bot and oyun.oyuncu1_id != current_user.id and not oyun.oyuncu2_id:
+        oyun.oyuncu2_id = current_user.id
+        oyun.durum = "aktif"
+        oyun.guncelleme = datetime.utcnow()
+        db.session.commit()
+    elif _cengel_oyuncu_no(oyun) is None:
+        flash("Bu düelloya başka biri katılmış.", "warning")
+    return redirect(url_for("cengel_oyun", kod=kod))
+
+
+@app.route("/cengel/<kod>/durum")
+@login_required
+def cengel_durum(kod):
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    return jsonify(_cengel_json(oyun, _cengel_oyuncu_no(oyun)))
+
+
+@app.route("/cengel/<kod>/hamle", methods=["POST"])
+@login_required
+def cengel_hamle(kod):
+    sorgu = CengelOyun.query.filter_by(kod=kod)
+    try:
+        sorgu = sorgu.with_for_update()
+    except Exception:
+        pass
+    oyun = sorgu.first_or_404()
+    ben = _cengel_oyuncu_no(oyun)
+    if ben is None:
+        abort(403)
+    if oyun.durum != "aktif":
+        return jsonify({"hata": "Rakip henüz katılmadı." if oyun.durum == "bekliyor" else "Oyun bitti.",
+                        **_cengel_json(oyun, ben)}), 400
+    veri = request.get_json(silent=True) or {}
+    tip = veri.get("tip")
+    d = _cjson.loads(oyun.veri)
+    ek = None
+    if tip == "koy":
+        try:
+            ok, mesaj = _cengel.harf_koy(d, ben, int(veri.get("i", -1)), str(veri.get("x", "")))
+        except (TypeError, ValueError):
+            ok, mesaj = False, "Geçersiz hamle."
+    elif tip == "degistir":
+        ok, mesaj = _cengel.degistir(d, ben)
+    elif tip == "pas":
+        ok, mesaj = _cengel.pas(d, ben)
+    elif tip == "ipucu":
+        ok, mesaj, ek = _cengel.ipucu(d, ben)
+    else:
+        ok, mesaj = False, "Geçersiz hamle."
+    if not ok:
+        db.session.rollback()
+        return jsonify({"hata": mesaj, **_cengel_json(oyun, ben)}), 400
+    # Robot Ziya hemen oynar (sıra kendisine geçtiyse; arka arkaya pas/boş ıstaka durumları dahil)
+    if oyun.bot:
+        sinir = 0
+        while not d["bitti"] and d["sira"] == 1 and sinir < 3:
+            _cengel.bot_oyna(d, 1, oyun.zorluk or "orta")
+            sinir += 1
+    # İnsan oyuncunun ıstakası boş ve oyun sürüyorsa sırası otomatik geçer
+    if not d["bitti"] and not d["raf"][d["sira"]] and not (oyun.bot and d["sira"] == 1):
+        _cengel.pas(d, d["sira"])
+        if oyun.bot and not d["bitti"]:
+            _cengel.bot_oyna(d, 1, oyun.zorluk or "orta")
+    if d["bitti"]:
+        oyun.durum = "bitti"
+    oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+    oyun.guncelleme = datetime.utcnow()
+    db.session.commit()
+    sonuc = _cengel_json(oyun, ben)
+    sonuc["sonuc"] = mesaj
+    if ek:
+        sonuc["ipucu_yer"] = ek
+    return jsonify(sonuc)
+
+
+def cengel_sira_bende_sayisi(kullanici_id):
+    try:
+        sayi = 0
+        for o in CengelOyun.query.filter(CengelOyun.durum == "aktif", db.or_(
+                CengelOyun.oyuncu1_id == kullanici_id, CengelOyun.oyuncu2_id == kullanici_id)).all():
+            ben = 0 if o.oyuncu1_id == kullanici_id else 1
+            if _cjson.loads(o.veri)["sira"] == ben and not (o.bot and ben == 1):
+                sayi += 1
+        return sayi
+    except Exception:
+        db.session.rollback()
+        return 0
+
+
+app.jinja_env.globals["cengel_sira_bende_sayisi"] = cengel_sira_bende_sayisi
 
 
 @app.route("/admin/geri-bildirimler")

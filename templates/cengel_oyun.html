@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Çengel Düello · Tahmin Ligi{% endblock %}
+
+{% block content %}
+<div class="cd-ust">
+  <a class="cd-geri" href="{{ url_for('cengel_lobi') }}" aria-label="Lobiye dön">✕</a>
+  <h1 class="cd-logo">ÇENGEL <span>DÜELLO</span></h1>
+  <button type="button" class="cd-yardim" id="cdYardimBtn" aria-label="Nasıl oynanır">?</button>
+</div>
+
+{% if katilabilir %}
+<section class="panel cd-katil">
+  <h2>⚔️ {{ isimler[0] }} seni düelloya çağırıyor!</h2>
+  <p>Aynı bulmacayı sırayla dolduracaksınız. Doğru harf +1, kelimeyi tamamlayan harf sayısı kadar bonus alır.</p>
+  <form method="POST" action="{{ url_for('cengel_katil', kod=oyun.kod) }}"><button class="btn btn-blok" type="submit">Düelloya katıl</button></form>
+</section>
+{% elif ben is none %}
+<div class="bos"><strong>Bu düello iki kişi arasında oynanıyor.</strong>Kendi düellonu <a href="{{ url_for('cengel_lobi') }}">buradan</a> başlatabilirsin.</div>
+{% else %}
+
+<div class="cd-skorlar">
+  <div class="cd-oyuncu" id="cdO0"><span class="cd-ad">Sen</span><span class="cd-puan" id="cdP0">0</span></div>
+  <span class="cd-vs">vs</span>
+  <div class="cd-oyuncu cd-rakip" id="cdO1"><span class="cd-puan" id="cdP1">0</span><span class="cd-ad" id="cdRakipAd">{{ 'Ziya' if oyun.bot else (isimler[1 - ben] or 'Rakip') }}</span><span class="cd-avatar" aria-hidden="true">{{ '🤖' if oyun.bot else '🧑' }}</span></div>
+</div>
+
+<div class="cd-durum" id="cdDurum" role="status" aria-live="polite"></div>
+
+{% if oyun.durum == 'bekliyor' and ben == 0 %}
+<section class="panel cd-davet" id="cdDavet">
+  <h2>Düello linkin hazır</h2>
+  <p class="sessiz kucuk">Arkadaşın linke tıklayıp katılınca oyun başlar. Sen başlarsın.</p>
+  <div class="btn-dizi">
+    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Çengel Düello: seni bulmaca düellosuna çağırıyorum! ⚔️ ' ~ davet_linki) | urlencode }}">WhatsApp'tan gönder</a>
+    <button type="button" class="btn btn-ikincil" id="cdKopyala" data-link="{{ davet_linki }}">Linki kopyala</button>
+  </div>
+</section>
+{% endif %}
+
+<div class="cd-tahta" id="cdTahta" aria-label="Bulmaca"></div>
+<div class="cd-ipucu-cubuk" id="cdIpucuCubuk">Bir ipucu kutusuna dokun, tam metni burada görünsün.</div>
+
+<div class="cd-raf" id="cdRaf" aria-label="Istakan"></div>
+
+<div class="cd-dugmeler">
+  <button type="button" class="cd-yan" id="cdDegistir"><span class="cd-yan-ikon">⇄</span><span>Değiştir</span></button>
+  <button type="button" class="btn cd-pas" id="cdPas">Pas</button>
+  <button type="button" class="cd-yan" id="cdIpucu"><span class="cd-yan-ikon">K</span><span>İpucu</span></button>
+</div>
+<p class="cd-son" id="cdSon"></p>
+
+<dialog class="cd-dlg" id="cdSonuc">
+  <h2 id="cdSonucBaslik"></h2>
+  <p class="cd-sonuc-skor" id="cdSonucSkor"></p>
+  <div class="cd-sonuc-dugmeler">
+    <form method="POST" action="{{ url_for('cengel_yeni') }}">
+      <input type="hidden" name="tip" value="{{ 'bot' if oyun.bot else 'davet' }}">
+      <input type="hidden" name="zorluk" value="{{ oyun.zorluk or 'orta' }}">
+      <button class="btn btn-blok" type="submit">{{ 'Tekrar oyna' if oyun.bot else 'Rövanş daveti oluştur' }}</button>
+    </form>
+    <a class="btn btn-ikincil btn-blok" href="{{ url_for('cengel_lobi') }}">Lobiye dön</a>
+    <button type="button" class="cd-kapat" id="cdSonucKapat">Bulmacaya bak</button>
+  </div>
+</dialog>
+{% endif %}
+
+<dialog class="cd-dlg" id="cdYardim">
+  <h2>Nasıl oynanır?</h2>
+  <ul class="cd-kurallar">
+    <li>Yeşil kutulardaki ipuçlarının cevaplarını ok yönünde yaz.</li>
+    <li>Sıran gelince ıstakandan bir harf seç, sonra yerleşeceği beyaz kutuya dokun.</li>
+    <li><b>Doğru harf +1 puan.</b> O harfle bir kelime tamamlanırsa <b>kelimenin harf sayısı kadar bonus.</b></li>
+    <li>Yanlış harf puan getirmez. Her hamleden sonra sıra rakibe geçer.</li>
+    <li><b>Değiştir:</b> Istakandaki harfleri yenileriyle değiştirir. <b>Pas:</b> Sırayı geçer.</li>
+    <li><b>İpucu:</b> Istakandaki bir harfin doğru yerini gösterir. Oyun başına 1 hak.</li>
+    <li>Bulmaca dolunca çok puanı olan kazanır.</li>
+  </ul>
+  <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
+</dialog>
+
+<style>
+.cd-ust{display:grid; grid-template-columns:40px 1fr 40px; align-items:center; margin:2px 0 10px}
+.cd-geri{font-size:26px; text-decoration:none; color:var(--murekkep); line-height:1}
+.cd-logo{margin:0; text-align:center; font:800 26px/1 var(--baslik); letter-spacing:.5px}
+.cd-logo span{background:var(--cim); color:#fff; border-radius:8px; padding:2px 7px; font-size:20px; vertical-align:2px}
+.cd-yardim{width:34px; height:34px; border-radius:9px; border:2px solid var(--murekkep); background:#fff; font:700 17px var(--yazi); cursor:pointer; justify-self:end}
+.cd-katil h2, .cd-davet h2{margin:0 0 6px; font-size:20px}
+.cd-skorlar{display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; margin-bottom:6px}
+.cd-oyuncu{display:flex; align-items:center; gap:8px; justify-content:space-between; padding:6px 12px; border:3px solid var(--cizgi); border-radius:999px; background:#fff; min-width:0; transition:border-color .2s, box-shadow .2s}
+.cd-oyuncu.sirada{border-color:var(--cim); box-shadow:0 0 0 3px rgba(14,122,76,.15)}
+.cd-ad{font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+.cd-puan{font:800 24px/1 var(--baslik); color:var(--cim)}
+.cd-rakip .cd-puan{color:#2F5D8C}
+.cd-avatar{font-size:22px; flex:none}
+.cd-vs{font-weight:700; color:var(--gri)}
+.cd-durum{text-align:center; font-weight:700; min-height:24px; margin:4px 0 8px; font-size:15px}
+.cd-durum.bende{color:var(--cim)}
+.cd-tahta{display:grid; gap:2px; background:#B9CDBE; border:2px solid #B9CDBE; border-radius:8px; overflow:hidden; width:min(100%, 470px); margin:0 auto; touch-action:manipulation; container-type:inline-size}
+.cd-h{position:relative; aspect-ratio:1; background:#fff; display:flex; align-items:center; justify-content:center; user-select:none}
+.cd-h.harf{cursor:pointer}
+.cd-h.harf .cd-hrf{font:800 clamp(18px, 6.4cqi, 30px)/1 var(--baslik)}
+.cd-h.o0 .cd-hrf{color:#0E7A4C} .cd-h.o1 .cd-hrf{color:#2F5D8C}
+.cd-h.tamam{background:#F3FAF5}
+.cd-h.yeni{animation:cdYeni 1.2s ease}
+@keyframes cdYeni{0%{background:#FFE58A}100%{background:#fff}}
+.cd-h.yanlis{animation:cdYanlis .9s ease}
+@keyframes cdYanlis{0%,60%{background:#F8C9C4}100%{background:#fff}}
+.cd-h.secilebilir:hover, .cd-h.secilebilir:focus-visible{background:#EAF6EE; outline:none}
+.cd-h.isaret{box-shadow:inset 0 0 0 3px #F3C623}
+.cd-h.ipucu-yer{box-shadow:inset 0 0 0 3px #F3C623; animation:cdNabiz 1s ease infinite alternate}
+@keyframes cdNabiz{to{background:#FFF4C6}}
+.cd-h.bosluk{background:repeating-linear-gradient(45deg,#EEF3EF,#EEF3EF 4px,#E6EDE8 4px,#E6EDE8 8px)}
+.cd-h.ip{background:#DDF1E3; flex-direction:column; align-items:stretch; cursor:pointer; padding:0}
+.cd-ip{flex:1; display:flex; align-items:center; justify-content:center; text-align:center; position:relative; padding:1px 3px; font:700 clamp(7px, 2.3cqi, 12px)/1.08 var(--yazi); text-transform:uppercase; color:#14201A; overflow:hidden; overflow-wrap:normal; word-break:normal; hyphens:manual}
+.cd-ip.a{padding-right:9px} .cd-ip.d{padding-bottom:9px}
+.cd-ip.u1{font-size:clamp(6.5px, 2.05cqi, 11px)} .cd-ip.u2{font-size:clamp(6px, 1.85cqi, 10px); letter-spacing:-.2px} .cd-ip.u3{font-size:clamp(5.5px, 1.65cqi, 9px); letter-spacing:-.3px; overflow-wrap:anywhere}
+.cd-ip + .cd-ip{border-top:1px solid #B9CDBE}
+.cd-ip.emoji{font-size:clamp(18px, 6.5cqi, 32px); text-transform:none}
+.cd-ip::after{position:absolute; font-size:9px; color:#14201A}
+.cd-ip.a::after{content:"▶"; right:-1px; top:50%; transform:translateY(-50%)}
+.cd-ip.d::after{content:"▼"; bottom:-1px; font-size:8px; left:50%; transform:translateX(-50%)}
+.cd-ip.secili{background:#BFE5CB}
+.cd-ipucu-cubuk{width:min(100%, 470px); margin:8px auto 0; min-height:22px; text-align:center; font-size:14px; color:var(--gri)}
+.cd-ipucu-cubuk b{color:var(--murekkep)}
+.cd-raf{display:flex; justify-content:center; gap:8px; margin:12px 0 10px; min-height:62px}
+.cd-tas{width:56px; height:60px; border-radius:10px; border:2px solid #14201A; background:#FAD9B3; font:800 30px/1 var(--baslik); color:#14201A; cursor:pointer; box-shadow:0 3px 0 #14201A; transition:transform .1s}
+.cd-tas.secili{transform:translateY(-6px); background:#F3C623; box-shadow:0 7px 0 #14201A}
+.cd-tas:disabled{opacity:.55; cursor:default}
+.cd-dugmeler{display:grid; grid-template-columns:64px 1fr 64px; gap:14px; align-items:center; width:min(100%, 420px); margin:0 auto}
+.cd-pas{min-height:54px; border-radius:999px; font-size:20px}
+.cd-yan{display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:0; cursor:pointer; font-size:12.5px; color:var(--gri); padding:0}
+.cd-yan-ikon{width:52px; height:52px; border-radius:50%; border:2px solid var(--murekkep); display:flex; align-items:center; justify-content:center; font:700 22px var(--baslik); color:var(--murekkep); background:#fff}
+.cd-yan:disabled{opacity:.4; cursor:default}
+.cd-son{text-align:center; color:var(--gri); font-size:13.5px; min-height:20px; margin:10px 0 0}
+.cd-dlg{max-width:380px; border:0; border-radius:var(--r-buyuk); padding:20px}
+.cd-dlg::backdrop{background:rgba(0,0,0,.45)}
+.cd-dlg h2{margin:0 0 8px}
+.cd-kurallar{padding-left:18px; font-size:14.5px; margin:0 0 14px} .cd-kurallar li{margin-bottom:6px}
+.cd-sonuc-skor{font:800 34px var(--baslik); text-align:center; margin:4px 0 14px}
+.cd-sonuc-dugmeler{display:grid; gap:8px} .cd-sonuc-dugmeler form{margin:0}
+.cd-kapat{background:none; border:0; color:var(--gri); text-decoration:underline; cursor:pointer; padding:6px}
+@media (max-width:400px){ .cd-avatar{display:none} .cd-oyuncu{padding:6px 10px; gap:6px} .cd-skorlar{gap:5px} }
+@media (max-width:380px){ .cd-tas{width:48px; height:54px; font-size:26px} .cd-raf{gap:6px} .cd-ad{font-size:13.5px} .cd-puan{font-size:21px} }
+</style>
+
+{% if ben is not none %}
+<script>
+(function(){
+  var KOD = {{ oyun.kod | tojson }}, BEN = {{ ben }};
+  var durum = null, seciliTas = null, mesgul = false, ilk = true, sonHamle = -1, sonucGosterildi = false;
+  var tahta = document.getElementById('cdTahta'), raf = document.getElementById('cdRaf');
+  var cubuk = document.getElementById('cdIpucuCubuk'), durumEl = document.getElementById('cdDurum');
+  function esc(t){ var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+  function emojiMi(t){ return !/\p{L}/u.test(t); }
+  function uzunluk(t, iki){ var en = Math.max.apply(null, t.split(' ').map(function(w){ return w.length; })), L = t.length + (iki ? 8 : 0);
+    return (L > 26 || en > 9) ? ' u3' : (L > 18 || en > 7) ? ' u2' : (L > 11 || en > 6) ? ' u1' : ''; }
+  function BUYUK(h){ return (h||'').toLocaleUpperCase('tr-TR'); }
+
+  function ciz(d){
+    durum = d;
+    var R = d.satir, C = d.sutun, rakip = 1 - BEN;
+    document.getElementById('cdP0').textContent = d.puan[BEN];
+    document.getElementById('cdP1').textContent = d.puan[rakip];
+    if (d.isimler[rakip]) document.getElementById('cdRakipAd').textContent = d.bot ? 'Ziya' : d.isimler[rakip];
+    document.getElementById('cdO0').classList.toggle('sirada', !d.bitti && d.durum === 'aktif' && d.sira === BEN);
+    document.getElementById('cdO1').classList.toggle('sirada', !d.bitti && d.durum === 'aktif' && d.sira === rakip);
+    var davet = document.getElementById('cdDavet'); if (davet && d.durum !== 'bekliyor') davet.remove();
+    // durum yazısı
+    var bende = d.durum === 'aktif' && !d.bitti && d.sira === BEN;
+    durumEl.className = 'cd-durum' + (bende ? ' bende' : '');
+    durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (bende ? 'Sıra sende' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…')));
+    // tahta
+    tahta.style.gridTemplateColumns = 'repeat(' + C + ', 1fr)';
+    var tamam = {}; d.tamam.forEach(function(x){ tamam[x] = 1; });
+    var sonX = {}, yanlisX = {};
+    if (d.hamle !== sonHamle) {
+      d.son.forEach(function(s){ if (s.o !== BEN || ilk) { if (s.t === 'dogru') sonX[s.x] = 1; } if (s.t === 'yanlis' && s.o !== BEN) yanlisX[s.x] = 1; });
+    }
+    var html = '';
+    for (var r = 0; r < R; r++) for (var c = 0; c < C; c++) {
+      var k = r + ',' + c, h = d.hucreler[k], ip = d.ipuclari[k];
+      if (h) {
+        var cls = 'cd-h harf' + (h.h ? ' o' + h.o : '') + (tamam[k] ? ' tamam' : '') + (!ilk && sonX[k] ? ' yeni' : '') + (!ilk && yanlisX[k] ? ' yanlis' : '');
+        html += '<div class="' + cls + '" data-x="' + k + '" tabindex="' + (h.h ? -1 : 0) + '"><span class="cd-hrf">' + esc(h.h || '') + '</span></div>';
+      } else if (ip) {
+        html += '<div class="cd-h ip" data-ip="' + k + '">';
+        ['a', 'd'].forEach(function(y){ if (ip[y]) html += '<span class="cd-ip ' + y + (emojiMi(ip[y]) ? ' emoji' : uzunluk(ip[y], !!(ip.a && ip.d))) + '" data-yon="' + y + '">' + esc(ip[y]) + '</span>'; });
+        html += '</div>';
+      } else html += '<div class="cd-h bosluk"></div>';
+    }
+    tahta.innerHTML = html;
+    // ıstaka
+    if (seciliTas !== null && seciliTas >= d.raf.length) seciliTas = null;
+    raf.innerHTML = d.raf.map(function(h, i){ return '<button type="button" class="cd-tas' + (i === seciliTas ? ' secili' : '') + '" data-i="' + i + '"' + (bende ? '' : ' disabled') + '>' + esc(h) + '</button>'; }).join('');
+    secilebilirleriIsaretle();
+    document.getElementById('cdPas').disabled = !bende;
+    document.getElementById('cdDegistir').disabled = !bende || d.torba === 0;
+    document.getElementById('cdIpucu').disabled = !bende || !d.ipucu_kaldi;
+    // son hamleler
+    document.getElementById('cdSon').innerHTML = sonMetin(d);
+    sonHamle = d.hamle; ilk = false;
+    if (d.bitti && !sonucGosterildi) { sonucGosterildi = true; setTimeout(sonucGoster, 900); }
+  }
+  function sonMetin(d){
+    var s = d.son[d.son.length - 1]; if (!s) return d.durum === 'aktif' ? 'İlk hamle senin! Bir harf seç, sonra kutuya dokun.' : '';
+    var kim = s.o === BEN ? 'Sen' : esc(d.isimler[s.o] || 'Rakip');
+    if (s.t === 'dogru') return kim + ' <b>' + esc(s.h) + '</b> koydu, +' + s.p + (s.k && s.k.length ? ' 🎉 <b>' + s.k.map(esc).join(', ') + '</b> tamamlandı' : '');
+    if (s.t === 'yanlis') return kim + ' yanlış bir harf denedi.';
+    if (s.t === 'degistir') return kim + ' harflerini değiştirdi.';
+    if (s.t === 'pas') return kim + ' pas geçti.';
+    return '';
+  }
+  function secilebilirleriIsaretle(){
+    tahta.querySelectorAll('.cd-h.harf').forEach(function(e){
+      var bos = !durum.hucreler[e.dataset.x].h;
+      e.classList.toggle('secilebilir', bos && seciliTas !== null);
+    });
+  }
+  function sonucGoster(){
+    var d = durum, p = d.puan, ben = p[BEN], o = p[1 - BEN];
+    document.getElementById('cdSonucBaslik').textContent = ben > o ? '🏆 Kazandın!' : (ben < o ? 'Bu sefer olmadı 😅' : 'Berabere! 🤝');
+    document.getElementById('cdSonucSkor').textContent = ben + ' – ' + o;
+    document.getElementById('cdSonuc').showModal();
+  }
+  document.getElementById('cdSonucKapat').addEventListener('click', function(){ document.getElementById('cdSonuc').close(); });
+
+  function istek(govde){
+    if (mesgul) return; mesgul = true;
+    fetch('/cengel/' + KOD + '/hamle', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify(govde)})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+      .then(function(x){
+        mesgul = false;
+        if (!x.ok) { cubuk.innerHTML = '⚠️ ' + esc(x.j.hata || 'Olmadı'); if (x.j.hucreler) ciz(x.j); return; }
+        if (govde.tip === 'koy' && x.j.sonuc === 'yanlis') cubuk.innerHTML = '❌ Yanlış harf, sıra rakibe geçti.';
+        else if (govde.tip === 'koy') { var s = x.j.son.filter(function(z){ return z.o === BEN; }).pop(); cubuk.innerHTML = s && s.k && s.k.length ? '🎉 <b>' + s.k.map(esc).join(', ') + '</b> tamamlandı! +' + s.p : '✅ Doğru! +1'; }
+        seciliTas = null;
+        if (govde.tip === 'ipucu' && x.j.ipucu_yer) { ciz(x.j); seciliTas = x.j.ipucu_yer.i; ciz(x.j); var e = tahta.querySelector('[data-x="' + x.j.ipucu_yer.x + '"]'); if (e) e.classList.add('ipucu-yer'); cubuk.innerHTML = '💡 Seçili harf parlayan kutuya gidiyor.'; return; }
+        ciz(x.j);
+      })
+      .catch(function(){ mesgul = false; cubuk.textContent = 'Bağlantı hatası, tekrar dene.'; });
+  }
+  raf.addEventListener('click', function(e){
+    var t = e.target.closest('.cd-tas'); if (!t || t.disabled) return;
+    var i = +t.dataset.i; seciliTas = seciliTas === i ? null : i;
+    raf.querySelectorAll('.cd-tas').forEach(function(b){ b.classList.toggle('secili', +b.dataset.i === seciliTas); });
+    secilebilirleriIsaretle();
+    if (seciliTas !== null) cubuk.innerHTML = '<b>' + esc(durum.raf[seciliTas]) + '</b> harfini koyacağın kutuya dokun.';
+  });
+  tahta.addEventListener('click', function(e){
+    var ipEl = e.target.closest('.cd-ip');
+    if (ipEl) { tahta.querySelectorAll('.cd-ip.secili').forEach(function(x){ x.classList.remove('secili'); }); ipEl.classList.add('secili');
+      cubuk.innerHTML = (ipEl.dataset.yon === 'a' ? '▶ ' : '▼ ') + '<b>' + esc(ipEl.textContent) + '</b>'; return; }
+    var h = e.target.closest('.cd-h.harf'); if (!h) return;
+    if (durum.hucreler[h.dataset.x].h) return;
+    if (!(durum.durum === 'aktif' && !durum.bitti && durum.sira === BEN)) { cubuk.textContent = 'Sıranı bekle.'; return; }
+    if (seciliTas === null) { cubuk.textContent = 'Önce ıstakandan bir harf seç.'; return; }
+    istek({tip:'koy', i: seciliTas, x: h.dataset.x});
+  });
+  document.getElementById('cdPas').addEventListener('click', function(){ istek({tip:'pas'}); });
+  document.getElementById('cdDegistir').addEventListener('click', function(){ if (confirm('Istakandaki harfler değişsin mi? Sıra rakibe geçer.')) istek({tip:'degistir'}); });
+  document.getElementById('cdIpucu').addEventListener('click', function(){ istek({tip:'ipucu'}); });
+  var kop = document.getElementById('cdKopyala');
+  if (kop) kop.addEventListener('click', function(){ var l = kop.dataset.link; (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(function(){ kop.textContent = 'Kopyalandı ✓'; }, function(){ prompt('Düello linki:', l); }); });
+
+  function yokla(){
+    if (document.hidden || mesgul) return;
+    var bekle = !durum || durum.durum === 'bekliyor' || (!durum.bitti && durum.sira !== BEN);
+    if (!bekle) return;
+    fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){ if (!durum || d.hamle !== durum.hamle || d.durum !== durum.durum) ciz(d); }).catch(function(){});
+  }
+  fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(ciz);
+  setInterval(yokla, 3000);
+})();
+</script>
+{% endif %}
+<script>
+(function(){ var d = document.getElementById('cdYardim'); document.getElementById('cdYardimBtn').addEventListener('click', function(){ d.showModal(); });
+  try { if (!localStorage.getItem('cengel_yardim')) { localStorage.setItem('cengel_yardim', '1'); d.showModal(); } } catch(e) {} })();
+</script>
+{% endblock %}
