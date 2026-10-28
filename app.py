@@ -2903,7 +2903,7 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /kelime", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
         "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
@@ -2913,7 +2913,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/kelime", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/oyunlar", "/kelime", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -3683,6 +3683,22 @@ def _kelime_yanit(durum, cevap):
     if durum["bitti"]:
         veri["cevap"] = cevap
     return veri
+
+
+@app.route("/oyunlar")
+def oyunlar():
+    return render_template("oyunlar.html")
+
+
+def oyun_rozeti():
+    """Oyunlar sekmesindeki rozet: bekleyen düello davetleri + sırası gelen düellolar."""
+    try:
+        return len(cengel_gelen_davetler()) + (cengel_sira_bende_sayisi() if current_user.is_authenticated else 0)
+    except Exception:
+        return 0
+
+
+app.jinja_env.globals["oyun_rozeti"] = oyun_rozeti
 
 
 @app.route("/kelime")

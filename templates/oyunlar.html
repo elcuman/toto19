@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Oyunlar · Kelime ve Çengel Bulmaca · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="Günlük Türkçe kelime oyunu ve Çengel Düello: arkadaşlarınla ya da Robot Ziya'ya karşı ücretsiz kelime oyunları. Üye olmadan da oynanır.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/oyunlar">
+{% endblock %}
+
+{% block content %}
+<div class="oy-bas">
+  <h1>Oyunlar</h1>
+  <p class="alt">Maç aralarında beyin jimnastiği. İkisi de ücretsiz{% if not current_user.is_authenticated %}, üye olmadan da oynanır{% endif %}.</p>
+</div>
+{{ p.cengel_karti() }}
+{{ p.kelime_karti() }}
+<style>
+.oy-bas h1{margin:4px 0 4px; font-size:30px}
+.oy-bas .alt{margin:0 0 16px}
+</style>
+{% endblock %}
