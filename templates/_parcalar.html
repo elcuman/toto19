@@ -272,12 +272,12 @@
 
 
 {% macro cengel_karti() -%}
-{% set sb = cengel_sira_bende_sayisi(current_user.id) if current_user.is_authenticated else 0 %}
+{% set sb = cengel_sira_bende_sayisi() %}
 <a class="ck" href="{{ url_for('cengel_lobi') }}">
   <span class="ck-izgara" aria-hidden="true"><i class="ip">▶</i><i>Ç</i><i>E</i><i class="d">N</i><i class="ip">▼</i><i class="d">G</i></span>
   <span class="ck-metin">
     <strong>Çengel Düello <em>Yeni</em></strong>
-    <span>Bulmacayı sırayla doldur: doğru harf +1, kelimeyi bitirene harf sayısı kadar bonus. Robot Ziya'ya ya da arkadaşına karşı.</span>
+    <span>Sıran gelince 3 harf koy: doğru harf +1, kelimeyi bitirene harf sayısı kadar bonus. Robot Ziya'ya ya da arkadaşına karşı.{% if not current_user.is_authenticated %} Üye olmadan da oynanır.{% endif %}</span>
     {% if sb %}<small>{{ sb }} oyunda sıra sende!</small>{% endif %}
   </span>
   <span class="ck-btn">{{ 'Sıra sende' if sb else 'Oyna' }} ›</span>

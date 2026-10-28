@@ -12,11 +12,17 @@
 {% if katilabilir %}
 <section class="panel cd-katil">
   <h2>⚔️ {{ isimler[0] }} seni düelloya çağırıyor!</h2>
-  <p>Aynı bulmacayı sırayla dolduracaksınız. Doğru harf +1, kelimeyi tamamlayan harf sayısı kadar bonus alır.</p>
-  <form method="POST" action="{{ url_for('cengel_katil', kod=oyun.kod) }}"><button class="btn btn-blok" type="submit">Düelloya katıl</button></form>
+  <p>Aynı bulmacayı sırayla dolduracaksınız. Sıran gelince 3 harf koyarsın. Doğru harf +1, kelimeyi tamamlayan harf sayısı kadar bonus alır.</p>
+  <form method="POST" action="{{ url_for('cengel_katil', kod=oyun.kod) }}">
+    {% if not current_user.is_authenticated %}
+    <label for="cdAd" class="cd-ad-etiket">Takma adın <small>(isteğe bağlı, üyelik gerekmez)</small></label>
+    <input id="cdAd" type="text" name="ad" maxlength="20" value="{{ misafir_ad }}" placeholder="Örn. Bulmacacı Ayşe" autocomplete="nickname">
+    {% endif %}
+    <button class="btn btn-blok" type="submit">Düelloya katıl</button>
+  </form>
 </section>
 {% elif ben is none %}
-<div class="bos"><strong>Bu düello iki kişi arasında oynanıyor.</strong>Kendi düellonu <a href="{{ url_for('cengel_lobi') }}">buradan</a> başlatabilirsin.</div>
+<div class="bos"><strong>Bu düello iki kişi arasında oynanıyor.</strong>Kendi düellonu <a href="{{ url_for('cengel_lobi') }}">buradan</a> başlatabilirsin. Üye olmadan da oynanır.</div>
 {% else %}
 
 <div class="cd-skorlar">
@@ -71,8 +77,8 @@
     <li>Yeşil kutulardaki ipuçlarının cevaplarını ok yönünde yaz.</li>
     <li>Sıran gelince ıstakandan bir harf seç, sonra yerleşeceği beyaz kutuya dokun.</li>
     <li><b>Doğru harf +1 puan.</b> O harfle bir kelime tamamlanırsa <b>kelimenin harf sayısı kadar bonus.</b></li>
-    <li>Yanlış harf puan getirmez. Her hamleden sonra sıra rakibe geçer.</li>
-    <li><b>Değiştir:</b> Istakandaki harfleri yenileriyle değiştirir. <b>Pas:</b> Sırayı geçer.</li>
+    <li><b>Her turda 3 harf hakkın var.</b> Yanlış harf puan getirmez ama bir hakkını yer. 3 deneme bitince sıra rakibe geçer.</li>
+    <li><b>Turu bitir:</b> Haklarını kullanmadan sırayı rakibe verir. <b>Değiştir:</b> Turun başında ıstakandaki harfleri yeniler, sıra geçer.</li>
     <li><b>İpucu:</b> Istakandaki bir harfin doğru yerini gösterir. Oyun başına 1 hak.</li>
     <li>Bulmaca dolunca çok puanı olan kazanır.</li>
   </ul>
@@ -86,6 +92,11 @@
 .cd-logo span{background:var(--cim); color:#fff; border-radius:8px; padding:2px 7px; font-size:20px; vertical-align:2px}
 .cd-yardim{width:34px; height:34px; border-radius:9px; border:2px solid var(--murekkep); background:#fff; font:700 17px var(--yazi); cursor:pointer; justify-self:end}
 .cd-katil h2, .cd-davet h2{margin:0 0 6px; font-size:20px}
+.cd-ad-etiket{display:block; font-weight:700; margin:4px 0 4px} .cd-ad-etiket small{font-weight:400; color:var(--gri)}
+.cd-katil input[name=ad]{margin-bottom:10px}
+.cd-haklar{display:inline-flex; gap:4px; margin-left:8px; vertical-align:1px}
+.cd-haklar i{width:10px; height:10px; border-radius:50%; background:var(--cim); display:inline-block}
+.cd-haklar i.yok{background:#C9D6CD}
 .cd-skorlar{display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; margin-bottom:6px}
 .cd-oyuncu{display:flex; align-items:center; gap:8px; justify-content:space-between; padding:6px 12px; border:3px solid var(--cizgi); border-radius:999px; background:#fff; min-width:0; transition:border-color .2s, box-shadow .2s}
 .cd-oyuncu.sirada{border-color:var(--cim); box-shadow:0 0 0 3px rgba(14,122,76,.15)}
@@ -169,13 +180,17 @@
     // durum yazısı
     var bende = d.durum === 'aktif' && !d.bitti && d.sira === BEN;
     durumEl.className = 'cd-durum' + (bende ? ' bende' : '');
-    durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (bende ? 'Sıra sende' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…')));
+    var TH = d.tur_hakki || 3, hak = d.hak == null ? TH : d.hak;
+    if (bende) { var noktalar = ''; for (var n = 0; n < TH; n++) noktalar += '<i class="' + (n < hak ? '' : 'yok') + '"></i>';
+      durumEl.innerHTML = 'Sıra sende · ' + hak + ' harf hakkın var <span class="cd-haklar" aria-hidden="true">' + noktalar + '</span>'; }
+    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…'));
     // tahta
     tahta.style.gridTemplateColumns = 'repeat(' + C + ', 1fr)';
     var tamam = {}; d.tamam.forEach(function(x){ tamam[x] = 1; });
     var sonX = {}, yanlisX = {};
-    if (d.hamle !== sonHamle) {
-      d.son.forEach(function(s){ if (s.o !== BEN || ilk) { if (s.t === 'dogru') sonX[s.x] = 1; } if (s.t === 'yanlis' && s.o !== BEN) yanlisX[s.x] = 1; });
+    if (!ilk && d.hamle > sonHamle) {
+      d.son.slice(-Math.min(d.son.length, d.hamle - sonHamle)).forEach(function(s){
+        if (s.o === BEN) return; if (s.t === 'dogru') sonX[s.x] = 1; if (s.t === 'yanlis') yanlisX[s.x] = 1; });
     }
     var html = '';
     for (var r = 0; r < R; r++) for (var c = 0; c < C; c++) {
@@ -194,8 +209,9 @@
     if (seciliTas !== null && seciliTas >= d.raf.length) seciliTas = null;
     raf.innerHTML = d.raf.map(function(h, i){ return '<button type="button" class="cd-tas' + (i === seciliTas ? ' secili' : '') + '" data-i="' + i + '"' + (bende ? '' : ' disabled') + '>' + esc(h) + '</button>'; }).join('');
     secilebilirleriIsaretle();
-    document.getElementById('cdPas').disabled = !bende;
-    document.getElementById('cdDegistir').disabled = !bende || d.torba === 0;
+    var pasBtn = document.getElementById('cdPas');
+    pasBtn.disabled = !bende; pasBtn.textContent = (bende && hak < TH) ? 'Turu bitir' : 'Pas';
+    document.getElementById('cdDegistir').disabled = !bende || d.torba === 0 || hak < TH;
     document.getElementById('cdIpucu').disabled = !bende || !d.ipucu_kaldi;
     // son hamleler
     document.getElementById('cdSon').innerHTML = sonMetin(d);
@@ -203,13 +219,21 @@
     if (d.bitti && !sonucGosterildi) { sonucGosterildi = true; setTimeout(sonucGoster, 900); }
   }
   function sonMetin(d){
-    var s = d.son[d.son.length - 1]; if (!s) return d.durum === 'aktif' ? 'İlk hamle senin! Bir harf seç, sonra kutuya dokun.' : '';
-    var kim = s.o === BEN ? 'Sen' : esc(d.isimler[s.o] || 'Rakip');
-    if (s.t === 'dogru') return kim + ' <b>' + esc(s.h) + '</b> koydu, +' + s.p + (s.k && s.k.length ? ' 🎉 <b>' + s.k.map(esc).join(', ') + '</b> tamamlandı' : '');
-    if (s.t === 'yanlis') return kim + ' yanlış bir harf denedi.';
-    if (s.t === 'degistir') return kim + ' harflerini değiştirdi.';
-    if (s.t === 'pas') return kim + ' pas geçti.';
-    return '';
+    // Rakibin son turunu özetle (en fazla 3 deneme)
+    var tur = [];
+    for (var j = d.son.length - 1; j >= 0 && d.son[j].o !== BEN; j--) tur.unshift(d.son[j]);
+    if (!tur.length) return d.son.length ? '' : (d.durum === 'aktif' && d.sira === BEN ? 'İlk tur senin! Bir harf seç, sonra kutuya dokun.' : '');
+    var kim = esc(d.bot ? 'Robot Ziya' : (d.isimler[1 - BEN] || 'Rakip'));
+    var parca = tur.map(function(s){
+      if (s.t === 'dogru') return '<b>' + esc(s.h) + '</b> +' + s.p + (s.k && s.k.length ? ' 🎉 ' + s.k.map(esc).join(', ') : '');
+      if (s.t === 'yanlis') return 'bir yanlış';
+      if (s.t === 'degistir') return 'harflerini değiştirdi';
+      if (s.t === 'pas') return 'pas';
+      if (s.t === 'bitir') return 'turu bitirdi';
+      return '';
+    }).filter(Boolean);
+    var toplam = tur.reduce(function(a, s){ return a + (s.p || 0); }, 0);
+    return kim + ': ' + parca.join(' · ') + (toplam ? ' (toplam +' + toplam + ')' : '');
   }
   function secilebilirleriIsaretle(){
     tahta.querySelectorAll('.cd-h.harf').forEach(function(e){
@@ -232,8 +256,10 @@
       .then(function(x){
         mesgul = false;
         if (!x.ok) { cubuk.innerHTML = '⚠️ ' + esc(x.j.hata || 'Olmadı'); if (x.j.hucreler) ciz(x.j); return; }
-        if (govde.tip === 'koy' && x.j.sonuc === 'yanlis') cubuk.innerHTML = '❌ Yanlış harf, sıra rakibe geçti.';
-        else if (govde.tip === 'koy') { var s = x.j.son.filter(function(z){ return z.o === BEN; }).pop(); cubuk.innerHTML = s && s.k && s.k.length ? '🎉 <b>' + s.k.map(esc).join(', ') + '</b> tamamlandı! +' + s.p : '✅ Doğru! +1'; }
+        var halaBende = x.j.sira === BEN && !x.j.bitti, kalan = halaBende ? ' ' + x.j.hak + ' hakkın kaldı.' : ' Sıra rakibe geçti.';
+        if (govde.tip === 'koy' && x.j.sonuc === 'yanlis') cubuk.innerHTML = '❌ Yanlış harf.' + kalan;
+        else if (govde.tip === 'koy') { var s = x.j.son.filter(function(z){ return z.o === BEN; }).pop(); cubuk.innerHTML = (s && s.k && s.k.length ? '🎉 <b>' + s.k.map(esc).join(', ') + '</b> tamamlandı! +' + s.p : '✅ Doğru! +1') + kalan; }
+        else if (govde.tip === 'pas') cubuk.textContent = 'Sıra rakibe geçti.';
         seciliTas = null;
         if (govde.tip === 'ipucu' && x.j.ipucu_yer) { ciz(x.j); seciliTas = x.j.ipucu_yer.i; ciz(x.j); var e = tahta.querySelector('[data-x="' + x.j.ipucu_yer.x + '"]'); if (e) e.classList.add('ipucu-yer'); cubuk.innerHTML = '💡 Seçili harf parlayan kutuya gidiyor.'; return; }
         ciz(x.j);
@@ -258,7 +284,7 @@
     istek({tip:'koy', i: seciliTas, x: h.dataset.x});
   });
   document.getElementById('cdPas').addEventListener('click', function(){ istek({tip:'pas'}); });
-  document.getElementById('cdDegistir').addEventListener('click', function(){ if (confirm('Istakandaki harfler değişsin mi? Sıra rakibe geçer.')) istek({tip:'degistir'}); });
+  document.getElementById('cdDegistir').addEventListener('click', function(){ if (confirm('Istakandaki harfler değişsin mi? Bu tur biter, sıra rakibe geçer.')) istek({tip:'degistir'}); });
   document.getElementById('cdIpucu').addEventListener('click', function(){ istek({tip:'ipucu'}); });
   var kop = document.getElementById('cdKopyala');
   if (kop) kop.addEventListener('click', function(){ var l = kop.dataset.link; (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(function(){ kop.textContent = 'Kopyalandı ✓'; }, function(){ prompt('Düello linki:', l); }); });

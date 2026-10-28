@@ -206,8 +206,23 @@ def _kayit(d, kayit):
     d["hamle"] += 1
 
 
+TUR_HAKKI = 3   # bir turda en fazla kaç harf denenebilir
+
+
+def tur_hakki(d):
+    return d.get("tur_hak", TUR_HAKKI)
+
+
 def _sira_gec(d):
     d["sira"] = 1 - d["sira"]
+    d["tur_hak"] = TUR_HAKKI
+
+
+def _hak_kullan(d):
+    """Bir deneme hakkı düşer; hak bitince sıra rakibe geçer."""
+    d["tur_hak"] = tur_hakki(d) - 1
+    if d["tur_hak"] <= 0 and not d["bitti"]:
+        _sira_gec(d)
 
 
 def _bitti_mi(d):
@@ -217,7 +232,7 @@ def _bitti_mi(d):
 
 
 def harf_koy(d, oyuncu, raf_i, hucre, rnd=None):
-    """Döner: (ok, mesaj). Doğru/yanlış her hamlede sıra geçer."""
+    """Döner: (ok, mesaj). Her deneme (doğru/yanlış) tur hakkından düşer; 3 deneme sonunda sıra geçer."""
     rnd = rnd or random.Random()
     if d["bitti"]:
         return False, "Oyun bitti."
@@ -234,7 +249,7 @@ def harf_koy(d, oyuncu, raf_i, hucre, rnd=None):
     harf = raf[raf_i]
     if cozum[hucre] != harf:
         _kayit(d, {"o": oyuncu, "t": "yanlis", "h": harf, "x": hucre, "p": 0})
-        _sira_gec(d)
+        _hak_kullan(d)
         return True, "yanlis"
     d["dolu"][hucre] = oyuncu
     puan, tamam = 1, []
@@ -250,7 +265,10 @@ def harf_koy(d, oyuncu, raf_i, hucre, rnd=None):
     _kayit(d, {"o": oyuncu, "t": "dogru", "h": harf, "x": hucre, "p": puan, "k": tamam})
     _bitti_mi(d)
     if not d["bitti"]:
-        _sira_gec(d)
+        if not raf:
+            _sira_gec(d)     # ıstaka boşaldı, bu turda koyacak harf kalmadı
+        else:
+            _hak_kullan(d)
     return True, "dogru"
 
 
@@ -258,6 +276,8 @@ def degistir(d, oyuncu, rnd=None):
     rnd = rnd or random.Random()
     if d["bitti"] or d["sira"] != oyuncu:
         return False, "Sıra sende değil."
+    if tur_hakki(d) < TUR_HAKKI:
+        return False, "Harf koyduğun turda değiştiremezsin. Turu bitir."
     if not d["torba"]:
         return False, "Torbada değiştirecek harf kalmadı."
     eski = d["raf"][oyuncu]
@@ -272,7 +292,7 @@ def degistir(d, oyuncu, rnd=None):
 def pas(d, oyuncu):
     if d["bitti"] or d["sira"] != oyuncu:
         return False, "Sıra sende değil."
-    _kayit(d, {"o": oyuncu, "t": "pas", "p": 0})
+    _kayit(d, {"o": oyuncu, "t": "pas" if tur_hakki(d) == TUR_HAKKI else "bitir", "p": 0})
     _sira_gec(d)
     return True, "pas"
 
@@ -327,7 +347,7 @@ def bot_oyna(d, oyuncu=1, zorluk="orta", rnd=None):
         return
     bos = [h for h in d["bulmaca"]["cozum"] if h not in d["dolu"]]
     if not secenek:
-        if d["torba"]:
+        if d["torba"] and tur_hakki(d) == TUR_HAKKI:
             degistir(d, oyuncu, rnd)
         else:
             pas(d, oyuncu)
@@ -369,5 +389,5 @@ def istemci_gorunumu(d, oyuncu):
             "tamam": sorted(set(tamam)), "puan": d["puan"], "sira": d["sira"], "ben": oyuncu,
             "raf": d["raf"][oyuncu] if oyuncu in (0, 1) else [], "torba": len(d["torba"]),
             "ipucu_kaldi": (not d["ipucu"][oyuncu]) if oyuncu in (0, 1) else False,
-            "son": son, "bitti": d["bitti"], "hamle": d["hamle"],
+            "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
             "kalan": len(b["cozum"]) - len(d["dolu"])}

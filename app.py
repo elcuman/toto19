@@ -972,8 +972,13 @@ class CengelOyun(db.Model):
     __tablename__ = "cengel_oyunlari"
     id = db.Column(db.Integer, primary_key=True)
     kod = db.Column(db.String(16), unique=True, nullable=False, index=True)
-    oyuncu1_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    oyuncu1_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=True, index=True)
     oyuncu2_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Üye olmayan oyuncu: tarayıcıdaki gizli anahtarın özeti ve takma adı
+    misafir1 = db.Column(db.String(64), index=True)
+    misafir2 = db.Column(db.String(64), index=True)
+    misafir1_ad = db.Column(db.String(24))
+    misafir2_ad = db.Column(db.String(24))
     bot = db.Column(db.Boolean, nullable=False, default=False)
     zorluk = db.Column(db.String(10))
     durum = db.Column(db.String(12), nullable=False, default="bekliyor")    # bekliyor / aktif / bitti
@@ -2715,6 +2720,19 @@ def initialize_database():
         db.create_all()
         # Sonradan eklenen kolonlar (create_all var olan tabloya kolon eklemez)
         try:
+            kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("cengel_oyunlari")}
+            if "misafir1" not in kolonlar:
+                for kolon, tur in (("misafir1", "VARCHAR(64)"), ("misafir2", "VARCHAR(64)"),
+                                   ("misafir1_ad", "VARCHAR(24)"), ("misafir2_ad", "VARCHAR(24)")):
+                    db.session.execute(db.text(f"ALTER TABLE cengel_oyunlari ADD COLUMN {kolon} {tur}"))
+                if db.engine.dialect.name == "postgresql":
+                    db.session.execute(db.text("ALTER TABLE cengel_oyunlari ALTER COLUMN oyuncu1_id DROP NOT NULL"))
+                    db.session.execute(db.text("CREATE INDEX IF NOT EXISTS ix_cengel_oyunlari_misafir1 ON cengel_oyunlari (misafir1)"))
+                    db.session.execute(db.text("CREATE INDEX IF NOT EXISTS ix_cengel_oyunlari_misafir2 ON cengel_oyunlari (misafir2)"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
             kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("mesajlar")}
             if "yanit_id" not in kolonlar:
                 db.session.execute(db.text("ALTER TABLE mesajlar ADD COLUMN yanit_id INTEGER"))
@@ -2874,8 +2892,8 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /kelime", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api",
+        "Allow: /$", "Allow: /kelime", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2884,7 +2902,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/kelime", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/kelime", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -3752,22 +3770,60 @@ import json as _cjson
 import secrets as _csecrets
 
 
+def _cengel_misafir_ozeti(olustur=False):
+    """Üye olmayan oyuncunun kimliği: tarayıcı oturumundaki gizli anahtarın özeti."""
+    anahtar = session.get("cengel_anahtar")
+    if not anahtar and olustur:
+        anahtar = _csecrets.token_urlsafe(24)
+        session["cengel_anahtar"] = anahtar
+        session.permanent = True
+    return _anahtar_hash(anahtar) if anahtar else None
+
+
+def _cengel_benim_filtrem():
+    kosullar = []
+    if current_user.is_authenticated:
+        kosullar += [CengelOyun.oyuncu1_id == current_user.id, CengelOyun.oyuncu2_id == current_user.id]
+    oz = _cengel_misafir_ozeti()
+    if oz:
+        kosullar += [CengelOyun.misafir1 == oz, CengelOyun.misafir2 == oz]
+    return db.or_(*kosullar) if kosullar else db.false()
+
+
 def _cengel_oyuncu_no(oyun):
-    if not current_user.is_authenticated:
-        return None
-    if oyun.oyuncu1_id == current_user.id:
-        return 0
-    if oyun.oyuncu2_id == current_user.id:
-        return 1
+    if current_user.is_authenticated:
+        if oyun.oyuncu1_id == current_user.id:
+            return 0
+        if oyun.oyuncu2_id == current_user.id:
+            return 1
+    oz = _cengel_misafir_ozeti()
+    if oz:
+        if oyun.misafir1 == oz:
+            return 0
+        if oyun.misafir2 == oz:
+            return 1
     return None
 
 
+def _cengel_misafir_adi():
+    ad = _re.sub(r"\s+", " ", (request.form.get("ad") or session.get("cengel_ad") or "")).strip()[:20]
+    if request.form.get("ad") is not None and ad:
+        session["cengel_ad"] = ad
+    return ad or None
+
+
 def _cengel_isimler(oyun):
-    ad1 = oyun.oyuncu1.kullanici_adi if oyun.oyuncu1 else "?"
+    def misafir(ad):
+        return f"{ad} (misafir)" if ad else "Misafir"
+    ad1 = oyun.oyuncu1.kullanici_adi if oyun.oyuncu1 else misafir(oyun.misafir1_ad)
     if oyun.bot:
         ad2 = "Robot Ziya"
+    elif oyun.oyuncu2:
+        ad2 = oyun.oyuncu2.kullanici_adi
+    elif oyun.misafir2:
+        ad2 = misafir(oyun.misafir2_ad)
     else:
-        ad2 = oyun.oyuncu2.kullanici_adi if oyun.oyuncu2 else None
+        ad2 = None
     return [ad1, ad2]
 
 
@@ -3782,23 +3838,34 @@ def _cengel_json(oyun, ben):
     return g
 
 
-def _cengel_son_bulmacalar(kullanici_id, adet=40):
+def _cengel_son_bulmacalar(adet=40):
     return [n for (n,) in db.session.query(CengelOyun.bulmaca_no).filter(
-        db.or_(CengelOyun.oyuncu1_id == kullanici_id, CengelOyun.oyuncu2_id == kullanici_id),
-        CengelOyun.bulmaca_no.isnot(None)).order_by(CengelOyun.id.desc()).limit(adet).all()]
+        _cengel_benim_filtrem(), CengelOyun.bulmaca_no.isnot(None)).order_by(CengelOyun.id.desc()).limit(adet).all()]
+
+
+def _cengel_eskileri_temizle():
+    """Veritabanı şişmesin: 30 gündür dokunulmayan yarım oyunlar ve misafirlerin eski oyunları silinir."""
+    try:
+        sinir = datetime.utcnow() - timedelta(days=30)
+        CengelOyun.query.filter(CengelOyun.guncelleme < sinir, db.or_(
+            CengelOyun.durum != "bitti",
+            db.and_(CengelOyun.oyuncu1_id.is_(None), CengelOyun.oyuncu2_id.is_(None)))).delete(synchronize_session=False)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 @app.route("/cengel")
-@login_required
 def cengel_lobi():
-    oyunlar = (CengelOyun.query.filter(db.or_(CengelOyun.oyuncu1_id == current_user.id,
-                                              CengelOyun.oyuncu2_id == current_user.id))
+    oyunlar = (CengelOyun.query.filter(_cengel_benim_filtrem())
                .order_by(CengelOyun.guncelleme.desc()).limit(30).all())
     aktif, biten = [], []
     galibiyet = maglubiyet = beraberlik = 0
     for o in oyunlar:
         d = _cjson.loads(o.veri)
-        ben = 0 if o.oyuncu1_id == current_user.id else 1
+        ben = _cengel_oyuncu_no(o)
+        if ben is None:
+            continue
         bilgi = {"o": o, "isimler": _cengel_isimler(o), "puan": d["puan"], "ben": ben,
                  "sira_bende": o.durum == "aktif" and d["sira"] == ben}
         if o.durum == "bitti":
@@ -3810,18 +3877,23 @@ def cengel_lobi():
         else:
             aktif.append(bilgi)
     return render_template("cengel_lobi.html", aktif=aktif, biten=biten[:10],
-                           karne={"g": galibiyet, "m": maglubiyet, "b": beraberlik})
+                           karne={"g": galibiyet, "m": maglubiyet, "b": beraberlik},
+                           misafir_ad=session.get("cengel_ad", ""))
 
 
 @app.route("/cengel/yeni", methods=["POST"])
-@login_required
 def cengel_yeni():
     tip = request.form.get("tip", "bot")
     zorluk = request.form.get("zorluk", "orta")
     if zorluk not in _cengel.BOT_ZORLUK:
         zorluk = "orta"
-    d = _cengel.yeni_oyun(haric=_cengel_son_bulmacalar(current_user.id))
-    oyun = CengelOyun(kod=_csecrets.token_urlsafe(8)[:10], oyuncu1_id=current_user.id,
+    if _csecrets.randbelow(20) == 0:
+        _cengel_eskileri_temizle()
+    d = _cengel.yeni_oyun(haric=_cengel_son_bulmacalar())
+    uye = current_user.is_authenticated
+    oyun = CengelOyun(kod=_csecrets.token_urlsafe(8)[:10], oyuncu1_id=current_user.id if uye else None,
+                      misafir1=None if uye else _cengel_misafir_ozeti(olustur=True),
+                      misafir1_ad=None if uye else _cengel_misafir_adi(),
                       bot=(tip == "bot"), zorluk=zorluk if tip == "bot" else None,
                       durum="aktif" if tip == "bot" else "bekliyor",
                       veri=_cjson.dumps(d, ensure_ascii=False), bulmaca_no=d["bulmaca"].get("no"))
@@ -3833,21 +3905,24 @@ def cengel_yeni():
 @app.route("/cengel/<kod>")
 def cengel_oyun(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
-    if not current_user.is_authenticated:
-        return redirect(url_for("giris", next=request.path))
     ben = _cengel_oyuncu_no(oyun)
     davet_linki = url_for("cengel_oyun", kod=oyun.kod, _external=True)
     return render_template("cengel_oyun.html", oyun=oyun, ben=ben, davet_linki=davet_linki,
                            isimler=_cengel_isimler(oyun),
-                           katilabilir=(ben is None and oyun.durum == "bekliyor" and not oyun.bot))
+                           katilabilir=(ben is None and oyun.durum == "bekliyor" and not oyun.bot),
+                           misafir_ad=session.get("cengel_ad", ""))
 
 
 @app.route("/cengel/<kod>/katil", methods=["POST"])
-@login_required
 def cengel_katil(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
-    if oyun.durum == "bekliyor" and not oyun.bot and oyun.oyuncu1_id != current_user.id and not oyun.oyuncu2_id:
-        oyun.oyuncu2_id = current_user.id
+    if (oyun.durum == "bekliyor" and not oyun.bot and _cengel_oyuncu_no(oyun) is None
+            and not oyun.oyuncu2_id and not oyun.misafir2):
+        if current_user.is_authenticated:
+            oyun.oyuncu2_id = current_user.id
+        else:
+            oyun.misafir2 = _cengel_misafir_ozeti(olustur=True)
+            oyun.misafir2_ad = _cengel_misafir_adi()
         oyun.durum = "aktif"
         oyun.guncelleme = datetime.utcnow()
         db.session.commit()
@@ -3857,14 +3932,12 @@ def cengel_katil(kod):
 
 
 @app.route("/cengel/<kod>/durum")
-@login_required
 def cengel_durum(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
     return jsonify(_cengel_json(oyun, _cengel_oyuncu_no(oyun)))
 
 
 @app.route("/cengel/<kod>/hamle", methods=["POST"])
-@login_required
 def cengel_hamle(kod):
     sorgu = CengelOyun.query.filter_by(kod=kod)
     try:
@@ -3899,16 +3972,16 @@ def cengel_hamle(kod):
         db.session.rollback()
         return jsonify({"hata": mesaj, **_cengel_json(oyun, ben)}), 400
     # Robot Ziya hemen oynar (sıra kendisine geçtiyse; arka arkaya pas/boş ıstaka durumları dahil)
-    if oyun.bot:
-        sinir = 0
-        while not d["bitti"] and d["sira"] == 1 and sinir < 3:
+    # Robot Ziya'nın turunda en fazla 3 denemesi var. İnsan oyuncunun ıstakası boşsa sırası otomatik geçer.
+    for _ in range(24):
+        if d["bitti"]:
+            break
+        if oyun.bot and d["sira"] == 1:
             _cengel.bot_oyna(d, 1, oyun.zorluk or "orta")
-            sinir += 1
-    # İnsan oyuncunun ıstakası boş ve oyun sürüyorsa sırası otomatik geçer
-    if not d["bitti"] and not d["raf"][d["sira"]] and not (oyun.bot and d["sira"] == 1):
-        _cengel.pas(d, d["sira"])
-        if oyun.bot and not d["bitti"]:
-            _cengel.bot_oyna(d, 1, oyun.zorluk or "orta")
+        elif not d["raf"][d["sira"]]:
+            _cengel.pas(d, d["sira"])
+        else:
+            break
     if d["bitti"]:
         oyun.durum = "bitti"
     oyun.veri = _cjson.dumps(d, ensure_ascii=False)
@@ -3921,13 +3994,13 @@ def cengel_hamle(kod):
     return jsonify(sonuc)
 
 
-def cengel_sira_bende_sayisi(kullanici_id):
+def cengel_sira_bende_sayisi(kullanici_id=None):
+    """Giriş yapmış kullanıcının ya da bu tarayıcıdaki misafirin sırası gelen düelloları."""
     try:
         sayi = 0
-        for o in CengelOyun.query.filter(CengelOyun.durum == "aktif", db.or_(
-                CengelOyun.oyuncu1_id == kullanici_id, CengelOyun.oyuncu2_id == kullanici_id)).all():
-            ben = 0 if o.oyuncu1_id == kullanici_id else 1
-            if _cjson.loads(o.veri)["sira"] == ben and not (o.bot and ben == 1):
+        for o in CengelOyun.query.filter(CengelOyun.durum == "aktif", _cengel_benim_filtrem()).limit(50).all():
+            ben = _cengel_oyuncu_no(o)
+            if ben is not None and _cjson.loads(o.veri)["sira"] == ben and not (o.bot and ben == 1):
                 sayi += 1
         return sayi
     except Exception:
