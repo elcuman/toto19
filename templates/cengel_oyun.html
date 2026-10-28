@@ -48,6 +48,7 @@
     <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Çengel Düello: seni bulmaca düellosuna çağırıyorum! ⚔️ ' ~ davet_linki) | urlencode }}">WhatsApp'tan gönder</a>
     <button type="button" class="btn btn-ikincil" id="cdKopyala" data-link="{{ davet_linki }}">Linki kopyala</button>
   </div>
+  <form method="POST" action="{{ url_for('cengel_iptal', kod=oyun.kod) }}" onsubmit="return confirm('Davet iptal edilsin mi?')" style="margin:10px 0 0"><button type="submit" class="cd-kapat">Daveti iptal et</button></form>
 </section>
 {% endif %}
 
@@ -62,6 +63,9 @@
   <button type="button" class="cd-yan" id="cdIpucu"><span class="cd-yan-ikon">K</span><span>İpucu</span></button>
 </div>
 <p class="cd-son" id="cdSon"></p>
+{% if oyun.durum == 'aktif' %}
+<form method="POST" action="{{ url_for('cengel_iptal', kod=oyun.kod) }}" class="cd-cekil" id="cdCekil" onsubmit="return confirm('Oyundan çekilirsen kaybetmiş sayılırsın. Emin misin?')"><button type="submit" class="cd-kapat">Oyundan çekil</button></form>
+{% endif %}
 
 <dialog class="cd-dlg" id="cdSonuc">
   <h2 id="cdSonucBaslik"></h2>
@@ -159,6 +163,7 @@
 .cd-kurallar{padding-left:18px; font-size:14.5px; margin:0 0 14px} .cd-kurallar li{margin-bottom:6px}
 .cd-sonuc-skor{font:800 34px var(--baslik); text-align:center; margin:4px 0 14px}
 .cd-sonuc-dugmeler{display:grid; gap:8px} .cd-sonuc-dugmeler form{margin:0}
+.cd-cekil{text-align:center; margin:4px 0 0}
 .cd-kapat{background:none; border:0; color:var(--gri); text-decoration:underline; cursor:pointer; padding:6px}
 @media (max-width:400px){ .cd-avatar{display:none} .cd-oyuncu{padding:6px 10px; gap:6px} .cd-skorlar{gap:5px} }
 @media (max-width:380px){ .cd-tas{width:48px; height:54px; font-size:26px} .cd-raf{gap:6px} .cd-ad{font-size:13.5px} .cd-puan{font-size:21px} }
@@ -186,6 +191,7 @@
     document.getElementById('cdO0').classList.toggle('sirada', !d.bitti && d.durum === 'aktif' && d.sira === BEN);
     document.getElementById('cdO1').classList.toggle('sirada', !d.bitti && d.durum === 'aktif' && d.sira === rakip);
     var davet = document.getElementById('cdDavet'); if (davet && d.durum !== 'bekliyor') davet.remove();
+    var cekilBtn = document.getElementById('cdCekil'); if (cekilBtn) cekilBtn.style.display = d.bitti ? 'none' : '';
     // durum yazısı
     var bende = d.durum === 'aktif' && !d.bitti && d.sira === BEN;
     durumEl.className = 'cd-durum' + (bende ? ' bende' : '');
@@ -241,6 +247,7 @@
       if (s.t === 'degistir') return 'harflerini değiştirdi';
       if (s.t === 'pas') return 'pas';
       if (s.t === 'bitir') return 'turu bitirdi';
+      if (s.t === 'cekil') return 'oyundan çekildi';
       return '';
     }).filter(Boolean);
     var toplam = tur.reduce(function(a, s){ return a + (s.p || 0); }, 0);
@@ -254,7 +261,8 @@
   }
   function sonucGoster(){
     var d = durum, p = d.puan, ben = p[BEN], o = p[1 - BEN];
-    document.getElementById('cdSonucBaslik').textContent = ben > o ? '🏆 Kazandın!' : (ben < o ? 'Bu sefer olmadı 😅' : 'Berabere! 🤝');
+    var k = d.kazanan;
+    document.getElementById('cdSonucBaslik').textContent = d.cekilen === BEN ? 'Oyundan çekildin' : (d.cekilen === 1 - BEN ? '🏆 Rakibin çekildi, kazandın!' : (k === BEN ? '🏆 Kazandın!' : (k === -1 ? 'Berabere! 🤝' : 'Bu sefer olmadı 😅')));
     document.getElementById('cdSonucSkor').textContent = ben + ' – ' + o;
     document.getElementById('cdSonuc').showModal();
   }

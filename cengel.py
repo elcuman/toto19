@@ -340,6 +340,23 @@ def _dogru_hamleler(d, oyuncu):
     return sonuc
 
 
+def kazanan(d):
+    """0 / 1 ya da -1 (berabere). Oyundan çekilen puanı ne olursa olsun kaybeder."""
+    if d.get("cekilen") in (0, 1):
+        return 1 - d["cekilen"]
+    p = d["puan"]
+    return -1 if p[0] == p[1] else (0 if p[0] > p[1] else 1)
+
+
+def cekil(d, oyuncu):
+    if d["bitti"]:
+        return False, "Oyun zaten bitti."
+    d["bitti"] = True
+    d["cekilen"] = oyuncu
+    _kayit(d, {"o": oyuncu, "t": "cekil", "p": 0})
+    return True, "cekil"
+
+
 BOT_ZORLUK = {"kolay": 0.45, "orta": 0.68, "zor": 0.88}
 
 
@@ -402,6 +419,6 @@ def istemci_gorunumu(d, oyuncu):
             "tamam": sorted(set(tamam)), "puan": d["puan"], "sira": d["sira"], "ben": oyuncu,
             "raf": d["raf"][oyuncu] if oyuncu in (0, 1) else [], "torba": len(d["torba"]),
             "ipucu_kaldi": (not d["ipucu"][oyuncu]) if oyuncu in (0, 1) else False,
-            "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
+            "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "cekilen": d.get("cekilen"), "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
             "pas_kaldi": pas_kaldi(d, oyuncu) if oyuncu in (0, 1) else 0,
             "kalan": len(b["cozum"]) - len(d["dolu"])}

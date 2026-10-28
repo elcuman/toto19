@@ -3845,7 +3845,7 @@ def _cengel_json(oyun, ben):
               "isimler": _cengel_isimler(oyun), "izleyici": ben is None})
     if oyun.durum == "bitti":
         p = d["puan"]
-        g["kazanan"] = -1 if p[0] == p[1] else (0 if p[0] > p[1] else 1)
+        g["kazanan"] = _cengel.kazanan(d)
     return g
 
 
@@ -3885,7 +3885,9 @@ def cengel_lobi():
                  "sira_bende": o.durum == "aktif" and d["sira"] == ben}
         if o.durum == "bitti":
             p = d["puan"]
-            bilgi["sonuc"] = "berabere" if p[0] == p[1] else ("kazandın" if p[ben] > p[1 - ben] else "kaybettin")
+            k = _cengel.kazanan(d)
+            bilgi["sonuc"] = "berabere" if k == -1 else ("kazandın" if k == ben else "kaybettin")
+            bilgi["cekilme"] = d.get("cekilen") in (0, 1)
             galibiyet += bilgi["sonuc"] == "kazandın"; maglubiyet += bilgi["sonuc"] == "kaybettin"
             beraberlik += bilgi["sonuc"] == "berabere"
             biten.append(bilgi)
@@ -3986,6 +3988,30 @@ def _cengel_katilabilir_mi(oyun):
     if oyun.davetli_id:
         return current_user.is_authenticated and current_user.id == oyun.davetli_id
     return True
+
+
+@app.route("/cengel/<kod>/iptal", methods=["POST"])
+def cengel_iptal(kod):
+    """Bekleyen daveti kuran iptal eder (oyun silinir); süren oyundan çekilen kaybeder."""
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    ben = _cengel_oyuncu_no(oyun)
+    if ben is None:
+        abort(403)
+    if oyun.durum == "bekliyor" and ben == 0:
+        db.session.delete(oyun)
+        db.session.commit()
+        flash("Davet iptal edildi.", "info")
+        return redirect(url_for("cengel_lobi"))
+    if oyun.durum == "aktif":
+        d = _cjson.loads(oyun.veri)
+        ok, _ = _cengel.cekil(d, ben)
+        if ok:
+            oyun.durum = "bitti"
+            oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+            oyun.guncelleme = datetime.utcnow()
+            db.session.commit()
+            flash("Oyundan çekildin.", "info")
+    return redirect(request.form.get("geri") or url_for("cengel_lobi"))
 
 
 @app.route("/cengel/<kod>/reddet", methods=["POST"])

@@ -405,3 +405,408 @@ GEZİ|Seyahat
 HARİTA|🗺️
 PUSULA|🧭
 ÇAYDANLIK|Çay demlenen
+OD|Ateş (eski dilde)
+ÖZ|Esas, cevher
+ÜS|Askeri merkez
+AŞ|Yemek, aş
+UZ|Usta, becerikli
+OY|Seçimde sandığa atılır
+ÖÇ|İntikam
+AZ|Çok değil
+DO|İlk nota
+RE|İkinci nota
+Mİ|Üçüncü nota
+FA|Dördüncü nota
+LA|Altıncı nota
+Sİ|Yedinci nota
+EK|Sonradan katılan parça
+AÇ|Tok değil
+BUZ|🧊
+CAN|Ruh, hayat
+CAM|Pencere malzemesi
+DÜŞ|Rüya
+FAL|Kahveyle bakılır
+GAZ|Ocağın yakıtı
+GÜL|🌹
+HAL|Durum, vaziyet
+HAN|Kervansaray
+HAS|Saf, katışıksız
+HIZ|Sürat
+İLK|Birinci
+LAF|Söz
+MAL|Varlık, servet
+NEM|Rutubet
+OYA|İğneyle yapılan süs
+PAY|Hisse
+RAF|Kitaplık bölmesi
+SEL|Taşkın su
+SIR|Gizli şey
+SOY|Nesil, sülale
+ŞAH|Satrançta en önemli taş
+ŞİŞ|Kebap çubuğu
+TER|Sıcakta vücuttan akar
+TÜY|Kuşun örtüsü
+YAĞ|Zeytinden çıkar
+ZOR|Kolay değil
+BEZ|Dokuma parçası
+BEL|Gövdenin ortası
+BOY|Uzunluk
+CİN|Lamba perisi
+DEV|Çok büyük
+DUA|Yakarış
+HAM|Olgunlaşmamış
+HOŞ|Sevimli, güzel
+KİN|Garez
+NAL|Atın ayakkabısı
+NOT|Okulda verilir
+PİL|🔋
+RUH|Can
+SON|Bitiş
+SUÇ|Kanuna aykırı iş
+TAY|Yavru at
+TÜP|Gaz kabı
+YAT|Lüks tekne
+YEL|Rüzgar
+YÜN|Koyundan elde edilir
+ZAR|Tavlada atılır
+ÇOK|Az değil
+DAR|Geniş değil
+GEÇ|Erken değil
+İYİ|Kötü değil
+KÖR|Görmeyen
+SAL|Kütüklerden yapılan tekne
+TOZ|Kuru ince zerre
+AŞK|Derin sevgi
+HAP|İlaç tableti
+LİG|Takımların yarıştığı seri
+GOL|Futbolda sayı
+MAÇ|Spor karşılaşması
+CEP|Pantolonda bulunur
+KAN|Damarlarda dolaşır
+KÜL|Yanma artığı
+DÜN|Bugünden önce
+DUT|Beyazı ve karası olan meyve
+ÇAM|Yaprak dökmeyen ağaç
+SIĞ|Derin değil
+TOK|Aç değil
+BOT|Kışlık ayakkabı
+BABA|Annenin eşi
+BACA|Duman çıkar
+BOYA|Duvara sürülür
+ÇİFT|Tek değil
+ERİK|Ekşi yeşil meyve
+EVET|Hayır değil
+FARE|🐭
+FİDE|Toprağa dikilen fidan
+GECE|Gündüzün karşıtı
+HAVA|Soluduğumuz şey
+İĞNE|Dikiş aleti
+KASA|Para dolabı
+NANE|Ferahlatıcı bitki
+OTEL|🏨
+RENK|Kırmızı, mavi gibi
+SOBA|Kışın ısıtır
+ZARF|Mektubun konduğu kılıf
+ADAM|Erkek kişi
+AĞIR|Hafif değil
+AİLE|Anne, baba ve çocuklar
+DOĞA|Tabiat
+EKİN|Tarlada yetişen
+GERİ|İleri değil
+GÖK|Sema
+İLAÇ|💊
+İSİM|Ad
+İŞÇİ|Çalışan kişi
+KIRK|Otuz dokuzdan sonra
+KİLO|Ağırlık birimi
+KUYU|Su çekilen çukur
+ORTA|Merkez
+ÖĞLE|Günün ortası
+ÖLÇÜ|Ölçme birimi
+SAYI|Rakam
+SPOR|Beden etkinliği
+UZAK|Yakın değil
+ÜLKE|Devlet toprağı
+YURT|Vatan
+ZEKİ|Akıllı
+OTUZ|Yirmi dokuzdan sonra
+ELLİ|Kırk dokuzdan sonra
+SKOR|Maç sonucu
+FAUL|Kural dışı hareket
+ÇENE|Yüzün alt kısmı
+ALIN|Kaşların üstü
+SIRT|Gövdenin arkası
+KOVA|Su taşıma kabı
+ÇATI|Evin üstü
+ŞORT|Kısa pantolon
+ÖFKE|Kızgınlık
+SERT|Yumuşak değil
+KURU|Islak değil
+DANA|Sığır yavrusu
+AYVA|Tüylü sarı meyve
+KİVİ|🥝
+MEŞE|Palamut veren ağaç
+NOTA|Müzik işareti
+OKEY|Taşlarla oynanır
+ASIR|Yüzyıl
+ARPA|Hayvan yemi tahıl
+BÖCEK|Altı bacaklı küçük canlı
+CEVİZ|Sert kabuklu yemiş
+DUVAR|Odayı çevreler
+GÖLGE|Güneşte oluşur
+GÖNÜL|Kalp, yürek
+KABAK|🎃
+KOYUN|Yünü için beslenen hayvan
+PİLAV|Pirinç yemeği
+SAMAN|Kuru ekin sapı
+SEPET|🧺
+SİNEK|Vızıldayan küçük böcek
+KAVUN|Sarı yaz meyvesi
+HOROZ|🐓
+ÖRDEK|🦆
+AKREP|🦂
+BALTA|🪓
+VALİZ|🧳
+AMPUL|Elektrikle ışık verir
+BEYİN|🧠
+AKŞAM|Günün sonu
+BİLET|🎫
+BİLGİ|Öğrenilen şey
+CADDE|Geniş yol
+CÜMLE|Kelimelerden oluşur
+ÇARŞI|Alışveriş yeri
+ÇOCUK|Küçük insan
+DAMAT|Gelinin eşi
+GELİN|Damadın eşi
+HASTA|Rahatsız kimse
+HAYAL|Düş, hülya
+HEDEF|Amaç
+KADIN|Erkeğin karşıtı
+KAĞIT|Üzerine yazılır
+KAYIK|Küçük tekne
+KEMER|Pantolonu tutar
+KONAK|Büyük eski ev
+KUMAŞ|Dokuma, bez
+MEYVE|Ağaçta yetişir
+ÖRNEK|Misal
+SABAH|Günün başı
+SAHİL|Kıyı
+SARAY|Padişahın evi
+SATIR|Yazı dizisi
+SEBZE|Bahçede yetişir
+SELAM|Merhaba
+SOFRA|Yemek düzeni
+SOKAK|Dar yol
+TARİH|Geçmişin bilimi
+TAVAN|Odanın üstü
+TEPSİ|Yayvan kap
+TURŞU|Sirkeli kış yiyeceği
+VATAN|Yurt
+YAKIN|Uzak değil
+YALAN|Doğru değil
+YARIN|Bugünden sonra
+YEMEK|Karın doyurur
+YÜREK|Kalp
+ZAMAN|Vakit
+YİRMİ|On dokuzdan sonra
+SİNOP|En kuzeydeki il
+MUĞLA|Bodrum'un ili
+AFYON|Kaymağıyla ünlü il
+HAKEM|Maçı yönetir
+TAKIM|Oyuncu topluluğu
+DERBİ|Büyük rakiplerin maçı
+BİLEK|Eli kola bağlar
+TOPUK|Ayağın arkası
+YANAK|Yüzün iki yanı
+GÖĞÜS|Gövdenin önü
+KEMİK|İskeleti oluşturur
+DAMAR|Kan taşır
+CİĞER|Karaciğer kısaca
+ŞOFÖR|Araç kullanan
+KASAP|Et satan
+YAZAR|Kitap yazan
+MİMAR|Bina tasarlayan
+BEKÇİ|Gece nöbetçisi
+PALTO|Kalın dış giysi
+YELEK|Kolsuz giysi
+TAKSİ|🚕
+VAPUR|Boğaz'ı geçer
+MOTOR|Aracı yürüten makine
+METRO|Yer altı treni
+KIZAK|Karda kayılır
+SAVAŞ|Barışın karşıtı
+KEDER|Üzüntü
+CESUR|Yürekli
+KOLAY|Zor değil
+TEMİZ|Kirli değil
+DERİN|Sığ değil
+TUZLU|Tuzu çok
+HAFİF|Ağır değil
+GÜZEL|Hoş
+MUTLU|Sevinçli
+ÜZGÜN|Kederli
+ISLAK|Kuru değil
+ERKEN|Geç değil
+ALÇAK|Yüksek değil
+GENİŞ|Dar değil
+BORDO|Koyu kırmızı
+ZEBRA|🦓
+SERÇE|Küçük kahverengi kuş
+MARTI|Deniz kuşu
+KİRPİ|🦔
+GEYİK|🦌
+HAMSİ|Karadeniz balığı
+İNCİR|Sütlü yaz meyvesi
+BADEM|Kabuklu yemiş
+SÖĞÜT|Su kenarı ağacı
+KAVAK|Uzun boylu ağaç
+ÇINAR|Asırlık ulu ağaç
+DİKEN|Gülün sivri ucu
+YOSUN|Nemli yerde biter
+SAHNE|Oyuncuların yeri
+KUKLA|İple oynatılan oyuncak
+TAVLA|Zarla oynanan masa oyunu
+HAFTA|Yedi gün
+BUGÜN|Dünden sonra
+ŞİMDİ|Bu an
+KUTUP|Buzlarla kaplı bölge
+ÇAMUR|Islak toprak
+DUMAN|Ateşten çıkar
+NOHUT|Leblebinin hammaddesi
+YULAF|Kahvaltılık tahıl
+AYRAN|Yoğurtlu içecek
+BÖREK|Yufkalı hamur işi
+HELVA|Tahinli tatlı
+KÖFTE|Kıymadan yapılır
+KEBAP|Şişte pişen et
+DÖNER|Döndürülerek pişen et
+MANTI|Kayseri'nin hamur yemeği
+TAHİN|Susamdan yapılır
+SİRKE|Ekşi sos
+ŞİMŞEK|⚡
+TOPRAK|Bitkiler içinde yetişir
+YELKEN|⛵
+ZEYTİN|🫒
+KARPUZ|🍉
+SALATA|🥗
+BAYRAK|🚩
+KAMERA|📷
+BALİNA|🐳
+TİMSAH|🐊
+KAPLAN|🐅
+KARTAL|🦅
+FINDIK|Karadeniz'in meşhur yemişi
+CETVEL|📏
+ŞELALE|Yüksekten dökülen su
+VOLKAN|🌋
+TAKVİM|📅
+PARMAK|☝️
+TIRNAK|💅
+GÜNDÜZ|Gecenin karşıtı
+HIRSIZ|Çalan kimse
+KARDEŞ|Aynı anne babanın çocuğu
+MUTFAK|Yemek yapılan oda
+SÖZLÜK|Kelimelerin anlamını verir
+ALTMIŞ|Elli dokuzdan sonra
+YETMİŞ|Altmış dokuzdan sonra
+SEKSEN|Yetmiş dokuzdan sonra
+DOKSAN|Seksen dokuzdan sonra
+AMASYA|Elmasıyla ünlü il
+FORVET|Golcü oyuncu
+DEFANS|Savunma
+TRİBÜN|Seyircinin yeri
+DİRSEK|Kolun ortasındaki eklem
+KİRPİK|Göz kapağı kılları
+RESSAM|Resim yapan
+KOLTUK|Oturma mobilyası
+YASTIK|Başımızı koyduğumuz
+YORGAN|Kalın örtü
+FİNCAN|Kahve içilir
+TERLİK|Ev ayakkabısı
+OTOBÜS|🚌
+KAMYON|🚚
+ÇİRKİN|Güzel değil
+YORGUN|Bitkin
+YÜKSEK|Alçak değil
+BUZAĞI|İnek yavrusu
+CİVCİV|🐥
+LEYLEK|Uzun bacaklı göçmen kuş
+SİNCAP|🐿️
+YENGEÇ|🦀
+LEVREK|Değerli deniz balığı
+KAYISI|Malatya'nın meyvesi
+ANANAS|🍍
+SÜMBÜL|Kokulu bahar çiçeği
+SANİYE|Dakikanın altmışta biri
+DAKİKA|Saatin altmışta biri
+KAYNAK|Suyun çıktığı yer
+BOZKIR|Kurak düzlük
+MAĞARA|Yer altı boşluğu
+RÜZGAR|Esinti
+PİRİNÇ|Pilavın tanesi
+BULGUR|Kırık buğday
+BUĞDAY|Undan önceki tahıl
+YOĞURT|Sütten mayalanır
+KAYMAK|Sütün yağlı üstü
+POĞAÇA|Kahvaltılık hamur işi
+PEKMEZ|Üzümden yapılır
+PATATES|🥔
+DOMATES|🍅
+YUMURTA|🥚
+ŞEMSİYE|☂️
+KELEBEK|🦋
+PENGUEN|🐧
+AHTAPOT|🐙
+ÖRÜMCEK|🕷️
+KARINCA|🐜
+KESTANE|Kışın közde pişer
+MAHALLE|Semt
+FIRTINA|Şiddetli rüzgar
+HAZİRAN|Altıncı ay
+AĞUSTOS|Sekizinci ay
+TRABZON|Hamsisiyle ünlü il
+ANTALYA|Turizm başkenti il
+MALATYA|Kayısısıyla ünlü il
+GİRESUN|Fındığıyla ünlü il
+KAYSERİ|Pastırmasıyla ünlü il
+PENALTI|On bir metre vuruşu
+FIRINCI|Ekmek yapan
+BALIKÇI|Balık tutan
+POSTACI|Mektup getiren
+DENİZCİ|Gemici
+TENCERE|Yemek pişirilen kap
+SÜPÜRGE|🧹
+PENCERE|🪟
+TRAKTÖR|🚜
+YUMUŞAK|Sert değil
+TURUNCU|Portakal rengi
+KANGURU|🦘
+PAPAĞAN|🦜
+KURBAĞA|🐸
+SOLUCAN|Toprak kurdu
+ŞEFTALİ|🍑
+PAPATYA|🌼
+MENEKŞE|Mor bahar çiçeği
+SATRANÇ|♟️
+BULMACA|Çözülen kelime oyunu
+OYUNCAK|Çocuğun eğlencesi
+UÇURTMA|🪁
+LEBLEBİ|Kavrulmuş nohut
+FASULYE|Kuru bakliyat
+BAKLAVA|Şerbetli tatlı
+MERCİMEK|Çorbası meşhur bakliyat
+MIKNATIS|🧲
+ÇARŞAMBA|Haftanın üçüncü günü
+PERŞEMBE|Haftanın dördüncü günü
+ŞAMPİYON|Birinci olan
+SANDALYE|Oturulan eşya
+MERDİVEN|Basamaklı yol
+PANTOLON|Bacak giysisi
+BİSİKLET|🚲
+GERGEDAN|🦏
+PORTAKAL|🍊
+SALINCAK|Sallanılan oyun aleti
+GÖKYÜZÜ|Bulutların olduğu yer
+LACİVERT|Koyu mavi
+ÇEKİRDEK|Ayçiçeğinden çıkar
+ÇAĞLAYAN|Coşkun akan su
