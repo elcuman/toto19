@@ -1,812 +1,952 @@
 # Çengel düello kelime bankası: KELİME|ipucu  (ipucu tek emoji ise resimli ipucu olarak gösterilir)
-AT|🐎
-AV|Avcının işi
-EL|✋
-EV|🏠
-EN|Genişlik
-ON|Dokuzdan sonra
-OT|Çayırda biten
-SU|💧
-AY|🌙
-İP|İnce halat
-UÇ|Sivri kısım
-ÜÇ|İkiden sonra
-AN|Çok kısa süre
-AL|Kırmızı
-AK|Beyaz
-ER|Asker
-OK|Yayın fırlattığı
-ÖN|Arkanın karşıtı
-ÜN|Şöhret
-İN|Ayının barınağı
-İŞ|Meslek, görev
-UN|Ekmeğin ana maddesi
-ET|🥩
-İZ|Belirti, işaret
-ÇİL|Yüzdeki küçük leke
-DİZ|Bacağın ortasındaki eklem
-KOL|💪
-DAĞ|⛰️
-GÖL|Durgun su birikintisi
-KUM|Çölün toprağı
-TAŞ|Kaya parçası
-BAŞ|Vücudun en üst kısmı
-YAŞ|Ömür süresi
-KAŞ|Gözün üstündeki kıllar
-DİŞ|🦷
-KAR|❄️
-BAL|🍯
-SÜT|🥛
-ÇAY|🍵
-NAR|Taneli kırmızı meyve
-KUŞ|🐦
-TOP|⚽
-SAZ|Telli halk çalgısı
-TEN|Deri rengi
-YÜZ|Doksan dokuzdan sonra
-GÖZ|👁️
+AT|Binek hayvanı
+AV|Şikar
+EL|Avuç sahibi uzuv
+EV|Konut, hane
+EN|Boyun dik yöndeki ölçüsü
+ON|Bir düzine eksik iki
+OT|Yeşil bitki, çayır
+SU|Hayat kaynağı sıvı
+AY|Dünyanın uydusu
+İP|Urgan, sicim
+UÇ|Bir şeyin son noktası
+ÜÇ|Sacayağının ayak sayısı
+AN|Lahza
+AL|Kızıl
+AK|Pak, lekesiz
+ER|Nefer
+OK|Sadak dolusu
+ÖN|Cephe
+ÜN|Nam, şan
+İN|Hayvan barınağı, mağara
+İŞ|Uğraş, meşguliyet
+UN|Değirmenin ürünü
+ET|Kasap satar
+İZ|Nişan, emare
+ÇİL|Keklik türü ya da benek
+DİZ|Patella bölgesi
+KOL|Pazu taşıyan uzuv
+DAĞ|Zirve sahibi yükselti
+GÖL|Etrafı karayla çevrili su
+KUM|Plaj tanesi
+TAŞ|Sert yer kabuğu parçası
+BAŞ|Sermaye ya da kafa
+YAŞ|Islak ya da ömür
+KAŞ|Kemer biçimli kıllar
+DİŞ|Çiğneme aracı
+KAR|Kazanç ya da lapa lapa yağan
+BAL|Kovan ürünü
+SÜT|Yoğurdun ham maddesi
+ÇAY|Rize'nin yaprağı
+NAR|Ateş ya da bir meyve
+KUŞ|Kanatlı hayvan
+TOP|Yuvarlak oyun aracı
+SAZ|Bağlama, bozuk
+TEN|Beniz
+YÜZ|Çehre ya da bir sayı
+GÖZ|Görme organı
 KEL|Saçsız
-KÖK|Bitkinin toprak altı
-DAL|Ağacın kolu
-BAĞ|Üzüm yetiştirilen yer
-TAT|Lezzet
-ATA|Dede, cet
-ANA|Anne
-ADA|🏝️
-ODA|Evin bölümü
-YIL|On iki ay
-GÜN|Yirmi dört saat
-ŞAL|Omuza atılan örtü
-KAZ|Kanatlı kümes hayvanı
-KAP|İçine bir şey konan eşya
-SAP|Tutacak
-KAS|Vücudu hareket ettiren doku
-SİS|Görüşü kapatan buğu
-SES|Kulağın duyduğu
-ZİL|🔔
-KİL|Çömlek toprağı
-TEL|İnce metal şerit
-MUZ|🍌
-TUZ|🧂
-MUM|🕯️
+KÖK|Asıl, esas
+DAL|Budak
+BAĞ|Bent ya da asma bahçesi
+TAT|Damak zevki
+ATA|Cet
+ANA|Valide
+ADA|Cezire
+ODA|Hücre, bölme
+YIL|Sene
+GÜN|Yevm
+ŞAL|Örtü, atkı
+KAZ|Kars'ın kümes kuşu
+KAP|Zarf, kılıf
+SAP|Kulp, tutamak
+KAS|Adale
+SİS|Duman gibi bulut
+SES|Seda
+ZİL|Kapıda öten
+KİL|Balçık
+TEL|Saz kirişi
+MUZ|Tropik sarı meyve
+TUZ|Sofrada beyaz tat
+MUM|Şamdanın konuğu
 ÇAN|Kilise zili
-KOÇ|Erkek koyun
-YOL|Gidilen güzergâh
-MOR|Menekşe rengi
-GRİ|Kül rengi
-BİR|Sayıların ilki
-İKİ|Birden sonra
-BEŞ|Dörtten sonra
-BİN|Dokuz yüz doksan dokuzdan sonra
-YAZ|☀️ mevsimi
-KIŞ|Soğuk mevsim
-DİL|👅
-SAÇ|Başı örten kıllar
-ÇÖL|🏜️
-KÖY|Küçük yerleşim yeri
-İLÇE|İlin bölümü
-ACI|Tatlının karşıtı
-BOŞ|Dolunun karşıtı
-ÜST|Altın karşıtı
-ALT|Üstün karşıtı
-SAĞ|Solun karşıtı
-SOL|Sağın karşıtı
-FİL|🐘
-AYI|🐻
-ARI|🐝
-KEK|Fırında pişen tatlı
-ÖYKÜ|Hikâye
-SÖZ|Kelam
-AKIL|Us
-ÇARE|Çözüm yolu
+KOÇ|Damızlık erkek koyun
+YOL|Tarik, güzergah
+MOR|Eflatun
+GRİ|Kurşuni
+BİR|Tek
+İKİ|Çift
+BEŞ|Elin parmak sayısı
+BİN|Hezar
+YAZ|Sayf
+KIŞ|Şita
+DİL|Lisan
+SAÇ|Kakül
+ÇÖL|Sahra
+KÖY|Karye
+İLÇE|Kaza
+ACI|Elem ya da tatlının zıddı
+BOŞ|Hali, ıssız
+ÜST|Fevk
+ALT|Taht
+SAĞ|Diri, canlı
+SOL|Bir nota ya da yön
+FİL|Hortumlu dev
+AYI|Boz ya da kutup türü
+ARI|Bal yapan
+KEK|Çaya eşlik eden hamur işi
+ÖYKÜ|Hikaye
+SÖZ|Vaat, kelam
+AKIL|Us, zihin
+ÇARE|Derman
 UMUT|Ümit
 ONUR|Şeref
 ÇABA|Gayret
 EMEK|Alın teri
-EKŞİ|Limonun tadı
-ESKİ|Yeninin karşıtı
-YENİ|Eskinin karşıtı
-UZUN|Kısanın karşıtı
-KISA|Uzunun karşıtı
-İNCE|Kalının karşıtı
-AÇIK|Kapalının karşıtı
-GENÇ|Yaşlının karşıtı
-DOLU|Boşun karşıtı
-ARKA|Önün karşıtı
-DOĞU|Güneşin doğduğu yön
-BATI|Güneşin battığı yön
-DÖRT|Üçten sonra
-ALTI|Beşten sonra
-YEDİ|Altıdan sonra
-MAVİ|Gökyüzü rengi
-SARI|Limon rengi
-KARA|Siyah
-OMUZ|Kolun gövdeye bağlandığı yer
-AYAK|🦶
-AĞIZ|👄
-KALP|❤️
-MİDE|Sindirim organı
-SALI|Pazartesiden sonra
-CUMA|Perşembeden sonra
-OCAK|Yılın ilk ayı
-MART|Baharın ilk ayı
-EKİM|Eylülden sonra
-DERE|Küçük akarsu
-TEPE|Küçük dağ
-KAYA|Büyük taş
-KUZU|🐑
-İNEK|🐄
-KEÇİ|🐐
-DEVE|🐫
-KURT|🐺
-UÇAK|✈️
-GEMİ|🚢
-TREN|🚆
-SAAT|⏰
-KAPI|🚪
-MASA|Üzerinde yemek yenen eşya
-KALE|Surlarla çevrili yapı
-KULE|Yüksek yapı
-CAMİ|🕌
-AĞAÇ|🌳
-LALE|🌷
-ELMA|🍎
-ÜZÜM|🍇
-KUPA|🏆
-TAÇ|👑
-ATEŞ|🔥
-ŞİİR|Dizelerden oluşan eser
-KOLA|Gazlı içecek
-KAHVE|☕
-ÇORBA|🍲
-LİMON|🍋
-KİRAZ|🍒
-ÇİLEK|🍓
-ARMUT|🍐
-BİBER|🌶️
-SOĞAN|🧅
-HAVUÇ|🥕
-MISIR|🌽
-EKMEK|🍞
-PASTA|🎂
-BALON|🎈
-ROKET|🚀
-KİTAP|📖
-KALEM|✏️
-MAKAS|✂️
-ÇEKİÇ|🔨
-GİTAR|🎸
-DAVUL|🥁
-KEMAN|🎻
-ÇADIR|⛺
-ÇİÇEK|🌸
-KUZEY|Pusulanın gösterdiği yön
-GÜNEY|Kuzeyin karşıtı
-GÜNEŞ|Dünyamızı ısıtan yıldız
-BULUT|☁️
-DÜNYA|🌍
-DENİZ|🌊
-NEHİR|Büyük akarsu
+EKŞİ|Mayhoş
+ESKİ|Köhne
+YENİ|Taze, nev
+UZUN|Boylu boslu, kısanın zıddı
+KISA|Kesik, mukassar
+İNCE|Narin
+AÇIK|Aşikar
+GENÇ|Delikanlı
+DOLU|Hıncahınç ya da yağış
+ARKA|Sırt, geri
+DOĞU|Şark
+BATI|Garp
+DÖRT|Kare kenarı sayısı
+ALTI|Zarın en büyüğü
+YEDİ|Haftanın gün sayısı
+MAVİ|Lacivertin açığı
+SARI|Zerde
+KARA|Siyah ya da toprak
+OMUZ|Apolet yeri
+AYAK|Pabuç giyen uzuv
+AĞIZ|Dudakların çevrelediği
+KALP|Yürek
+MİDE|İşkembe
+SALI|Haftanın ikinci günü
+CUMA|Haftanın beşinci günü
+OCAK|Yılın ilk ayı ya da maden
+MART|Kapı dışarı ay
+EKİM|Hasat ayı, onuncu ay
+DERE|Çay, küçük akarsu
+TEPE|Doruk
+KAYA|Sarp taş
+KUZU|Koyunun yavrusu
+İNEK|Sağmal hayvan
+KEÇİ|Kıl veren hayvan
+DEVE|Çöl gemisi
+KURT|Ulumasıyla bilinen
+UÇAK|Tayyare
+GEMİ|Sefine
+TREN|Vagon katarı
+SAAT|Vakit gösteren
+KAPI|Bab
+MASA|Sofra kurulan mobilya
+KALE|Hisar
+KULE|Burç
+CAMİ|Minareli mabet
+AĞAÇ|Gövde ve dal sahibi
+LALE|Ahmet III devrinin çiçeği
+ELMA|Amasya'nın meyvesi
+ÜZÜM|Asma meyvesi
+KUPA|Şampiyona ödülü
+TAÇ|Hükümdar başlığı
+ATEŞ|Nar, od
+ŞİİR|Nazım
+KOLA|Gazlı içecek ya da çiriş
+KAHVE|Telvesi falda kullanılır
+ÇORBA|Kaşıkla içilen yemek
+LİMON|Ekşi narenciye
+KİRAZ|Haziran meyvesi
+ÇİLEK|Kırmızı yaz meyvesi
+ARMUT|Ayva kılıklı meyve
+BİBER|Acısı da olan sebze
+SOĞAN|Kat kat sebze
+HAVUÇ|Turuncu kök sebze
+MISIR|Koçan ya da bir ülke
+EKMEK|Nimet
+PASTA|Doğum günü tatlısı
+BALON|Şişirilen oyuncak
+ROKET|Fırlatılan araç
+KİTAP|Eser, cilt
+KALEM|Kurşun, dolma vb.
+MAKAS|Kesme aleti
+ÇEKİÇ|Çivi çakan alet
+GİTAR|Telli çalgı
+DAVUL|Zurnanın eşi
+KEMAN|Yaylı çalgı
+ÇADIR|Oba evi
+ÇİÇEK|Gül, lale gibi
+KUZEY|Şimal
+GÜNEY|Cenup
+GÜNEŞ|Şems
+BULUT|Yağmur taşıyan buğu
+DÜNYA|Arz, cihan
+DENİZ|Derya
+NEHİR|Irmak
 IRMAK|Nehir
-ORMAN|🌲
-LİMAN|Gemilerin yanaştığı yer
+ORMAN|Koru, sık ağaçlık
+LİMAN|Rıhtım yeri
 ŞEHİR|Kent
-ASLAN|🦁
-BALIK|🐟
-KÖPEK|🐶
-TİLKİ|🦊
-TAVUK|🐔
-PANDA|🐼
-YILAN|🐍
-TAVŞAN|🐇
-ZÜRAFA|🦒
-BAYKUŞ|🦉
-YUNUS|🐬
-MAYMUN|🐒
-KEDİ|🐱
-ARABA|🚗
-KÖPRÜ|🌉
+ASLAN|Hayvanlar kralı
+BALIK|Hamsi, levrek gibi
+KÖPEK|Kangal gibi
+TİLKİ|Kurnaz hayvan
+TAVUK|Yumurtlayan kümes hayvanı
+PANDA|Bambu yiyen ayı
+YILAN|Sürüngen
+TAVŞAN|Uzun kulaklı kemirgen
+ZÜRAFA|Uzun boyunlu hayvan
+BAYKUŞ|Gece yırtıcısı
+YUNUS|Zeki deniz memelisi
+MAYMUN|Şempanze, goril gibi
+KEDİ|Pisi
+ARABA|Otomobil
+KÖPRÜ|Cisr
 EYLÜL|Okulların açıldığı ay
-KASIM|Ekimden sonra
-NİSAN|Martın ardından gelen ay
-MAYIS|Nisandan sonra
-ŞUBAT|Yılın en kısa ayı
+KASIM|On birinci ay
+NİSAN|Yağmurlarıyla bilinen ay
+MAYIS|Bahar bayramı ayı
+ŞUBAT|Gücük ay
 BAHAR|İlkyaz
-SEKİZ|Yediden sonra
-DOKUZ|Sekizden sonra
-YEŞİL|Çimen rengi
-PEMBE|Açık kırmızı tonu
-BEYAZ|Kar rengi
-SİYAH|Gece rengi
-BACAK|Kalçadan ayağa uzanan uzuv
-BOYUN|Başı gövdeye bağlayan kısım
-KULAK|👂
-BURUN|👃
-HAYAT|Yaşam
+SEKİZ|Ahtapotun kol sayısı
+DOKUZ|Tokuz
+YEŞİL|Zümrüt rengi
+PEMBE|Gül rengi
+BEYAZ|Ak
+SİYAH|Kara
+BACAK|Baldır ve uyluk
+BOYUN|Gerdan
+KULAK|İşitme organı
+BURUN|Koku organı ya da çıkıntı
+HAYAT|Ömür, yaşam
 SEVGİ|Muhabbet
-BARIŞ|Savaşın karşıtı
+BARIŞ|Sulh
 ZAFER|Utku
-TATLI|Acının karşıtı
-SICAK|Soğuğun karşıtı
-SOĞUK|Sıcağın karşıtı
-BÜYÜK|Küçüğün karşıtı
-KÜÇÜK|Büyüğün karşıtı
-KALIN|İncenin karşıtı
-HIZLI|Yavaşın karşıtı
-YAVAŞ|Hızlının karşıtı
-YAŞLI|Gencin karşıtı
-ZENGİN|Fakirin karşıtı
-FAKİR|Zenginin karşıtı
-KAPALI|Açığın karşıtı
-PAZAR|Haftanın son günü
-TEMMUZ|Hazirandan sonra
+TATLI|Şirin ya da baklava gibi
+SICAK|Harlı, sıcacık
+SOĞUK|Ayaz
+BÜYÜK|İri, kocaman
+KÜÇÜK|Ufak
+KALIN|Kaba, iri
+HIZLI|Seri
+YAVAŞ|Ağır, ağır
+YAŞLI|Kocamış
+ZENGİN|Varsıl
+FAKİR|Yoksul
+KAPALI|Bulutlu hava
+PAZAR|Hafta tatili ya da çarşı
+TEMMUZ|Yılın yedinci ayı
 ARALIK|Yılın son ayı
-YILDIZ|⭐
-YAĞMUR|🌧️
-ŞEKER|Tatlandırıcı
-PEYNİR|🧀
-LOKUM|Türk tatlısı, ikram şekeri
-SİMİT|Susamlı halka
-GÖZLÜK|👓
-HEDİYE|🎁
-KAKTÜS|🌵
-MANTAR|🍄
-PİYANO|🎹
-ANKARA|Türkiye'nin başkenti
-İZMİR|Ege'nin incisi
-BURSA|Yeşil şehir
-ADANA|Kebabıyla ünlü il
-SİVAS|Kangal köpeğiyle ünlü il
-VAN|Kedisiyle ünlü il
-RİZE|Çayıyla ünlü il
+YILDIZ|Kevkep
+YAĞMUR|Rahmet
+ŞEKER|Sakkaroz
+PEYNİR|Kaşar, beyaz gibi
+LOKUM|Rahat-ı hulkum
+SİMİT|Gevrek
+GÖZLÜK|Optik çerçeve
+HEDİYE|Armağan
+KAKTÜS|Dikenli çöl bitkisi
+MANTAR|Şapkalı bitki
+PİYANO|Tuşlu çalgı
+ANKARA|Başkent
+İZMİR|Kordon'un şehri
+BURSA|İlk Osmanlı başkenti
+ADANA|Seyhan'ın şehri
+SİVAS|Kongre şehri
+VAN|Akdamar'ın ili
+RİZE|Çay başkenti
 ORDU|Asker topluluğu
 AĞRI|Sızı
-BOLU|Abant Gölü'nün ili
-KARS|Kaşarıyla ünlü il
-KONYA|Mevlana'nın şehri
-HATAY|Künefesiyle ünlü il
-AYDIN|Aydınlık
+BOLU|Abant'ın ili
+KARS|Ani Harabeleri'nin ili
+KONYA|Sille'nin şehri
+HATAY|Antakya'nın ili
+AYDIN|Efeler diyarı
 TOKAT|Şamar
-ÇORUM|Leblebisiyle ünlü il
-MARDİN|Taş evleriyle ünlü il
-EDİRNE|Selimiye'nin şehri
-MUŞ|Doğu'da bir il
-KİM|Soru zamiri
-NE|Soru sözcüğü
-İLE|Bağlaç
-DE|Söyle
-YE|Yemek ye!
-NİNE|Büyükanne
-DEDE|Büyükbaba
-ABLA|Büyük kız kardeş
-AMCA|Babanın erkek kardeşi
-DAYI|Annenin erkek kardeşi
-TEYZE|Annenin kız kardeşi
-HALA|Babanın kız kardeşi
-EŞ|Karı ya da koca
-BEBEK|👶
-OKUL|🏫
-SINIF|Dersliğin diğer adı
-DERS|Öğretmenin anlattığı
+ÇORUM|Leblebi diyarı
+MARDİN|Midyat'ın ili
+EDİRNE|Kırkpınar'ın şehri
+MUŞ|Malazgirt'in ili
+NİNE|Babaanne ya da anneanne
+DEDE|Cet
+ABLA|Bacı
+AMCA|Emmi
+DAYI|Ananın erkek kardeşi
+TEYZE|Ana bacısı
+HALA|Baba bacısı
+EŞ|Zevce ya da zevç
+BEBEK|Nevzat
+OKUL|Mektep
+SINIF|Derslik ya da zümre
+DERS|Müfredat parçası
 SINAV|İmtihan
-ÖDEV|Evde yapılan çalışma
-DEFTER|📓
-SİLGİ|Kalem izini çıkaran
-TAHTA|Ağaçtan kesilmiş levha
-OYUN|🎲
-MÜZİK|🎵
-ŞARKI|Söylenen beste
-RESİM|🖼️
-SANAT|Güzel yaratma uğraşı
-FİLM|🎬
-TİYATRO|🎭
-ROMAN|Uzun anlatı türü
-MASAL|Bir varmış bir yokmuş
-FIKRA|Kısa güldürü
-TELEFON|📱
-RADYO|📻
-LAMBA|💡
-YATAK|🛏️
-DOLAP|Eşya saklanan mobilya
-HALI|Yere serilen dokuma
-PERDE|Pencereyi örten kumaş
-AYNA|🪞
-TARAK|Saç düzelten araç
-SABUN|🧼
-HAVLU|Kurulanma bezi
-FIRIN|Ekmek pişirilen yer
-TABAK|🍽️
-ÇATAL|Yemek takımından biri
-KAŞIK|🥄
-BIÇAK|🔪
-BARDAK|Su içilen kap
-ŞİŞE|🍾
-KUTU|📦
-ÇANTA|👜
-CEKET|🧥
-GÖMLEK|👔
-ETEK|Kadın giysisi
-ÇORAP|🧦
-ŞAPKA|🎩
-ELDİVEN|🧤
-ATKI|Boyna sarılan örgü
-KAZAK|Yün giysi
-ÇİZME|👢
-TERZİ|Elbise diken
-BERBER|Saç kesen
-AŞÇI|Yemek pişiren
-ÇİFTÇİ|Toprağı ekip biçen
-ÇOBAN|Sürüyü güden
-DOKTOR|Hekim
-HEMŞİRE|Sağlık çalışanı
-POLİS|👮
-ASKER|Er
-PİLOT|Uçak süren
-HAKİM|Yargıç
-AVUKAT|Savunman
-ÖĞRETMEN|Ders veren
-BALKON|Evin dışa açılan bölümü
-DAMLA|Su tanesi
-DALGA|Denizin kabarması
+ÖDEV|Vazife
+DEFTER|Kayıt tutulan sayfalar
+SİLGİ|Hata gideren
+TAHTA|Levha
+OYUN|Temsil ya da eğlence
+MÜZİK|Musiki
+ŞARKI|Türkü, beste
+RESİM|Tablo
+SANAT|Zanaat, hüner
+FİLM|Beyaz perde eseri
+TİYATRO|Sahne sanatı
+ROMAN|Uzun kurmaca
+MASAL|Tekerleme ile başlar
+FIKRA|Nasreddin Hoca anlatısı
+TELEFON|Ahize sahibi
+RADYO|Frekanslı yayın
+LAMBA|Kandil
+YATAK|Döşek
+DOLAP|Gardırop
+HALI|Kilim kardeşi
+PERDE|Tül, stor
+AYNA|Mirat
+TARAK|Saç düzelten diş sırası
+SABUN|Köpüren temizleyici
+HAVLU|Peşkir
+FIRIN|Tandır kuzeni
+TABAK|Servis kabı
+ÇATAL|Dişli sofra aracı
+KAŞIK|Çorba aracı
+BIÇAK|Keski
+BARDAK|Kadeh
+ŞİŞE|Cam kap
+KUTU|Sandık
+ÇANTA|Heybe
+CEKET|Takımın üstü
+GÖMLEK|Yakalı giysi
+ETEK|Kadın giysisi ya da dağ dibi
+ÇORAP|Ayağa giyilen örgü
+ŞAPKA|Fötr, kasket
+ELDİVEN|Parmaklı kışlık
+ATKI|Kaşkol
+KAZAK|Hırka kardeşi
+ÇİZME|Uzun konçlu ayakkabı
+TERZİ|Dikişçi
+BERBER|Perukar
+AŞÇI|Mutfak ustası
+ÇİFTÇİ|Rençper
+ÇOBAN|Sürü bekçisi
+DOKTOR|Tabip
+HEMŞİRE|Hastabakıcı
+POLİS|Kolluk görevlisi
+ASKER|Mehmetçik
+PİLOT|Tayyareci
+HAKİM|Kadı
+AVUKAT|Vekil
+ÖĞRETMEN|Muallim
+BALKON|Taraça
+DAMLA|Katre
+DALGA|Mevç
 KUMSAL|Plaj
 KIYI|Sahil
-BOĞAZ|İki denizi bağlayan su yolu
-VADİ|İki dağ arası
-YAYLA|Yazın çıkılan yer
-OVA|Düz ve geniş arazi
-TARLA|Ekin yeri
-BAHÇE|Evin çiçekli alanı
-ÇİMEN|Yeşil örtü
-YAPRAK|🍃
-TOHUM|Bitkinin özü
-FİDAN|Genç ağaç
-ODUN|Yakacak ağaç
+BOĞAZ|Gırtlak ya da su yolu
+VADİ|Dere yatağı
+YAYLA|Otlak, yazlık mera
+OVA|Düzlük
+TARLA|Ekin alanı
+BAHÇE|Ravza
+ÇİMEN|Çayır
+YAPRAK|Varak
+TOHUM|Çekirdek, döl
+FİDAN|Taze ağaççık
+ODUN|Yakacak
 KÖMÜR|Kara elmas
-DEMİR|Paslanan metal
-ALTIN|🥇
-GÜMÜŞ|🥈
-BAKIR|Kızıl metal
-ELMAS|💎
-İNCİ|İstiridyenin hazinesi
-MERMER|Beyaz taş
-TUĞLA|🧱
-ÇİVİ|Çekiçle çakılan
-VİDA|Tornavidayla sıkılan
-HALAT|Kalın ip
-ZİNCİR|⛓️
-ANAHTAR|🔑
-KİLİT|🔒
-PARA|💰
-BANKA|🏦
-ÇEK|Banka ödeme belgesi
-PUL|Mektuba yapıştırılan
-MEKTUP|✉️
-HABER|Bildirim
-GAZETE|📰
-DERGİ|Süreli yayın
-SORU|❓
+DEMİR|Paslanan maden
+ALTIN|Zer
+GÜMÜŞ|Sim
+BAKIR|Kızıl maden
+ELMAS|Pırlanta
+İNCİ|Lüllü
+MERMER|Marmara'nın taşı
+TUĞLA|Kerpiç kardeşi
+ÇİVİ|Mıh
+VİDA|Yivli çivi
+HALAT|Palamar
+ZİNCİR|Halka dizisi
+ANAHTAR|Miftah
+KİLİT|Asma ya da kapı
+PARA|Nakit
+BANKA|Kredi veren kurum
+ÇEK|Hamiline yazılır
+PUL|Koleksiyoncunun damgalı kağıdı
+MEKTUP|Name
+HABER|Havadis
+GAZETE|Ceride
+DERGİ|Mecmua
+SORU|Sual
 CEVAP|Yanıt
 FİKİR|Düşünce
-RÜYA|Uykuda görülen
-UYKU|😴
-GÜLÜŞ|😄
-GÖZYAŞI|😢
-KORKU|😱
-NEŞE|Sevinç
-HUZUR|Dirlik
+RÜYA|Düş
+UYKU|Hab
+GÜLÜŞ|Tebessüm
+GÖZYAŞI|Ağlarken akan
+KORKU|Dehşet
+NEŞE|Şenlik
+HUZUR|Sükun
 ÖZLEM|Hasret
-DOST|Yakın arkadaş
-KOMŞU|Yan evde oturan
+DOST|Yar
+KOMŞU|Hemsaye
 MİSAFİR|Konuk
-DÜĞÜN|💒
-BAYRAM|Kutlama günü
-TATİL|Dinlenme zamanı
+DÜĞÜN|Cemiyet, evlilik şöleni
+BAYRAM|Iyd
+TATİL|Paydos
 GEZİ|Seyahat
-HARİTA|🗺️
-PUSULA|🧭
-ÇAYDANLIK|Çay demlenen
-OD|Ateş (eski dilde)
-ÖZ|Esas, cevher
-ÜS|Askeri merkez
-AŞ|Yemek, aş
-UZ|Usta, becerikli
-OY|Seçimde sandığa atılır
+HARİTA|Kroki
+PUSULA|Yön gösterici
+OD|Ateş (eski)
+ÖZ|Cevher
+ÜS|Karargah, merkez
+AŞ|Taam
+UZ|Becerikli
+OY|Rey
 ÖÇ|İntikam
-AZ|Çok değil
-DO|İlk nota
-RE|İkinci nota
-Mİ|Üçüncü nota
-FA|Dördüncü nota
-LA|Altıncı nota
-Sİ|Yedinci nota
-EK|Sonradan katılan parça
-AÇ|Tok değil
-BUZ|🧊
-CAN|Ruh, hayat
-CAM|Pencere malzemesi
-DÜŞ|Rüya
-FAL|Kahveyle bakılır
-GAZ|Ocağın yakıtı
-GÜL|🌹
-HAL|Durum, vaziyet
+AZ|Kıt
+DO|Gamın başı
+RE|Gamın ikincisi
+Mİ|Gamın üçüncüsü
+FA|Gamın dördüncüsü
+LA|Diyapazon notası
+Sİ|Gamın yedincisi
+EK|İlave
+AÇ|Tokun zıddı
+BUZ|Donmuş su
+CAN|Ruh
+CAM|Şişe malzemesi
+DÜŞ|Hülya
+FAL|Bakıcının işi
+GAZ|Akaryakıt buharı
+GÜL|Bülbülün sevgilisi
+HAL|Durum
 HAN|Kervansaray
-HAS|Saf, katışıksız
+HAS|Saf, halis
 HIZ|Sürat
-İLK|Birinci
-LAF|Söz
-MAL|Varlık, servet
+İLK|Evvel
+LAF|Söz, kelam
+MAL|Servet
 NEM|Rutubet
-OYA|İğneyle yapılan süs
+OYA|Dantel kenarı
 PAY|Hisse
-RAF|Kitaplık bölmesi
-SEL|Taşkın su
-SIR|Gizli şey
-SOY|Nesil, sülale
-ŞAH|Satrançta en önemli taş
-ŞİŞ|Kebap çubuğu
-TER|Sıcakta vücuttan akar
-TÜY|Kuşun örtüsü
-YAĞ|Zeytinden çıkar
-ZOR|Kolay değil
-BEZ|Dokuma parçası
-BEL|Gövdenin ortası
-BOY|Uzunluk
-CİN|Lamba perisi
-DEV|Çok büyük
-DUA|Yakarış
-HAM|Olgunlaşmamış
-HOŞ|Sevimli, güzel
+RAF|Etajer gözü
+SEL|Taşkın
+SIR|Gizem
+SOY|Nesep
+ŞAH|Satranç kralı
+ŞİŞ|Kebap demiri
+TER|Arak
+TÜY|Kuş örtüsü
+YAĞ|Revgan
+ZOR|Müşkül
+BEZ|Paçavra
+BEL|Kemer bağlanan yer
+BOY|Kamet
+CİN|Lambanın sakini
+DEV|Azman
+DUA|Niyaz
+HAM|Çiğ
+HOŞ|Latif
 KİN|Garez
-NAL|Atın ayakkabısı
-NOT|Okulda verilir
-PİL|🔋
+NAL|Toynak koruyucusu
+NOT|Karne değeri
+PİL|Batarya
 RUH|Can
-SON|Bitiş
-SUÇ|Kanuna aykırı iş
-TAY|Yavru at
-TÜP|Gaz kabı
-YAT|Lüks tekne
-YEL|Rüzgar
-YÜN|Koyundan elde edilir
-ZAR|Tavlada atılır
-ÇOK|Az değil
-DAR|Geniş değil
-GEÇ|Erken değil
-İYİ|Kötü değil
-KÖR|Görmeyen
-SAL|Kütüklerden yapılan tekne
-TOZ|Kuru ince zerre
-AŞK|Derin sevgi
-HAP|İlaç tableti
-LİG|Takımların yarıştığı seri
-GOL|Futbolda sayı
-MAÇ|Spor karşılaşması
-CEP|Pantolonda bulunur
-KAN|Damarlarda dolaşır
-KÜL|Yanma artığı
-DÜN|Bugünden önce
-DUT|Beyazı ve karası olan meyve
-ÇAM|Yaprak dökmeyen ağaç
-SIĞ|Derin değil
-TOK|Aç değil
-BOT|Kışlık ayakkabı
-BABA|Annenin eşi
-BACA|Duman çıkar
-BOYA|Duvara sürülür
-ÇİFT|Tek değil
-ERİK|Ekşi yeşil meyve
-EVET|Hayır değil
-FARE|🐭
-FİDE|Toprağa dikilen fidan
-GECE|Gündüzün karşıtı
-HAVA|Soluduğumuz şey
-İĞNE|Dikiş aleti
+SON|Nihayet
+SUÇ|Kabahat
+TAY|Kulun
+TÜP|Mutfak gazı kabı
+YAT|Lüks gezi teknesi
+YEL|Esinti
+YÜN|Koyun kılı
+ZAR|Tavla küpü
+ÇOK|Bol
+DAR|Sıkışık
+GEÇ|Gecikmiş
+İYİ|Hayırlı
+KÖR|Ama
+SAL|Kütük tekne
+TOZ|Gubar
+AŞK|Sevda
+HAP|Tablet
+LİG|Puan cetvelli yarış
+GOL|Filelere giden
+MAÇ|Karşılaşma
+CEP|Kese
+KAN|Damar sıvısı
+KÜL|Yanık artığı
+DÜN|Geçen gün
+DUT|Pestili yapılan meyve
+ÇAM|Kozalaklı ağaç
+SIĞ|Derin olmayan
+TOK|Karnı dolu
+BOT|Sandal ya da çizme
+BABA|Peder
+BACA|Duman yolu
+BOYA|Renk veren madde
+ÇİFT|İkili, eş
+ERİK|Mürdümü de olan meyve
+EVET|Olur
+FARE|Sıçan
+FİDE|Fidancık
+GECE|Leyl
+HAVA|Atmosfer
+İĞNE|Dikiş ucu
 KASA|Para dolabı
-NANE|Ferahlatıcı bitki
-OTEL|🏨
-RENK|Kırmızı, mavi gibi
-SOBA|Kışın ısıtır
-ZARF|Mektubun konduğu kılıf
-ADAM|Erkek kişi
-AĞIR|Hafif değil
-AİLE|Anne, baba ve çocuklar
+NANE|Ferahlatıcı ot
+OTEL|Konaklama yeri
+RENK|Ton
+SOBA|Isıtıcı
+ZARF|Mektup kılıfı
+ADAM|İnsan, kişi
+AĞIR|Vakur ya da hafifin zıddı
+AİLE|Hane halkı
 DOĞA|Tabiat
-EKİN|Tarlada yetişen
-GERİ|İleri değil
+EKİN|Hasat edilen
+GERİ|Arka
 GÖK|Sema
-İLAÇ|💊
+İLAÇ|Deva
 İSİM|Ad
-İŞÇİ|Çalışan kişi
-KIRK|Otuz dokuzdan sonra
-KİLO|Ağırlık birimi
-KUYU|Su çekilen çukur
-ORTA|Merkez
-ÖĞLE|Günün ortası
-ÖLÇÜ|Ölçme birimi
+İŞÇİ|Amele
+KIRK|Bir kahvenin hatır yılı
+KİLO|Bin gram
+KUYU|Su çekilen derin çukur
+ORTA|Vasat
+ÖĞLE|Gün ortası
+ÖLÇÜ|Ayar
 SAYI|Rakam
-SPOR|Beden etkinliği
-UZAK|Yakın değil
-ÜLKE|Devlet toprağı
+SPOR|İdman
+UZAK|Irak
+ÜLKE|Diyar
 YURT|Vatan
 ZEKİ|Akıllı
-OTUZ|Yirmi dokuzdan sonra
-ELLİ|Kırk dokuzdan sonra
-SKOR|Maç sonucu
-FAUL|Kural dışı hareket
-ÇENE|Yüzün alt kısmı
-ALIN|Kaşların üstü
-SIRT|Gövdenin arkası
-KOVA|Su taşıma kabı
-ÇATI|Evin üstü
-ŞORT|Kısa pantolon
-ÖFKE|Kızgınlık
-SERT|Yumuşak değil
-KURU|Islak değil
-DANA|Sığır yavrusu
-AYVA|Tüylü sarı meyve
-KİVİ|🥝
-MEŞE|Palamut veren ağaç
-NOTA|Müzik işareti
-OKEY|Taşlarla oynanır
+OTUZ|Ayın gün sayısı
+ELLİ|Yarım asır
+SKOR|Sonuç
+FAUL|Kural ihlali
+ÇENE|Gerdan üstü
+ALIN|Cebin
+SIRT|Arka
+KOVA|Gerdel
+ÇATI|Dam
+ŞORT|Kısa paça
+ÖFKE|Hiddet
+SERT|Katı
+KURU|Yavan
+DANA|Buzağı büyüğü
+AYVA|Tüylü meyve
+KİVİ|Yeşil içli meyve
+MEŞE|Palamut ağacı
+NOTA|Müzik harfi
+OKEY|Taşlı oyun
 ASIR|Yüzyıl
-ARPA|Hayvan yemi tahıl
-BÖCEK|Altı bacaklı küçük canlı
-CEVİZ|Sert kabuklu yemiş
-DUVAR|Odayı çevreler
-GÖLGE|Güneşte oluşur
-GÖNÜL|Kalp, yürek
-KABAK|🎃
-KOYUN|Yünü için beslenen hayvan
+ARPA|Bira tahılı
+BÖCEK|Haşere
+CEVİZ|Koz
+DUVAR|Cidar
+GÖLGE|Saye
+GÖNÜL|Kalp
+KABAK|Sakızı da olan sebze
+KOYUN|Davar
 PİLAV|Pirinç yemeği
-SAMAN|Kuru ekin sapı
-SEPET|🧺
-SİNEK|Vızıldayan küçük böcek
-KAVUN|Sarı yaz meyvesi
-HOROZ|🐓
-ÖRDEK|🦆
-AKREP|🦂
-BALTA|🪓
-VALİZ|🧳
-AMPUL|Elektrikle ışık verir
-BEYİN|🧠
-AKŞAM|Günün sonu
-BİLET|🎫
-BİLGİ|Öğrenilen şey
-CADDE|Geniş yol
-CÜMLE|Kelimelerden oluşur
-ÇARŞI|Alışveriş yeri
-ÇOCUK|Küçük insan
-DAMAT|Gelinin eşi
-GELİN|Damadın eşi
-HASTA|Rahatsız kimse
-HAYAL|Düş, hülya
+SAMAN|Kuru sap
+SEPET|Zembil
+SİNEK|Vızıldayan
+KAVUN|Kırkağaç'ın meyvesi
+HOROZ|Sabah öten
+ÖRDEK|Paytak yürüyen kuş
+AKREP|Zehirli kuyruk
+BALTA|Nacak
+VALİZ|Bavul
+AMPUL|Elektrikli ışık
+BEYİN|Dimağ
+AKŞAM|Gün batımı vakti
+BİLET|Giriş kartı
+BİLGİ|Malumat
+CADDE|Bulvar
+CÜMLE|Tümce
+ÇARŞI|Pazar yeri
+ÇOCUK|Velet
+DAMAT|Güvey
+GELİN|Duvaklı
+HASTA|Rahatsız
+HAYAL|Hülya
 HEDEF|Amaç
-KADIN|Erkeğin karşıtı
-KAĞIT|Üzerine yazılır
-KAYIK|Küçük tekne
-KEMER|Pantolonu tutar
-KONAK|Büyük eski ev
-KUMAŞ|Dokuma, bez
-MEYVE|Ağaçta yetişir
+KADIN|Hanım
+KAĞIT|Varak
+KAYIK|Sandal
+KEMER|Kuşak
+KONAK|Malikane
+KUMAŞ|Dokuma
+MEYVE|Yemiş
 ÖRNEK|Misal
-SABAH|Günün başı
+SABAH|Seher
 SAHİL|Kıyı
-SARAY|Padişahın evi
-SATIR|Yazı dizisi
-SEBZE|Bahçede yetişir
+SARAY|Kasr
+SATIR|Dize
+SEBZE|Zerzevat
 SELAM|Merhaba
 SOFRA|Yemek düzeni
-SOKAK|Dar yol
-TARİH|Geçmişin bilimi
-TAVAN|Odanın üstü
-TEPSİ|Yayvan kap
-TURŞU|Sirkeli kış yiyeceği
+SOKAK|Aralık yol
+TARİH|Geçmiş bilimi
+TAVAN|Sakf
+TEPSİ|Sini
+TURŞU|Sirkeli saklama
 VATAN|Yurt
-YAKIN|Uzak değil
-YALAN|Doğru değil
-YARIN|Bugünden sonra
-YEMEK|Karın doyurur
+YAKIN|Civar
+YALAN|Kizb
+YARIN|Ferda
+YEMEK|Taam
 YÜREK|Kalp
 ZAMAN|Vakit
-YİRMİ|On dokuzdan sonra
-SİNOP|En kuzeydeki il
+YİRMİ|Kırkın yarısı
+SİNOP|Diyojen'in şehri
 MUĞLA|Bodrum'un ili
-AFYON|Kaymağıyla ünlü il
-HAKEM|Maçı yönetir
-TAKIM|Oyuncu topluluğu
-DERBİ|Büyük rakiplerin maçı
-BİLEK|Eli kola bağlar
-TOPUK|Ayağın arkası
-YANAK|Yüzün iki yanı
-GÖĞÜS|Gövdenin önü
-KEMİK|İskeleti oluşturur
-DAMAR|Kan taşır
-CİĞER|Karaciğer kısaca
-ŞOFÖR|Araç kullanan
-KASAP|Et satan
-YAZAR|Kitap yazan
-MİMAR|Bina tasarlayan
+AFYON|Kaymak diyarı
+HAKEM|Düdük çalan
+TAKIM|Ekip
+DERBİ|Kader maçı
+BİLEK|Saat takılan yer
+TOPUK|Ökçe yeri
+YANAK|Avurt
+GÖĞÜS|Sine
+KEMİK|İskelet parçası
+DAMAR|Kan yolu
+CİĞER|Akciğer kısaca
+ŞOFÖR|Sürücü
+KASAP|Etçi
+YAZAR|Müellif
+MİMAR|Sinan gibi
 BEKÇİ|Gece nöbetçisi
-PALTO|Kalın dış giysi
-YELEK|Kolsuz giysi
-TAKSİ|🚕
-VAPUR|Boğaz'ı geçer
-MOTOR|Aracı yürüten makine
-METRO|Yer altı treni
-KIZAK|Karda kayılır
-SAVAŞ|Barışın karşıtı
-KEDER|Üzüntü
-CESUR|Yürekli
-KOLAY|Zor değil
-TEMİZ|Kirli değil
-DERİN|Sığ değil
-TUZLU|Tuzu çok
-HAFİF|Ağır değil
-GÜZEL|Hoş
-MUTLU|Sevinçli
-ÜZGÜN|Kederli
-ISLAK|Kuru değil
-ERKEN|Geç değil
-ALÇAK|Yüksek değil
-GENİŞ|Dar değil
-BORDO|Koyu kırmızı
-ZEBRA|🦓
+PALTO|Kaban
+YELEK|Kolsuz üstlük
+TAKSİ|Sarı araç
+VAPUR|Boğaz'ın simgesi
+MOTOR|Makine
+METRO|Raylı yeraltı
+KIZAK|Karda kayan
+SAVAŞ|Harp
+KEDER|Hüzün
+CESUR|Yiğit
+KOLAY|Basit
+TEMİZ|Pak
+DERİN|Engin
+TUZLU|Salamura
+HAFİF|Yeğni
+GÜZEL|Dilber
+MUTLU|Bahtiyar
+ÜZGÜN|Mahzun
+ISLAK|Rutubetli
+ERKEN|Vakitli
+ALÇAK|Basık
+GENİŞ|Ferah
+BORDO|Vişneçürüğü
+ZEBRA|Çizgili at
 SERÇE|Küçük kahverengi kuş
-MARTI|Deniz kuşu
-KİRPİ|🦔
-GEYİK|🦌
-HAMSİ|Karadeniz balığı
-İNCİR|Sütlü yaz meyvesi
-BADEM|Kabuklu yemiş
-SÖĞÜT|Su kenarı ağacı
-KAVAK|Uzun boylu ağaç
-ÇINAR|Asırlık ulu ağaç
-DİKEN|Gülün sivri ucu
-YOSUN|Nemli yerde biter
-SAHNE|Oyuncuların yeri
-KUKLA|İple oynatılan oyuncak
-TAVLA|Zarla oynanan masa oyunu
+MARTI|Simit kapan kuş
+KİRPİ|Dikenli memeli
+GEYİK|Boynuzlu orman hayvanı
+HAMSİ|Karadeniz'in balığı
+İNCİR|Bursa siyahı
+BADEM|Ezmesi yapılan yemiş
+SÖĞÜT|Salkım ağaç
+KAVAK|Uzun ağaç
+ÇINAR|Asırlık ağaç
+DİKEN|Gül nöbetçisi
+YOSUN|Kayada yeşeren
+SAHNE|Perde ardı
+KUKLA|İpli figür
+TAVLA|Mars olunan oyun
 HAFTA|Yedi gün
-BUGÜN|Dünden sonra
-ŞİMDİ|Bu an
-KUTUP|Buzlarla kaplı bölge
-ÇAMUR|Islak toprak
-DUMAN|Ateşten çıkar
-NOHUT|Leblebinin hammaddesi
-YULAF|Kahvaltılık tahıl
-AYRAN|Yoğurtlu içecek
-BÖREK|Yufkalı hamur işi
-HELVA|Tahinli tatlı
-KÖFTE|Kıymadan yapılır
-KEBAP|Şişte pişen et
-DÖNER|Döndürülerek pişen et
-MANTI|Kayseri'nin hamur yemeği
-TAHİN|Susamdan yapılır
+BUGÜN|Dünden sonra, yarından önce
+ŞİMDİ|Halen
+KUTUP|Penguen yurdu
+ÇAMUR|Balçık
+DUMAN|Tütsü
+NOHUT|Leblebi ham maddesi
+YULAF|Kahvaltı tahılı
+AYRAN|Yayık ürünü
+BÖREK|Su ya da sigara
+HELVA|İrmikli tatlı
+KÖFTE|İnegöl'ün ünü
+KEBAP|Adana ya da Urfa
+DÖNER|Yaprak et
+MANTI|Kayseri'nin yemeği
+TAHİN|Susam ezmesi
 SİRKE|Ekşi sos
-ŞİMŞEK|⚡
-TOPRAK|Bitkiler içinde yetişir
-YELKEN|⛵
-ZEYTİN|🫒
-KARPUZ|🍉
-SALATA|🥗
-BAYRAK|🚩
-KAMERA|📷
-BALİNA|🐳
-TİMSAH|🐊
-KAPLAN|🐅
-KARTAL|🦅
-FINDIK|Karadeniz'in meşhur yemişi
-CETVEL|📏
-ŞELALE|Yüksekten dökülen su
-VOLKAN|🌋
-TAKVİM|📅
-PARMAK|☝️
-TIRNAK|💅
-GÜNDÜZ|Gecenin karşıtı
-HIRSIZ|Çalan kimse
-KARDEŞ|Aynı anne babanın çocuğu
-MUTFAK|Yemek yapılan oda
-SÖZLÜK|Kelimelerin anlamını verir
-ALTMIŞ|Elli dokuzdan sonra
-YETMİŞ|Altmış dokuzdan sonra
-SEKSEN|Yetmiş dokuzdan sonra
-DOKSAN|Seksen dokuzdan sonra
+ŞİMŞEK|Yıldırım
+TOPRAK|Arz
+YELKEN|Rüzgarla dolar
+ZEYTİN|Ayvalık'ın ünü
+KARPUZ|Diyarbakır'ın ünü
+SALATA|Çoban ya da mevsim
+BAYRAK|Sancak
+KAMERA|Çekim aracı
+BALİNA|Deniz devi
+TİMSAH|Nil sürüngeni
+KAPLAN|Çizgili kedigil
+KARTAL|Kuşların şahı
+FINDIK|Giresun'un ünü
+CETVEL|Çizgi aracı
+ŞELALE|Çağlayan
+VOLKAN|Yanardağ
+TAKVİM|Ruzname
+PARMAK|Yüzük takılan
+TIRNAK|Oje sürülen
+GÜNDÜZ|Gece değil
+HIRSIZ|Yankesici
+KARDEŞ|Bacı ya da birader
+MUTFAK|Aşhane
+SÖZLÜK|Lügat
+ALTMIŞ|Saatteki dakika
+YETMİŞ|Seksenden on eksik
+SEKSEN|Doksandan on eksik
+DOKSAN|Dik açı derecesi
 AMASYA|Elmasıyla ünlü il
-FORVET|Golcü oyuncu
-DEFANS|Savunma
-TRİBÜN|Seyircinin yeri
-DİRSEK|Kolun ortasındaki eklem
-KİRPİK|Göz kapağı kılları
-RESSAM|Resim yapan
-KOLTUK|Oturma mobilyası
-YASTIK|Başımızı koyduğumuz
-YORGAN|Kalın örtü
-FİNCAN|Kahve içilir
-TERLİK|Ev ayakkabısı
-OTOBÜS|🚌
-KAMYON|🚚
-ÇİRKİN|Güzel değil
-YORGUN|Bitkin
-YÜKSEK|Alçak değil
-BUZAĞI|İnek yavrusu
-CİVCİV|🐥
-LEYLEK|Uzun bacaklı göçmen kuş
-SİNCAP|🐿️
-YENGEÇ|🦀
-LEVREK|Değerli deniz balığı
-KAYISI|Malatya'nın meyvesi
-ANANAS|🍍
-SÜMBÜL|Kokulu bahar çiçeği
-SANİYE|Dakikanın altmışta biri
-DAKİKA|Saatin altmışta biri
-KAYNAK|Suyun çıktığı yer
-BOZKIR|Kurak düzlük
-MAĞARA|Yer altı boşluğu
-RÜZGAR|Esinti
-PİRİNÇ|Pilavın tanesi
-BULGUR|Kırık buğday
-BUĞDAY|Undan önceki tahıl
-YOĞURT|Sütten mayalanır
-KAYMAK|Sütün yağlı üstü
-POĞAÇA|Kahvaltılık hamur işi
-PEKMEZ|Üzümden yapılır
-PATATES|🥔
-DOMATES|🍅
-YUMURTA|🥚
-ŞEMSİYE|☂️
-KELEBEK|🦋
-PENGUEN|🐧
-AHTAPOT|🐙
-ÖRÜMCEK|🕷️
-KARINCA|🐜
-KESTANE|Kışın közde pişer
+FORVET|Santrfor
+DEFANS|Savunma hattı
+TRİBÜN|Seyirci yeri
+DİRSEK|Kol eklemi
+KİRPİK|Göz kapağı kılı
+RESSAM|Nakkaş
+KOLTUK|Berjer
+YASTIK|Baş koyulan
+YORGAN|Kaz tüylü örtü
+FİNCAN|Telveli kap
+TERLİK|Patik, şıpıdık
+OTOBÜS|Şehir içi araç
+KAMYON|Yük aracı
+ÇİRKİN|Güzel olmayan
+YORGUN|Bitap
+YÜKSEK|Yüce
+BUZAĞI|Dana yavrusu
+CİVCİV|Piliç yavrusu
+LEYLEK|Hacı kuşu
+SİNCAP|Ceviz toplayan
+YENGEÇ|Yan yürüyen
+LEVREK|Akdeniz balığı
+KAYISI|Zerdali
+ANANAS|Tropik meyve
+SÜMBÜL|Bahar çiçeği
+SANİYE|Dakikanın bölümü
+DAKİKA|Saatin bölümü
+KAYNAK|Pınar
+BOZKIR|Step
+MAĞARA|Kovuk
+RÜZGAR|Esinti, yel
+PİRİNÇ|Çeltik
+BULGUR|Kırma buğday
+BUĞDAY|Hınta
+YOĞURT|Mayalı süt
+KAYMAK|Afyon'un ünü
+POĞAÇA|Pastane hamuru
+PEKMEZ|Üzüm şırası
+PATATES|Kızartması yapılır
+DOMATES|Kırmızı sebze
+YUMURTA|Tavuk ürünü
+ŞEMSİYE|Yağmurluk
+KELEBEK|Pervane
+PENGUEN|Buzul kuşu
+AHTAPOT|Sekiz kollu
+ÖRÜMCEK|Ağ ören
+KARINCA|Çalışkan böcek
+KESTANE|Közde pişen
 MAHALLE|Semt
-FIRTINA|Şiddetli rüzgar
-HAZİRAN|Altıncı ay
-AĞUSTOS|Sekizinci ay
-TRABZON|Hamsisiyle ünlü il
-ANTALYA|Turizm başkenti il
-MALATYA|Kayısısıyla ünlü il
-GİRESUN|Fındığıyla ünlü il
-KAYSERİ|Pastırmasıyla ünlü il
-PENALTI|On bir metre vuruşu
-FIRINCI|Ekmek yapan
-BALIKÇI|Balık tutan
-POSTACI|Mektup getiren
+FIRTINA|Bora
+HAZİRAN|Yılın altıncı ayı
+AĞUSTOS|Yılın sekizinci ayı
+TRABZON|Sümela'nın ili
+ANTALYA|Turizm başkenti
+MALATYA|Kayısı diyarı
+GİRESUN|Fındık diyarı
+KAYSERİ|Erciyes'in ili
+PENALTI|On bir adım
+FIRINCI|Ekmekçi
+BALIKÇI|Ağ atan
+POSTACI|Mektupçu
 DENİZCİ|Gemici
-TENCERE|Yemek pişirilen kap
-SÜPÜRGE|🧹
-PENCERE|🪟
-TRAKTÖR|🚜
-YUMUŞAK|Sert değil
+TENCERE|Kapaklı kap
+SÜPÜRGE|Çalı ya da elektrikli
+PENCERE|Cam açıklık
+TRAKTÖR|Çiftçi aracı
+YUMUŞAK|Mülayim
 TURUNCU|Portakal rengi
-KANGURU|🦘
-PAPAĞAN|🦜
-KURBAĞA|🐸
+KANGURU|Keseli zıplayan
+PAPAĞAN|Konuşan kuş
+KURBAĞA|Vıraklayan
 SOLUCAN|Toprak kurdu
-ŞEFTALİ|🍑
-PAPATYA|🌼
-MENEKŞE|Mor bahar çiçeği
-SATRANÇ|♟️
-BULMACA|Çözülen kelime oyunu
-OYUNCAK|Çocuğun eğlencesi
-UÇURTMA|🪁
+ŞEFTALİ|Tüylü yaz meyvesi
+PAPATYA|Fal çiçeği
+MENEKŞE|Mor çiçek
+SATRANÇ|Şah mat oyunu
+BULMACA|Çengel gibi
+OYUNCAK|Çocuk eğlencesi
+UÇURTMA|İpli uçan
 LEBLEBİ|Kavrulmuş nohut
 FASULYE|Kuru bakliyat
-BAKLAVA|Şerbetli tatlı
-MERCİMEK|Çorbası meşhur bakliyat
-MIKNATIS|🧲
-ÇARŞAMBA|Haftanın üçüncü günü
-PERŞEMBE|Haftanın dördüncü günü
-ŞAMPİYON|Birinci olan
-SANDALYE|Oturulan eşya
-MERDİVEN|Basamaklı yol
-PANTOLON|Bacak giysisi
-BİSİKLET|🚲
-GERGEDAN|🦏
-PORTAKAL|🍊
-SALINCAK|Sallanılan oyun aleti
-GÖKYÜZÜ|Bulutların olduğu yer
+BAKLAVA|Gaziantep tatlısı
+MERCİMEK|Kırmızı bakliyat
+MIKNATIS|Demir çeken taş
+ÇARŞAMBA|Haftanın ortası
+PERŞEMBE|Cumadan önceki gün
+ŞAMPİYON|Birinci
+SANDALYE|İskemle
+MERDİVEN|Basamak dizisi
+PANTOLON|Paçalı giysi
+BİSİKLET|Pedallı araç
+GERGEDAN|Boynuzlu dev
+PORTAKAL|Turunçgil
+SALINCAK|Sallanan oturak
+GÖKYÜZÜ|Asuman
 LACİVERT|Koyu mavi
-ÇEKİRDEK|Ayçiçeğinden çıkar
-ÇAĞLAYAN|Coşkun akan su
+ÇEKİRDEK|Çitlenen
+ÇAĞLAYAN|Şelale
+AHU|Ceylan
+ARZ|Yeryüzü ya da sunma
+ÇİT|Bahçe sınırı
+ESER|Yapıt
+İLİM|Bilim
+ÖRF|Gelenek
+SEMA|Gök
+ŞAN|Ün
+ŞER|Kötülük
+TAN|Şafak
+UÇUK|Soluk renkli
+VARİL|Fıçı
+YAR|Uçurum ya da sevgili
+ZAN|Tahmin
+AHENK|Uyum
+AHIR|Hayvan barınağı
+ASA|Değnek
+ATLAS|Harita kitabı
+AZAP|Eziyet
+BEDEN|Vücut
+BELA|Musibet
+BOSTAN|Sebze bahçesi
+CİLT|Deri ya da kitap
+CİVAR|Çevre
+ÇAĞ|Devir
+ÇAPA|Toprak kazma aleti
+ÇEŞME|Musluklu su yeri
+ÇIRA|Reçineli odun
+DEFNE|Akdeniz yaprağı
+DEHA|Üstün zeka
+DESTAN|Epik şiir
+DİVAN|Sedir ya da şiir kitabı
+DÖNEM|Periyot
+EBE|Doğum yardımcısı
+EFE|Zeybek
+ESİR|Tutsak
+FENER|Kandil ya da deniz ışığı
+GURBET|Yabancı ellerde olmak
+HASAT|Ekin toplama
+HAYRAN|Tutkun
+HECE|Kelime parçası
+İKLİM|Hava düzeni
+İMZA|Paraf
+İNAT|Direnç
+İSTEK|Arzu
+KADER|Alın yazısı
+KANUN|Yasa ya da çalgı
+KARAR|Hüküm
+KERVAN|Deve katarı
+KESE|Hamam eldiveni
+KILIÇ|Pala
+KOZA|İpek böceği yuvası
+KUBBE|Yarım küre çatı
+LEZZET|Tat
+MAHSUL|Ürün
+MEKAN|Yer
+MERAK|İlgi
+MİRAS|Kalıt
+MÜZE|Eser sergilenen yer
+NAZAR|Göz değmesi
+NİMET|Bereket
+OLAY|Hadise
+ORAN|Nispet
+PAZI|Yaprak sebze
+RAKAM|Sayı işareti
+REKOR|En iyi derece
+SAHRA|Çöl
+SANDIK|Çeyiz kutusu
+SEFER|Yolculuk
+SEMER|Eşek eğeri
+SERAP|Yanılsama
+SİLAH|Tüfek
+SİNİ|Büyük tepsi
+SÜRÜ|Koyun topluluğu
+ŞAFAK|Tan yeri
+ŞEREF|Onur
+ŞÖLEN|Ziyafet
+TABUT|Cenaze sandığı
+TARAF|Yan, cephe
+TEMEL|Esas
+TEZGAH|Satış masası
+TÖREN|Merasim
+ÜLFET|Alışkanlık, yakınlık
+VAKIF|Hayır kurumu
+VEDA|Ayrılık selamı
+YAPI|Bina
+YAZGI|Kader
+YEMİN|Ant
+YOKUŞ|Bayır
+ZERRE|Parçacık
+ZEYBEK|Ege oyunu
+ZIRH|Koruyucu kaplama
+ZİRVE|Doruk
+ARENA|Oyun alanı
+ATÖLYE|İşlik
+ÇARDAK|Asma gölgeliği
+ÇEYİZ|Gelin hazırlığı
+DOĞAL|Tabii
+EFSANE|Söylence
+EVREN|Kainat
+HANGAR|Uçak barınağı
+HAZİNE|Define
+KAFES|Kuş evi
+KALKAN|Siper
+KAŞİF|Bulucu
+KOVAN|Arı evi
+MASKE|Yüz örtüsü
+MEVSİM|Dönem, sezon
+MİZAH|Gülmece
+ORKİDE|Saksı çiçeği
+PUSU|Tuzak
+SAĞLIK|Sıhhat
+SERVET|Varlık
+SINIR|Hudut
+SOLUK|Nefes ya da donuk
+SÜRGÜN|Göç ettirme ya da filiz
+TABİAT|Doğa
+TÜRKÜ|Halk ezgisi
+YETENEK|Kabiliyet
+YOLCU|Misafir, seyyah
+ZİYAFET|Şölen
+KUYRUK|Sıra ya da hayvan uzvu
+MİNARE|Şerefeli kule
+KERPİÇ|Çamur tuğla
+MANDIRA|Süt işleme yeri
+DEĞİRMEN|Un öğüten
+ÇEKMECE|Dolap gözü
+KAVANOZ|Reçel kabı
+TESBİH|Doksan dokuzluk dizi
+NAKIŞ|İşleme
+KİLİM|Dokuma yaygı
+HEYKEL|Yontu
+SİLUET|Gölge çizgisi
+SANCAK|Bayrak
+ORDUGAH|Karargah
+OKYANUS|Umman
+MERCAN|Deniz taşı
+İSKELE|Rıhtım
+FENERCİ|Işıkçı
+KAPTAN|Gemi reisi
+TÜCCAR|Tacir
+SARRAF|Kuyumcu
+HATTAT|Güzel yazı ustası
+ÇİNİ|İznik sanatı
+EBRU|Su üstü resmi
+MİNYATÜR|Küçük resim
