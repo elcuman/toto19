@@ -57,7 +57,7 @@
   <p class="sessiz kucuk" style="margin-top:-4px">Önce en az denemede bulan, eşitlikte daha hızlı bulan önde. Tahmin ligi puanlarına etkisi yok.</p>
   <ol class="kl-sira-liste" id="klSira">
     {% for s in siralama %}
-    <li class="{{ 'kl-ben' if current_user.is_authenticated and s.kullanici_id == current_user.id }}{{ ' kl-kaybetti' if not s.kazandi }}">
+    <li class="{{ 'kl-ben' if s.misafir or (current_user.is_authenticated and s.kullanici_id == current_user.id) }}{{ ' kl-kaybetti' if not s.kazandi }}">
       <span class="kl-s-no">{{ s.sira or '–' }}</span>
       <span class="kl-s-ad{{ ' kl-gizli' if s.gizli }}"{% if s.gizli %} aria-label="Gizli oyuncu"{% endif %}>{{ s.ad }}</span>
       <span class="kl-s-deneme">{{ (s.deneme ~ '/6') if s.kazandi else 'X/6' }}</span>
@@ -300,7 +300,7 @@
     var ol = document.getElementById('klSira'), ben = {{ current_user.id if current_user.is_authenticated else 'null' }};
     if (!liste.length) return;
     ol.innerHTML = liste.map(function(s){
-      return '<li class="'+(s.kullanici_id!==null&&s.kullanici_id===ben?'kl-ben':'')+(s.kazandi?'':' kl-kaybetti')+'"><span class="kl-s-no">'+(s.sira||'–')+'</span><span class="kl-s-ad'+(s.gizli?' kl-gizli':'')+'">'+esc(s.ad)+'</span><span class="kl-s-deneme">'+(s.kazandi?s.deneme+'/6':'X/6')+'</span><span class="kl-s-sure">'+(s.kazandi?esc(s.sure):'')+'</span></li>';
+      return '<li class="'+(s.misafir||(s.kullanici_id!==null&&s.kullanici_id===ben)?'kl-ben':'')+(s.kazandi?'':' kl-kaybetti')+'"><span class="kl-s-no">'+(s.sira||'–')+'</span><span class="kl-s-ad'+(s.gizli?' kl-gizli':'')+'">'+esc(s.ad)+'</span><span class="kl-s-deneme">'+(s.kazandi?s.deneme+'/6':'X/6')+'</span><span class="kl-s-sure">'+(s.kazandi?esc(s.sure):'')+'</span></li>';
     }).join('');
   }
   document.getElementById('klKlavye').addEventListener('click', function(e){

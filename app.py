@@ -3695,6 +3695,23 @@ def kelime_siralamasi(gun=None):
                       "gizli": not acik,
                       "kullanici_id": o.kullanici_id if acik else None, "kazandi": o.kazandi,
                       "deneme": len(o.liste()), "sure": (f"{s // 60}:{s % 60:02d}" if s < 10 ** 9 else "")})
+    # Misafir kaydedilmez ama kendi sonucunu listede yerinde görür (sadece kendisi)
+    if not current_user.is_authenticated and gun == kelime_bugun():
+        m = _kelime_durumu()
+        if m["bitti"]:
+            ben = {"sira": None, "ad": "Sen (misafir)", "gizli": False, "kullanici_id": None, "misafir": True,
+                   "kazandi": m["kazandi"], "deneme": len(m["tahminler"]), "sure": ""}
+            yer = len(liste)
+            for i, x in enumerate(liste):
+                if (not x["kazandi"], x["deneme"] if x["kazandi"] else 99) > (not ben["kazandi"], ben["deneme"] if ben["kazandi"] else 99):
+                    yer = i
+                    break
+            liste.insert(yer, ben)
+            sira = 0
+            for x in liste:
+                if x["kazandi"]:
+                    sira += 1
+                    x["sira"] = sira
     return liste
 
 
@@ -3908,23 +3925,32 @@ def harf_siralamasi(gun=None):
     oyunlar = (HarfOyunu.query.options(db.joinedload(HarfOyunu.kullanici))
                .filter(HarfOyunu.gun == gun, HarfOyunu.bitti.is_(True)).all())
 
-    def sure(o):
-        if o.baslangic and o.bitis:
-            return max(0, int((o.bitis - o.baslangic).total_seconds()))
-        return 10 ** 9
-    oyunlar.sort(key=lambda o: (-o.dogru, o.yanlis, sure(o)))
+    def sure(bas, bitis):
+        return max(0, int((bitis - bas).total_seconds())) if bas and bitis else 10 ** 9
     gorunur = siralama_gorunur_idler()
-    liste, sira = [], 0
+    ben_id = current_user.id if current_user.is_authenticated else None
+    satirlar = []
     for o in oyunlar:
         if not o.kullanici or yz_mi(o.kullanici):
             continue
-        sira += 1
-        s = sure(o)
         acik = o.kullanici_id in gorunur
-        liste.append({"sira": sira, "ad": o.kullanici.kullanici_adi if acik else "Oyuncu" + "•" * (3 + o.id % 5),
-                      "gizli": not acik, "dogru": o.dogru, "yanlis": o.yanlis,
-                      "sure": f"{s // 60}:{s % 60:02d}" if s < 10 ** 9 else ""})
-    return liste
+        satirlar.append({"ad": o.kullanici.kullanici_adi if acik else "Oyuncu" + "•" * (3 + o.id % 5),
+                         "gizli": not acik, "dogru": o.dogru, "yanlis": o.yanlis,
+                         "_s": sure(o.baslangic, o.bitis), "ben": o.kullanici_id == ben_id})
+    # Misafir sıralamaya kaydedilmez ama kendi sonucunu listede yerinde görür (sadece kendisi)
+    if ben_id is None:
+        d = _harf_durumu()
+        if d["bitti"]:
+            c = d["cevaplar"].values()
+            satirlar.append({"ad": "Sen (misafir)", "gizli": False, "ben": True, "misafir": True,
+                             "dogru": sum(1 for v in c if v[0] == "d"), "yanlis": sum(1 for v in c if v[0] == "y"),
+                             "_s": sure(d["bas"], d["bitis"])})
+    satirlar.sort(key=lambda x: (-x["dogru"], x["yanlis"], x["_s"]))
+    for i, x in enumerate(satirlar, 1):
+        s = x.pop("_s")
+        x["sira"] = i
+        x["sure"] = f"{s // 60}:{s % 60:02d}" if s < 10 ** 9 else ""
+    return satirlar
 
 
 @app.route("/harf")

@@ -50,6 +50,7 @@
 <section class="panel hc-sonuc" id="hcSonuc" hidden>
   <h2 id="hcSonucBaslik"></h2>
   <p class="hc-sonuc-ozet" id="hcSonucOzet"></p>
+  <div class="hc-serit acik" id="hcSonucSerit" aria-label="Harf sonuçları"></div>
   <div class="btn-dizi"><button type="button" class="btn" id="hcPaylas">Sonucu paylaş</button><a class="btn btn-ikincil" href="{{ url_for('oyunlar') }}">Diğer oyunlar</a></div>
   <p class="sessiz kucuk">Yeni çark her gece 00:00'da.</p>
   <details class="hc-cevaplar"><summary>Cevapları gör</summary><ol id="hcCevaplar"></ol></details>
@@ -99,6 +100,10 @@
 .hc-s-kural{flex:1; min-width:0; color:var(--gri); font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .hc-cark.oyunda{width:min(100%, 330px)}
 .hc-serit{display:none; flex-wrap:wrap; justify-content:center; gap:3px}
+.hc-serit.acik{display:flex; justify-content:flex-start; margin:0 0 14px}
+.hc-serit.acik i{width:24px; height:24px; font-size:12px; line-height:24px}
+.hc-sira-liste li.ben{background:#FFF7D6; border-radius:8px}
+.hc-sira-liste li.ben .misafir-not{display:block; font-size:12px; color:var(--gri)}
 .hc-serit i{width:20px; height:20px; border-radius:50%; background:#2F5D8C; color:#fff; font:800 10.5px/20px var(--baslik); font-style:normal; text-align:center}
 .hc-serit i.d{background:#1E8C4E} .hc-serit i.y{background:#C0392B} .hc-serit i.aktif{background:#F3C623; color:#14201A; transform:scale(1.2)}
 /* Telefonda oyun sırasında tam ekran: çark kalan yüksekliğe sığar, klavye açılınca küçülür ya da şeride döner */
@@ -266,6 +271,9 @@ body.hc-tam .hc-form{margin-top:8px}
 
   function sonuc(){
     if (sayacId) { clearInterval(sayacId); sayacId = null; }
+    // Bitince çark ve süre alanı kalkar; sonuç başlığın hemen altında, kaydırmaya gerek kalmaz
+    document.getElementById('hcOyun').hidden = true;
+    document.getElementById('hcSonucSerit').innerHTML = veri.sorular.map(function(q){ return '<i class="' + (q.d || '') + '" title="' + esc(q.k || '') + '">' + esc(q.h) + '</i>'; }).join('');
     var p = document.getElementById('hcSonuc'); p.hidden = false;
     var gecen = veri.sure - veri.kalan;
     document.getElementById('hcSonucBaslik').textContent = veri.dogru >= 25 ? '🔥 Muhteşem!' : (veri.dogru >= 18 ? '👏 Çok iyi!' : (veri.dogru >= 10 ? '👍 Fena değil' : 'Yarın tekrar dene 💪'));
@@ -276,10 +284,10 @@ body.hc-tam .hc-form{margin-top:8px}
     var sp = document.getElementById('hcSiraPanel'); sp.hidden = false;
     var ol = document.getElementById('hcSira');
     ol.innerHTML = siralama.length ? siralama.map(function(s){
-      return '<li><span class="no">' + s.sira + '</span><span class="' + (s.gizli ? 'gizli' : '') + '">' + esc(s.ad) + '</span><span class="sk">✅' + s.dogru + ' ❌' + s.yanlis + '</span><span class="su">' + esc(s.sure) + '</span></li>';
-    }).join('') : '<li style="display:block" class="sessiz">{{ "Sıralamaya girmek için giriş yap." if not current_user.is_authenticated else "Bugün henüz kimse bitirmedi." }}</li>';
+      return '<li class="' + (s.ben ? 'ben' : '') + '"><span class="no">' + s.sira + '</span><span class="' + (s.gizli ? 'gizli' : '') + '">' + esc(s.ad) + (s.misafir ? '<span class="misafir-not">Sadece sen görüyorsun. <a href="{{ url_for('kayit') }}">Üye ol</a>, herkesin listesine gir.</span>' : '') + '</span><span class="sk">✅' + s.dogru + ' ❌' + s.yanlis + '</span><span class="su">' + esc(s.sure) + '</span></li>';
+    }).join('') : '<li style="display:block" class="sessiz">Bugün henüz kimse bitirmedi.</li>';
     document.getElementById('hcSiraNot').hidden = !siralama.some(function(s){ return s.gizli; });
-    if (!sonGosterildi) { sonGosterildi = true; if (veri.basladi) p.scrollIntoView({behavior:'smooth', block:'start'}); }
+    if (!sonGosterildi) { sonGosterildi = true; window.scrollTo(0, 0); }
   }
   document.getElementById('hcPaylas').addEventListener('click', function(){
     var dizi = veri.sorular.map(function(s){ return s.d === 'd' ? '🟩' : (s.d === 'y' ? '🟥' : '⬜'); }).join('');
