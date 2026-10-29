@@ -957,6 +957,7 @@ class KelimeOyunu(db.Model):
     kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
     gun = db.Column(db.Date, nullable=False, index=True)
     tahminler = db.Column(db.Text, nullable=False, default="")      # virgülle ayrılmış
+    cevap = db.Column(db.String(10))                                 # kişiye özel günün kelimesi (oyun başlarken sabitlenir)
     bitti = db.Column(db.Boolean, nullable=False, default=False)
     kazandi = db.Column(db.Boolean, nullable=False, default=False)
     baslangic = db.Column(db.DateTime)
@@ -2739,6 +2740,13 @@ def initialize_database():
         db.create_all()
         # Sonradan eklenen kolonlar (create_all var olan tabloya kolon eklemez)
         try:
+            kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("kelime_oyunlari")}
+            if "cevap" not in kolonlar:
+                db.session.execute(db.text("ALTER TABLE kelime_oyunlari ADD COLUMN cevap VARCHAR(10)"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
             kolonlar = {k["name"] for k in db.inspect(db.engine).get_columns("cengel_oyunlari")}
             if "misafir1" in kolonlar and "davetli_id" not in kolonlar:
                 db.session.execute(db.text("ALTER TABLE cengel_oyunlari ADD COLUMN davetli_id INTEGER REFERENCES kullanicilar(id) ON DELETE SET NULL"))
@@ -3624,10 +3632,35 @@ def kelime_numarasi(gun=None):
     return ((gun or kelime_bugun()) - KELIME_BASLANGIC_GUNU).days + 1
 
 
-def kelime_cevabi(gun=None):
+import random
+
+
+def _kelime_kimlik():
+    """Kişiye özel kelime için kimlik: üyede kullanıcı no, misafirde tarayıcıya verilen anahtar."""
+    if current_user.is_authenticated:
+        return f"u{current_user.id}"
+    k = session.get("kelime_kimlik")
+    if not k:
+        import secrets
+        k = secrets.token_hex(8)
+        session["kelime_kimlik"] = k
+        session.permanent = True
+    return "m" + k
+
+
+def kelime_cevabi(gun=None, kimlik=None):
+    """Herkese farklı kelime: her kişinin kelime listesi kendine özel sırayla karıştırılır,
+    gün ilerledikçe sırayla gelir; liste bitmeden aynı kişiye aynı kelime tekrar çıkmaz."""
     if not KELIME_CEVAPLAR:
         return None
-    return KELIME_CEVAPLAR[(kelime_numarasi(gun) - 1) % len(KELIME_CEVAPLAR)]
+    sira = list(KELIME_CEVAPLAR)
+    random.Random("kelime-" + (kimlik or _kelime_kimlik())).shuffle(sira)
+    return sira[(kelime_numarasi(gun) - 1) % len(sira)]
+
+
+def _kelime_eski_ortak(gun=None):
+    """Kişiye özel kelimeden önce başlamış oyunlar için eski ortak kelime."""
+    return KELIME_CEVAPLAR[(kelime_numarasi(gun) - 1) % len(KELIME_CEVAPLAR)] if KELIME_CEVAPLAR else None
 
 
 def kelime_renkleri(tahmin, cevap):
@@ -3651,12 +3684,18 @@ def _kelime_durumu():
     gun = kelime_bugun()
     if current_user.is_authenticated:
         oyun = KelimeOyunu.query.filter_by(kullanici_id=current_user.id, gun=gun).first()
+        if oyun:
+            cevap = oyun.cevap or _kelime_eski_ortak()
+        else:
+            cevap = kelime_cevabi()
         return {"tahminler": oyun.liste() if oyun else [], "bitti": bool(oyun and oyun.bitti),
-                "kazandi": bool(oyun and oyun.kazandi), "oyun": oyun}
+                "kazandi": bool(oyun and oyun.kazandi), "oyun": oyun, "cevap": cevap}
     m = session.get("kelime") or {}
     if m.get("gun") != gun.isoformat():
         m = {}
-    return {"tahminler": m.get("t", []), "bitti": m.get("b", False), "kazandi": m.get("k", False), "oyun": None}
+    cevap = m.get("c") or (_kelime_eski_ortak() if m.get("t") else kelime_cevabi())
+    return {"tahminler": m.get("t", []), "bitti": m.get("b", False), "kazandi": m.get("k", False), "oyun": None,
+            "cevap": cevap}
 
 
 def siralama_gorunur_idler():
@@ -3740,27 +3779,36 @@ def oyun_rozeti():
 app.jinja_env.globals["oyun_rozeti"] = oyun_rozeti
 
 
+def _kelime_dunku(dun):
+    """Dün oynadıysa kendi kelimesi; oynamadıysa dün ona düşecek olan kelime."""
+    if current_user.is_authenticated:
+        o = KelimeOyunu.query.filter_by(kullanici_id=current_user.id, gun=dun).first()
+        if o:
+            return o.cevap or _kelime_eski_ortak(dun)
+    return kelime_cevabi(dun)
+
+
 @app.route("/kelime")
 def kelime_oyunu():
-    cevap = kelime_cevabi()
-    if not cevap:
+    if not KELIME_CEVAPLAR:
         abort(404)
     durum = _kelime_durumu()
+    cevap = durum["cevap"]
     dun = kelime_bugun() - timedelta(days=1)
     return render_template(
         "kelime.html", veri=_kelime_yanit(durum, cevap), siralama=kelime_siralamasi(),
-        dunku_kelime=kelime_cevabi(dun) if dun >= KELIME_BASLANGIC_GUNU else None,
+        dunku_kelime=_kelime_dunku(dun) if dun >= KELIME_BASLANGIC_GUNU else None,
         uzunluk=KELIME_UZUNLUK,
     )
 
 
 @app.route("/kelime/tahmin", methods=["POST"])
 def kelime_tahmin():
-    cevap = kelime_cevabi()
-    if not cevap:
+    if not KELIME_CEVAPLAR:
         abort(404)
     tahmin = tr_kucuk((request.get_json(silent=True) or {}).get("kelime") or request.form.get("kelime"))
     durum = _kelime_durumu()
+    cevap = durum["cevap"]
     if durum["bitti"]:
         return jsonify({"hata": "Bugünkü kelime bitti, yarın yenisi gelecek.", **_kelime_yanit(durum, cevap)}), 400
     if len(tahmin) != KELIME_UZUNLUK:
@@ -3777,7 +3825,7 @@ def kelime_tahmin():
     if current_user.is_authenticated:
         oyun = durum["oyun"]
         if oyun is None:
-            oyun = KelimeOyunu(kullanici_id=current_user.id, gun=kelime_bugun(), baslangic=simdi)
+            oyun = KelimeOyunu(kullanici_id=current_user.id, gun=kelime_bugun(), baslangic=simdi, cevap=cevap)
             db.session.add(oyun)
         oyun.tahminler = ",".join(tahminler)
         oyun.kazandi, oyun.bitti = kazandi, bitti
@@ -3789,7 +3837,7 @@ def kelime_tahmin():
             db.session.rollback()
             return jsonify({"hata": "Kaydedilemedi, sayfayı yenileyip tekrar dene."}), 409
     else:
-        session["kelime"] = {"gun": kelime_bugun().isoformat(), "t": tahminler, "b": bitti, "k": kazandi}
+        session["kelime"] = {"gun": kelime_bugun().isoformat(), "t": tahminler, "b": bitti, "k": kazandi, "c": cevap}
         session.permanent = True
     yeni = {"tahminler": tahminler, "bitti": bitti, "kazandi": kazandi}
     veri = _kelime_yanit(yeni, cevap)

@@ -14,7 +14,7 @@
   <h1>Kelime <span>#{{ veri.numara }}</span></h1>
   <button type="button" class="kl-yardim-btn" id="klYardimBtn" aria-label="Nasıl oynanır">?</button>
 </div>
-<p class="kl-alt{{ ' kl-uye' if current_user.is_authenticated }}">5 harfli kelimeyi 6 denemede bul. Her gün gece 00:00'da yeni kelime.</p>
+<p class="kl-alt{{ ' kl-uye' if current_user.is_authenticated }}">5 harfli kelimeyi 6 denemede bul. Herkese farklı kelime, her gece 00:00'da yenisi.</p>
 
 <div class="kl-tahta" id="klTahta" aria-label="Tahmin tablosu"{% if current_user.is_authenticated %} style="--kl-pay:420px"{% endif %}>
   {% for i in range(veri.hak) %}
@@ -73,7 +73,7 @@
 </section>
 
 {% if dunku_kelime %}
-<p class="sessiz kucuk kl-dun">Dünün kelimesi: <strong>{{ dunku_kelime.replace('i','İ').replace('ı','I').upper() }}</strong></p>
+<p class="sessiz kucuk kl-dun">Dünkü kelimen: <strong>{{ dunku_kelime.replace('i','İ').replace('ı','I').upper() }}</strong></p>
 {% endif %}
 
 <dialog class="kl-dlg" id="klYardim" aria-labelledby="klYardimBaslik">
