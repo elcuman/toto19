@@ -99,7 +99,7 @@
     {% for s in lig_sekmeleri %}
     <button type="button" role="tab" class="lig-sekme" data-sekme="{{ s.kod }}"
             aria-selected="{{ 'true' if s.kod == varsayilan_sekme else 'false' }}">
-      <span class="uzun">{{ s.ad }}</span><span class="kisa">{{ {"Şampiyonlar Ligi":"Şampiyonlar","Uluslar Ligi":"Uluslar"}.get(s.ad, s.ad) }}</span> <span class="sayi">{{ s.maclar|length }}</span>
+      <span class="uzun">{{ s.ad }}</span><span class="kisa">{{ {"Şampiyonlar Ligi":"Ş. Ligi","Uluslar Ligi":"Uluslar","Avp/Konf":"Avrupa","Premier Lig":"Premier"}.get(s.ad, s.ad) }}</span> <span class="sayi">{{ s.maclar|length }}</span>
     </button>
     {% endfor %}
   </div>
@@ -249,7 +249,8 @@
 .segment[role="tablist"]::-webkit-scrollbar{display:none}
 .segment[role="tablist"] button{flex:1 0 auto; padding:0 12px}
 .segment[role="tablist"].sag-var{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent); mask-image:linear-gradient(to right,#000 82%,transparent)}
-@media (max-width:480px){ .segment .uzun{display:none} .segment .kisa{display:inline} }
+@media (max-width:480px){ .segment .uzun{display:none} .segment .kisa{display:inline} .segment[role="tablist"]{gap:2px} .segment[role="tablist"] button{padding:0 7px; font-size:14.5px} .segment .sayi{margin-left:1px} }
+@media (max-width:380px){ .segment[role="tablist"] button{padding:0 5px; font-size:13.5px} .segment .sayi{font-size:12.5px} }
 @media (max-width:640px){
   .kaydet-cubugu{bottom:calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom)); padding:8px; margin-left:-8px; margin-right:-8px}
   .kaydet-cubugu .ipucu{display:none}
