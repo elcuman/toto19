@@ -221,16 +221,28 @@ def _simdi():
     return int(time.time())
 
 
-BOS_TUR_SINIRI = 6   # üst üste bu kadar turda (iki oyuncu toplamı) hiç doğru harf konmazsa oyun otomatik biter
+BOS_TUR_SINIRI = 3   # torba boşken üst üste bu kadar turda hiç doğru harf konmazsa oyun otomatik biter
+
+
+def _kalan_cezasi(d):
+    """Oyun bitince ıstakada kalan her harf -1."""
+    for o in (0, 1):
+        kalan = len(d["raf"][o])
+        if kalan:
+            d["puan"][o] -= kalan
+            _kayit(d, {"o": o, "t": "kalan", "n": kalan, "p": -kalan})
 
 
 def _sira_gec(d):
-    # Oyunu uzatmaya karşı: üst üste doğru harf konmayan turlar sayılır
-    d["bos_tur"] = 0 if d.get("tur_dogru") else d.get("bos_tur", 0) + 1
+    # Son harflerde inatla koymayıp oyunu uzatmaya karşı: torba boşken doğru harf konmayan turlar sayılır.
+    # Sınır dolunca oyun biter ve herkesin elinde kalan harf başına -1 hesaplanır.
+    if not d["torba"]:
+        d["bos_tur"] = 0 if d.get("tur_dogru") else d.get("bos_tur", 0) + 1
     d["tur_dogru"] = False
-    if d["bos_tur"] >= BOS_TUR_SINIRI and not d["bitti"]:
+    if d.get("bos_tur", 0) >= BOS_TUR_SINIRI and not d["bitti"]:
         d["bitti"] = True
         _kayit(d, {"o": d["sira"], "t": "otomatik", "p": 0})
+        _kalan_cezasi(d)
         return
     d["sira"] = 1 - d["sira"]
     d["tur_hak"] = TUR_HAKKI
@@ -247,7 +259,8 @@ def sure_kalan(d):
 
 
 def otomatik_bitir(d):
-    """Sırası gelen oyuncu hamle süresini aştıysa oyun kendiliğinden biter, o oyuncu kaybeder."""
+    """Süreye bağlı otomatik bitiş kullanılmıyor (kullanıcı isteği); fonksiyon geriye dönük uyumluluk için."""
+    return False
     if d["bitti"] or sure_kalan(d) > 0:
         return False
     d["sure_doldu"] = True
@@ -282,11 +295,7 @@ def _bitti_mi(d):
         d["bitti"] = True
     elif not d["torba"] and any(not r for r in d["raf"]):
         d["bitti"] = True
-        for o in (0, 1):
-            kalan = len(d["raf"][o])
-            if kalan:
-                d["puan"][o] -= kalan
-                _kayit(d, {"o": o, "t": "kalan", "n": kalan, "p": -kalan})
+        _kalan_cezasi(d)
     return d["bitti"]
 
 
@@ -480,6 +489,7 @@ def istemci_gorunumu(d, oyuncu):
             "raf": d["raf"][oyuncu] if oyuncu in (0, 1) else [], "torba": len(d["torba"]),
             "ipucu_kaldi": (not d["ipucu"][oyuncu]) if oyuncu in (0, 1) else False,
             "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "cekilen": d.get("cekilen"),
-            "sure_kalan": sure_kalan(d), "sure_doldu": d.get("sure_doldu", False), "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
+            "sure_kalan": sure_kalan(d), "sure_doldu": d.get("sure_doldu", False),
+            "bos_tur": d.get("bos_tur", 0) if not d["torba"] else 0, "bos_tur_siniri": BOS_TUR_SINIRI, "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
             "pas_kaldi": pas_kaldi(d, oyuncu) if oyuncu in (0, 1) else 0,
             "kalan": len(b["cozum"]) - len(d["dolu"])}

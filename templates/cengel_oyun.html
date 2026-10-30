@@ -34,6 +34,7 @@
 </div>
 
 <div class="cd-durum" id="cdDurum" role="status" aria-live="polite"></div>
+<p class="cd-bos-tur" id="cdBosTur" hidden></p>
 
 
 {% if oyun.durum == 'bekliyor' and ben == 0 %}
@@ -109,8 +110,7 @@
     <li><b>Pas:</b> Oyun başına 1 kez, harf koymadan sırayı geçebilirsin. <b>Turu bitir:</b> Harf koyduktan sonra kalan haklarını kullanmadan sırayı verir. <b>Değiştir:</b> Turun başında ıstakandaki harfleri yeniler, sıra geçer.</li>
     <li><b>İpucu:</b> Istakandaki bir harfin doğru yerini gösterir. Oyun başına 1 hak.</li>
     <li>Torbada harf kalmayıp bir oyuncunun ıstakası bitince oyun biter; rakibin elinde kalan her harf <b>-1</b>. Bulmaca dolunca da biter, çok puanı olan kazanır.</li>
-    <li>Düelloda sıra gelen oyuncu <b>12 saat</b> içinde oynamazsa oyun <b>kendiliğinden biter</b>, o oyuncu kaybeder.</li>
-    <li>Üst üste 6 turda (ikinizin toplamı) hiç doğru harf konmazsa oyun kendiliğinden biter, o anki puanlar geçerli olur.</li>
+    <li><b>Son harflerde oyunu uzatmak yok:</b> torbada harf kalmadıktan sonra üst üste 3 turda hiç doğru harf konmazsa oyun kendiliğinden biter; herkesin elinde kalan her harf <b>-1</b> sayılır.</li>
   </ul>
   <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
 </dialog>
@@ -137,6 +137,8 @@
 .cd-vs{font-weight:700; color:var(--gri)}
 .cd-durum{text-align:center; font-weight:700; min-height:24px; margin:4px 0 8px; font-size:15px}
 .cd-durum.bende{color:var(--cim)}
+.cd-bos-tur{margin:-4px auto 8px; max-width:470px; text-align:center; font-size:13.5px; font-weight:700; color:#B3261E; background:#FDECEA; border-radius:10px; padding:6px 10px}
+.cd-bos-tur[hidden]{display:none}
 .cd-sure-btn{display:block; margin:0 auto 8px; border:0; border-radius:999px; background:#D93025; color:#fff; font-weight:700; padding:8px 16px; cursor:pointer}
 .cd-sure-btn[hidden]{display:none}
 .cd-tahta{display:grid; gap:2px; background:#B9CDBE; border:2px solid #B9CDBE; border-radius:8px; overflow:hidden; width:min(100%, 470px); margin:0 auto; touch-action:manipulation; container-type:inline-size}
@@ -289,7 +291,11 @@
     var TH = d.tur_hakki || 3, hak = d.hak == null ? TH : d.hak;
     if (bende) { var noktalar = ''; for (var n = 0; n < TH; n++) noktalar += '<i class="' + (n < hak ? '' : 'yok') + '"></i>';
       durumEl.innerHTML = 'Sıra sende · ' + hak + ' harf hakkın var <span class="cd-haklar" aria-hidden="true">' + noktalar + '</span>'; }
-    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…' + (d.sure_kalan > 0 && d.sure_kalan < 12 * 3600 - 600 ? ' (' + sureYaz(d.sure_kalan) + ' içinde oynamazsa sen kazanırsın)' : '')));
+    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…'));
+    var uyari = document.getElementById('cdBosTur');
+    if (uyari) { var kalanTur = (d.bos_tur_siniri || 3) - (d.bos_tur || 0);
+      uyari.hidden = !(d.durum === 'aktif' && !d.bitti && d.bos_tur > 0);
+      uyari.textContent = '⚠️ Torba bitti: ' + kalanTur + ' tur içinde doğru harf konmazsa oyun biter, elde kalan her harf -1.'; }
     var sb = document.getElementById('cdSureBtn');
     if (sb) sb.hidden = !(d.durum === 'aktif' && !d.bitti && !d.bot && d.sira !== BEN && d.sure_kalan <= 0);
     // tahta
@@ -339,7 +345,7 @@
       if (s.t === 'dogru') return '<b>' + esc(s.h) + '</b> +' + s.p + (s.k && s.k.length ? ' 🎉 ' + s.k.map(esc).join(', ') : '');
       if (s.t === 'yanlis') return 'bir yanlış (-1)';
       if (s.t === 'kalan') return 'elinde ' + s.n + ' harf kaldı (' + s.p + ')';
-      if (s.t === 'otomatik') return 'üst üste doğru harf konmadı, oyun bitti';
+      if (s.t === 'otomatik') return '3 turdur doğru harf konmadı, oyun bitti';
       if (s.t === 'degistir') return 'harflerini değiştirdi';
       if (s.t === 'pas') return 'pas';
       if (s.t === 'bitir') return 'turu bitirdi';
