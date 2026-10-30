@@ -3619,6 +3619,28 @@ KELIME_CEVAPLAR = _kelime_dosyasi("cevaplar.txt")
 KELIME_GECERLI = set(_kelime_dosyasi("gecerli.txt")) | set(KELIME_CEVAPLAR)
 
 
+def _kelime_konulari():
+    """[(konu, [kelimeler])] — kelime/konular.txt. Her gün bir konu; herkese o konudan farklı kelime."""
+    sonuc = []
+    try:
+        with open(os.path.join(_KELIME_DIZINI, "konular.txt"), encoding="utf-8") as f:
+            for satir in f:
+                satir = satir.strip()
+                if not satir or satir.startswith("#") or "|" not in satir:
+                    continue
+                konu, kelimeler = satir.split("|", 1)
+                ks = [k for k in kelimeler.split() if len(k) == KELIME_UZUNLUK]
+                if len(ks) >= 5:
+                    sonuc.append((konu.strip(), ks))
+    except OSError:
+        pass
+    return sonuc
+
+
+KELIME_KONULARI = _kelime_konulari()
+KELIME_KONU_HARITASI = {k: konu for konu, ks in KELIME_KONULARI for k in ks}
+
+
 def tr_kucuk(metin):
     return (metin or "").replace("I", "ı").replace("İ", "i").lower().strip()
 
@@ -3648,14 +3670,28 @@ def _kelime_kimlik():
     return "m" + k
 
 
+def kelime_konusu(gun=None):
+    """Günün konusu (herkese aynı)."""
+    if not KELIME_KONULARI:
+        return None
+    return KELIME_KONULARI[(kelime_numarasi(gun) - 1) % len(KELIME_KONULARI)][0]
+
+
 def kelime_cevabi(gun=None, kimlik=None):
-    """Herkese farklı kelime: her kişinin kelime listesi kendine özel sırayla karıştırılır,
-    gün ilerledikçe sırayla gelir; liste bitmeden aynı kişiye aynı kelime tekrar çıkmaz."""
+    """Herkese aynı konudan farklı kelime: konunun kelimeleri her kişi için kendine özel
+    sırayla karıştırılır; konu her döndüğünde kişiye o konudan sıradaki kelime gelir."""
     if not KELIME_CEVAPLAR:
         return None
+    kimlik = kimlik or _kelime_kimlik()
+    n = kelime_numarasi(gun) - 1
+    if KELIME_KONULARI:
+        konu, kelimeler = KELIME_KONULARI[n % len(KELIME_KONULARI)]
+        sira = list(kelimeler)
+        random.Random("kelime-" + konu + "-" + kimlik).shuffle(sira)
+        return sira[(n // len(KELIME_KONULARI)) % len(sira)]
     sira = list(KELIME_CEVAPLAR)
-    random.Random("kelime-" + (kimlik or _kelime_kimlik())).shuffle(sira)
-    return sira[(kelime_numarasi(gun) - 1) % len(sira)]
+    random.Random("kelime-" + kimlik).shuffle(sira)
+    return sira[n % len(sira)]
 
 
 def _kelime_eski_ortak(gun=None):
@@ -3757,7 +3793,9 @@ def kelime_siralamasi(gun=None):
 def _kelime_yanit(durum, cevap):
     veri = {"tahminler": [{"kelime": t, "renk": kelime_renkleri(t, cevap)} for t in durum["tahminler"]],
             "bitti": durum["bitti"], "kazandi": durum["kazandi"], "hak": KELIME_HAK,
-            "numara": kelime_numarasi()}
+            "numara": kelime_numarasi(),
+            # Konu kelimenin kendisinden bulunur: konudan önce başlamış oyunda yanlış ipucu verilmesin
+            "konu": KELIME_KONU_HARITASI.get(cevap)}
     if durum["bitti"]:
         veri["cevap"] = cevap
     return veri

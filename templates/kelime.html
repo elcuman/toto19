@@ -11,10 +11,12 @@
 
 {% block content %}
 <div class="kl-bas">
+  {% if veri.konu %}<span class="kl-konu" title="Günün konusu"><small>Günün konusu</small>{{ veri.konu }}</span>{% endif %}
   <h1>Kelime <span>#{{ veri.numara }}</span></h1>
   <button type="button" class="kl-yardim-btn" id="klYardimBtn" aria-label="Nasıl oynanır">?</button>
 </div>
-<p class="kl-alt{{ ' kl-uye' if current_user.is_authenticated }}">5 harfli kelimeyi 6 denemede bul. Herkese farklı kelime, her gece 00:00'da yenisi.</p>
+{% if veri.konu %}<p class="kl-konu-satir"><span>Günün konusu:</span> <b>{{ veri.konu }}</b></p>{% endif %}
+<p class="kl-alt{{ ' kl-uye' if current_user.is_authenticated }}">5 harfli kelimeyi 6 denemede bul. Konu herkese aynı, kelime herkese farklı.</p>
 
 <div class="kl-tahta" id="klTahta" aria-label="Tahmin tablosu"{% if current_user.is_authenticated %} style="--kl-pay:420px"{% endif %}>
   {% for i in range(veri.hak) %}
@@ -93,6 +95,15 @@
 .kl-bas{display:flex; align-items:center; justify-content:center; gap:10px; position:relative; margin-top:4px}
 .kl-bas h1{margin:0; font-size:30px; letter-spacing:.04em}
 .kl-bas h1 span{color:var(--gri); font-weight:600}
+.kl-konu{position:absolute; left:0; top:50%; transform:translateY(-50%); max-width:calc(50% - 78px); padding:4px 9px; border-radius:10px;
+  background:#FFF4D6; border:1px solid #F0DC9C; color:#5C4600; font:700 12.5px/1.15 var(--yazi); text-align:left}
+.kl-konu small{display:block; font-size:9.5px; font-weight:600; color:#8A7330; text-transform:uppercase; letter-spacing:.04em; margin-bottom:1px}
+.kl-konu-satir{display:none}
+@media (max-width:600px){
+  .kl-konu{display:none}
+  .kl-konu-satir{display:block; width:max-content; max-width:100%; margin:4px auto 6px; padding:3px 10px; border-radius:999px; background:#FFF4D6; border:1px solid #F0DC9C; color:#5C4600; font-size:12.5px; text-align:center}
+  .kl-konu-satir span{color:#8A7330}
+}
 .kl-yardim-btn{position:absolute; right:0; width:32px; height:32px; border-radius:50%; border:1px solid var(--cizgi); background:var(--kart); font:700 16px var(--yazi); color:var(--gri); cursor:pointer}
 .kl-alt{text-align:center; color:var(--gri); font-size:14px; margin:4px 0 14px}
 .kl-tahta{display:grid; gap:6px; width:min(100%, 320px); margin:0 auto}
@@ -277,7 +288,7 @@
   function paylasimMetni(){
     var e = {y:'🟩', s:'🟨', g:'⬜'};
     var satir = veri.tahminler.map(function(t){ return t.renk.split('').map(function(r){ return e[r]; }).join(''); }).join('\n');
-    return 'Kelime #' + veri.numara + ' ' + (veri.kazandi ? veri.tahminler.length : 'X') + '/6\n\n' + satir + '\n\nskorbilen.com/kelime';
+    return 'Kelime #' + veri.numara + (veri.konu ? ' · ' + veri.konu : '') + ' ' + (veri.kazandi ? veri.tahminler.length : 'X') + '/6\n\n' + satir + '\n\nskorbilen.com/kelime';
   }
   document.getElementById('klPaylas').addEventListener('click', function(){
     var m = paylasimMetni();

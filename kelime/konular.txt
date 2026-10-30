@@ -1,0 +1,22 @@
+# Kelime oyunu günün konuları: Konu|kelimeler (her kelime cevaplar.txt'te olmalı, tek konuda bulunmalı)
+Mutfak ve Gastronomi|ayran badem biber börek cacık ceviz çerez çilek çorba dürüm ekmek erzak gazoz hamur helva hindi hoşaf hurma incir kahve kaşar kekik kepek kiraz lokma lokum mantı marul meyve nohut pasta reçel salça sarma sebze simit sirke somun sumak söğüş tahin tarif tatlı tuzlu vişne yemek armut kabak kavun limon şeker sofra tepsi tabak çatal kaşık bıçak kazan kadeh kepçe kiler sakız
+Doğa ve Coğrafya|bayır boğaz bulut buzul çayır çakıl çamur çorak dalga deniz derya dünya evren gölet güneş güney hilal iklim ırmak kumul kutup kuzey nehir orman pınar sahil tufan yağış yokuş batak arazi otlak sulak çukur serin sisli gölge
+Hayvanlar Alemi|akrep aslan böcek çakal davar doğan hamsi horoz karga katır kirpi koyun kumru manda martı ördek serçe sinek şahin tavuk tilki turna yunus kanat kovan kümes tasma köpek yılan balık kafes
+Bitkiler ve Tarım|bitki çınar çiçek çimen defne fidan filiz kavak ladin söğüt tohum yosun kamış başak koçan hasat tarla saban ırgat köylü pamuk ambar kürek
+Ev ve Yapı|ampul banyo beşik dolap duvar eviye fanus hasır havlu kilim kilit lamba perde saksı salon sehpa tavan tuğla yatak kapak garaj hamak sepet sabun tarak beton kolon sütun zemin tahta kubbe çeşme bahçe havuz fırın leğen poşet
+Meslekler|aktör asker bekçi camcı çoban çırak dağcı esnaf hakim hamal kasap memur mimar müdür odacı pilot polis savcı terzi uzman yazar mucit gözcü
+Para ve Ekonomi|banka borsa döviz dolar dinar emlak fiyat hisse kredi nakit senet vergi takas tekel ücret kefil fidye firma bağış zarar fayda değer mesai paket kargo hesap
+Duygular ve Karakter|coşku hüzün keder korku merak özlem sevgi huzur heves kahır telaş panik güven saygı inanç ilham hayal dilek sabır keyif gülüş gülme gönül yürek mutlu üzgün sakin cesur kibar cimri zarif sadık narin
+Aile ve Toplum|bebek çocuk damat gelin kuzen teyze yenge torun komşu konuk kadın erkek insan birey bayan bekar velet nesil nüfus imece düğün davet tören şölen selam ikram
+Vücut ve Sağlık|bacak beyin bilek boyun burun bıyık dudak damar göğüs gamze kasık karın kemik kulak nabız sakal topuk yanak hücre organ hasta nezle serum virüs diyet besin nefes
+Şehir ve Yolculuk|adres araba bavul cadde durak hisar liman metro peron plaka plaza posta sokak taksi tekne vapur yolcu kayık köprü konak saray çarşı sefer seyir valiz mahal
+Sanat ve Edebiyat|albüm bando davul düdük fıkra gitar kaval keman masal metin müzik roman sahne sanat sergi şarkı tablo türkü tuval zurna resim çalgı alkış fırça lehçe üslup dergi
+Bilim ve Teknoloji|ahize alarm anten deney ekran hacim jeton kablo madde modem model motor robot roket sayaç cisim birim rakam sıfır nokta çizgi şekil fosil maden demir bakır çelik buhar mazot
+Zaman ve Takvim|akşam anlık bugün devir dönem eylül hafta kasım mayıs nisan sabah şubat şimdi vakit yarın zaman erken bazen hemen sonra bahar
+Spor ve Oyun|cirit forma güreş hakem kayak kızak kulüp rekor takım takla tavla yarış yüzme zafer galip rakip kural toplu sürat
+Giyim ve Takı|butik ceket çanta çizme çorap eşarp kemer kumaş kuşak palto sarık şapka tulum yelek yünlü dikiş düğme ilmek sedef yakut elmas altın gümüş jilet maske
+Tarih, Devlet ve Hukuk|arşiv berat hukuk kanun karar yemin tanık savaş barış silah tüfek kılıç mermi süngü barut mayın enkaz şehit vatan uyruk prens vezir tarih seçim anket mühür belge dosya
+Aletler ve Malzemeler|balta çekiç makas hızar halat çuval varil teker kömür ahşap dümen kalıp çubuk delik tamir arıza
+Sıfatlar ve Nitelikler|beyaz siyah pembe yeşil sıcak soğuk küçük kolay hızlı yavaş temiz kirli güzel garip derin kalın yaşlı fakir zorlu olgun basit bayat buzlu canlı cazip dakik donuk bozuk harap kırık kesik yoğun özgür evcil
+Okul ve Eğitim|sınav sınıf karne ezber silgi bilgi kağıt cevap örnek proje kalem kitap sayfa cümle satır liste
+Gelenek ve Yaşam|namaz kıble sevap melek mezar tabut nimet niyet kader yazgı nişan doğum tatil parti hayat yaşam
