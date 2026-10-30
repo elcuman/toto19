@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Hızlı Parmaklar · Türkçe Yazma Hızı Testi · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="60 saniyede kaç kelime yazabilirsin? Türkçe yazma hızı testi: dakikadaki kelime (DKS), isabet oranı ve günlük sıralama. Ücretsiz, üye olmadan da oynanır.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/hiz">
+<meta property="og:title" content="Hızlı Parmaklar · Türkçe yazma hızı testi">
+<meta property="og:description" content="60 saniyede kaç kelime yazabilirsin? Arkadaşlarınla yarış.">
+<meta property="og:url" content="https://{{ ANA_DOMAIN_ADI }}/hiz">
+{% endblock %}
+
+{% block content %}
+<div class="hp-bas">
+  <h1>Hızlı <span>Parmaklar</span></h1>
+  <button type="button" class="hp-yardim-btn" id="hpYardimBtn" aria-label="Nasıl oynanır">?</button>
+</div>
+<p class="hp-alt">60 saniyede yazabildiğin kadar kelime yaz. Her kelimeden sonra <b>boşluk</b>. Süre ilk harfle başlar.</p>
+
+<div class="hp-oyun" id="hpOyun">
+  <div class="hp-kelimeler" id="hpKelimeler" aria-live="off"><div class="hp-ic" id="hpIc">Kelimeler yükleniyor…</div></div>
+  <div class="hp-giris">
+    <input id="hpGiris" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Yaz" placeholder="Buraya yaz…" disabled>
+    <span class="hp-sayac" id="hpSayac">1:00</span>
+    <button type="button" class="hp-yenile" id="hpYenile" aria-label="Yeniden başlat" title="Yeniden başlat">↻</button>
+  </div>
+  <div class="hp-canli"><span>Doğru: <b id="hpCanliD">0</b></span><span>Yanlış: <b id="hpCanliY">0</b></span><span>Rekorun: <b id="hpRekor">{{ rekor }}</b> DKS</span></div>
+</div>
+
+<section class="panel hp-sonuc" id="hpSonuc" hidden>
+  <p class="hp-rekor-rozet" id="hpRekorRozet" hidden>🏆 Yeni rekor!</p>
+  <div class="hp-dks"><b id="hpDks">0</b><span>DKS<br><small>dakikada kelime</small></span></div>
+  <ul class="hp-detay">
+    <li><span>Doğru kelime</span><b class="d" id="hpD">0</b></li>
+    <li><span>Yanlış kelime</span><b class="y" id="hpY">0</b></li>
+    <li><span>İsabet</span><b id="hpIsabet">0%</b></li>
+    <li><span>Tuş vuruşu</span><b id="hpTus">0</b></li>
+  </ul>
+  <p class="hp-hata" id="hpHata" hidden></p>
+  <div class="btn-dizi">
+    <button type="button" class="btn" id="hpTekrar">Tekrar dene</button>
+    <button type="button" class="btn btn-ikincil" id="hpPaylas">Sonucu paylaş</button>
+  </div>
+  {% if not current_user.is_authenticated %}<p class="sessiz kucuk" style="margin:10px 0 0">Sonucun sadece bu tarayıcıda tutuluyor. <a href="{{ url_for('kayit') }}">Üye ol</a>, sıralamada herkes görsün.</p>{% endif %}
+</section>
+
+<section class="panel hp-sira">
+  <div class="hp-sira-bas">
+    <h2>🏆 En hızlılar</h2>
+    <div class="segment hp-sekme" role="tablist">
+      <button type="button" role="tab" aria-selected="true" data-s="bugun">Bugün</button>
+      <button type="button" role="tab" aria-selected="false" data-s="tum">Tüm zamanlar</button>
+    </div>
+  </div>
+  <ol class="hp-liste" id="hpSiraBugun"></ol>
+  <ol class="hp-liste" id="hpSiraTum" hidden></ol>
+  <p class="sessiz kucuk" style="margin:8px 0 0">Herkesin günlük ve tüm zamanların en iyi sonucu sayılır. {% if not current_user.is_authenticated %}İsimleri görmek için <a href="{{ url_for('giris', next='/hiz') }}">giriş yap</a>.{% else %}İsimler sadece aynı grupta olduğun kişilerde görünür.{% endif %}</p>
+</section>
+
+<dialog class="hp-dlg" id="hpYardim">
+  <h2>Nasıl oynanır?</h2>
+  <ul>
+    <li>Kutudaki kelimeleri sırayla yaz, her kelimeden sonra <b>boşluk</b> tuşuna bas.</li>
+    <li>Süre ilk harfi yazınca başlar ve <b>60 saniye</b> sürer.</li>
+    <li>Yanlış harf yazınca kelime kırmızı olur; boşluğa basınca kelime yanlış sayılır ve sıradakine geçilir.</li>
+    <li><b>DKS</b> (dakikada kelime): doğru yazdığın harf ve boşlukların toplamının 5'e bölümüdür. Uluslararası yazma testleriyle aynı hesap.</li>
+    <li>Ortalama yazma hızı 35–45 DKS, 70 ve üstü çok hızlı sayılır.</li>
+  </ul>
+  <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
+</dialog>
+
+<style>
+.hp-bas{display:flex; align-items:center; justify-content:space-between; margin:4px 0 2px}
+.hp-bas h1{margin:0; font-size:28px} .hp-bas h1 span{color:var(--cim)}
+.hp-yardim-btn{width:34px; height:34px; border-radius:9px; border:2px solid var(--murekkep); background:#fff; font:700 17px var(--yazi); cursor:pointer}
+.hp-alt{color:var(--gri); font-size:14px; margin:0 0 12px}
+.hp-oyun{background:#fff; border:1px solid var(--cizgi); border-radius:16px; padding:12px; margin-bottom:14px}
+.hp-kelimeler{height:calc(2 * 2.2em + 8px); overflow:hidden; font-size:22px; line-height:2.2em; padding:4px 2px; position:relative; user-select:none}
+.hp-ic{transition:transform .15s}
+.hp-k{display:inline-block; padding:0 5px; margin:0 1px; border-radius:6px; line-height:1.5em}
+.hp-k.su{background:#E4ECF4}
+.hp-k.su.hata{background:#F8C9C4}
+.hp-k.d{color:#1E8C4E} .hp-k.y{color:#C0392B; text-decoration:line-through; text-decoration-thickness:1px}
+.hp-giris{display:flex; gap:8px; align-items:center; margin-top:8px}
+.hp-giris input{flex:1; min-width:0; font-size:20px; padding:10px 12px}
+.hp-giris input.hata{border-color:#C0392B; background:#FFF4F3}
+.hp-sayac{font:800 22px var(--baslik); font-variant-numeric:tabular-nums; min-width:56px; text-align:center; padding:8px 6px; border-radius:10px; background:#14201A; color:#fff}
+.hp-sayac.az{background:#C0392B}
+.hp-yenile{width:46px; height:46px; border-radius:10px; border:1px solid var(--cizgi); background:#F6F8F7; font-size:22px; cursor:pointer}
+.hp-canli{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; font-size:13.5px; color:var(--gri)}
+.hp-canli b{color:var(--murekkep)}
+.hp-sonuc{text-align:center}
+.hp-rekor-rozet{display:inline-block; margin:0 0 6px; background:#FFF4D6; color:#7A5D00; border:1px solid #F0DC9C; border-radius:999px; padding:3px 12px; font-weight:800}
+.hp-dks{display:flex; align-items:center; justify-content:center; gap:10px; margin:0 0 10px}
+.hp-dks b{font:800 64px/1 var(--baslik); color:var(--cim)}
+.hp-dks span{text-align:left; font-weight:800; font-size:18px; line-height:1.1} .hp-dks small{font-weight:500; font-size:12px; color:var(--gri)}
+.hp-detay{list-style:none; padding:0; margin:0 auto 12px; max-width:360px; display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.hp-detay li{display:flex; justify-content:space-between; padding:8px 10px; background:var(--zemin); border-radius:10px; font-size:14px}
+.hp-detay b.d{color:var(--cim)} .hp-detay b.y{color:#C0392B}
+.hp-hata{color:#B3261E; font-weight:700}
+.hp-sonuc .btn-dizi{justify-content:center}
+.hp-sira-bas{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px}
+.hp-sira-bas h2{margin:0; font-size:19px}
+.hp-sekme{margin:0} .hp-sekme button{padding:0 12px; white-space:nowrap}
+.hp-liste{list-style:none; margin:0; padding:0}
+.hp-liste li{display:grid; grid-template-columns:28px 1fr auto; gap:8px; align-items:center; padding:8px 4px; border-top:1px solid var(--cizgi); font-size:15px}
+.hp-liste li:first-child{border-top:0}
+.hp-liste .no{font-weight:800; color:var(--gri)} .hp-liste li:nth-child(1) .no{color:#C99A0A}
+.hp-liste .gizli{color:var(--gri); letter-spacing:1px}
+.hp-liste .dks{font:800 17px var(--baslik)} .hp-liste .dks small{font:500 11px var(--yazi); color:var(--gri)}
+.hp-liste li.ben{background:#FFF7D6; border-radius:8px}
+.hp-liste .not{display:block; font-size:12px; color:var(--gri)}
+.hp-dlg{max-width:400px; border:0; border-radius:var(--r-buyuk); padding:20px}
+.hp-dlg::backdrop{background:rgba(0,0,0,.45)}
+.hp-dlg h2{margin:0 0 8px} .hp-dlg ul{padding-left:18px; font-size:14.5px} .hp-dlg li{margin-bottom:6px}
+@media (max-width:480px){ .hp-kelimeler{font-size:19px} .hp-giris input{font-size:18px} .hp-dks b{font-size:54px} }
+</style>
+
+<script>
+(function(){
+  var SURE = {{ sure }}, kelimeler = [], yazilan = [], i = 0, kalan = SURE, basladi = false, bitti = false, sayacId = null, son = null;
+  var ic = document.getElementById('hpIc'), kutu = document.getElementById('hpKelimeler'), giris = document.getElementById('hpGiris');
+  var bugun = {{ bugun | tojson }}, tum = {{ tum | tojson }};
+  function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+  function sure(s){ return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function tr(s){ return (s || '').replace(/I/g, 'ı').replace(/İ/g, 'i').toLocaleLowerCase('tr-TR'); }
+
+  function yukle(){
+    bitti = basladi = false; i = 0; yazilan = []; kalan = SURE; clearInterval(sayacId); sayacId = null;
+    document.getElementById('hpSayac').textContent = sure(SURE); document.getElementById('hpSayac').classList.remove('az');
+    document.getElementById('hpSonuc').hidden = true; document.getElementById('hpCanliD').textContent = 0; document.getElementById('hpCanliY').textContent = 0;
+    giris.value = ''; giris.disabled = true; giris.classList.remove('hata'); ic.style.transform = '';
+    ic.textContent = 'Kelimeler yükleniyor…';
+    fetch('/hiz/basla', {method:'POST', credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(j){
+      kelimeler = j.kelimeler;
+      ic.innerHTML = kelimeler.map(function(k, n){ return '<span class="hp-k" id="hpK' + n + '">' + esc(k) + '</span>'; }).join(' ');
+      isaretle(); giris.disabled = false; giris.focus();
+    }).catch(function(){ ic.textContent = 'Bağlantı hatası, ↻ ile tekrar dene.'; });
+  }
+  function isaretle(){
+    var e = document.getElementById('hpK' + i); if (!e) return;
+    e.classList.add('su');
+    // Geçerli kelime ikinci satıra inince bir satır yukarı kaydır
+    var satir = e.offsetTop;
+    ic.style.transform = 'translateY(' + (-Math.max(0, satir - 4)) + 'px)';
+  }
+  function basla(){
+    if (basladi) return; basladi = true;
+    fetch('/hiz/saat', {method:'POST', credentials:'same-origin'});
+    son = Date.now() + SURE * 1000;
+    sayacId = setInterval(function(){
+      kalan = Math.max(0, Math.ceil((son - Date.now()) / 1000));
+      var s = document.getElementById('hpSayac'); s.textContent = sure(kalan); s.classList.toggle('az', kalan <= 10);
+      if (kalan <= 0) bitir();
+    }, 200);
+  }
+  function kelimeGonder(){
+    var y = tr(giris.value.trim()); giris.value = ''; giris.classList.remove('hata');
+    if (!y) return;
+    var e = document.getElementById('hpK' + i);
+    var ok = y === kelimeler[i];
+    yazilan.push(y);
+    e.classList.remove('su', 'hata'); e.classList.add(ok ? 'd' : 'y');
+    document.getElementById(ok ? 'hpCanliD' : 'hpCanliY').textContent = yazilan.filter(function(x, n){ return (x === kelimeler[n]) === ok; }).length;
+    i++; isaretle();
+  }
+  giris.addEventListener('input', function(){
+    if (bitti) return;
+    if (!basladi && giris.value.trim()) basla();
+    if (/\s/.test(giris.value)) {
+      // Telefon klavyeleri boşluğu tuş olayı yerine metin olarak gönderir
+      var parcalar = giris.value.split(/\s+/);
+      giris.value = parcalar[0]; kelimeGonder();
+      giris.value = parcalar.slice(1).join(' ');
+    }
+    var e = document.getElementById('hpK' + i), y = tr(giris.value);
+    var hata = y && kelimeler[i] && kelimeler[i].indexOf(y) !== 0;
+    if (e) e.classList.toggle('hata', !!hata); giris.classList.toggle('hata', !!hata);
+  });
+  giris.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); if (basladi) kelimeGonder(); } });
+
+  function bitir(){
+    if (bitti) return; bitti = true; clearInterval(sayacId); sayacId = null;
+    giris.disabled = true; giris.blur();
+    fetch('/hiz/bitir', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({yazilan: yazilan})})
+      .then(function(r){ return r.json(); }).then(function(j){
+        document.getElementById('hpSonuc').hidden = false;
+        document.getElementById('hpDks').textContent = j.dks || 0;
+        document.getElementById('hpD').textContent = j.dogru || 0; document.getElementById('hpY').textContent = j.yanlis || 0;
+        document.getElementById('hpIsabet').textContent = (j.isabet || 0) + '%'; document.getElementById('hpTus').textContent = j.tus || 0;
+        document.getElementById('hpRekorRozet').hidden = !j.rekor;
+        if (j.rekor) document.getElementById('hpRekor').textContent = j.dks;
+        var h = document.getElementById('hpHata'); h.hidden = !j.hata; h.textContent = j.hata || '';
+        if (j.siralama) { bugun = j.siralama; ciz(); }
+        document.getElementById('hpSonuc').scrollIntoView({behavior:'smooth', block:'center'});
+        window._hpSonuc = j;
+      });
+  }
+  function satirlar(liste){
+    return liste.length ? liste.map(function(s){
+      return '<li class="' + (s.ben ? 'ben' : '') + '"><span class="no">' + s.sira + '</span><span class="' + (s.gizli ? 'gizli' : '') + '">' + esc(s.ad) +
+        (s.misafir ? '<span class="not">Sadece sen görüyorsun</span>' : '') + '</span><span class="dks">' + s.dks + ' <small>DKS</small></span></li>';
+    }).join('') : '<li style="display:block" class="sessiz">Henüz kimse yok. İlk sen ol!</li>';
+  }
+  function ciz(){ document.getElementById('hpSiraBugun').innerHTML = satirlar(bugun); document.getElementById('hpSiraTum').innerHTML = satirlar(tum); }
+  document.querySelector('.hp-sekme').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    this.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+    document.getElementById('hpSiraBugun').hidden = b.dataset.s !== 'bugun'; document.getElementById('hpSiraTum').hidden = b.dataset.s !== 'tum';
+  });
+  document.getElementById('hpYenile').addEventListener('click', yukle);
+  document.getElementById('hpTekrar').addEventListener('click', function(){ yukle(); window.scrollTo({top:0, behavior:'smooth'}); });
+  document.getElementById('hpPaylas').addEventListener('click', function(){
+    var j = window._hpSonuc || {};
+    var m = '⌨️ Hızlı Parmaklar: ' + (j.dks || 0) + ' DKS (dakikada kelime), %' + (j.isabet || 0) + ' isabet. Sen kaç yaparsın?\nskorbilen.com/hiz';
+    if (navigator.share) navigator.share({text: m}).catch(function(){});
+    else if (navigator.clipboard) navigator.clipboard.writeText(m).then(function(){ document.getElementById('hpPaylas').textContent = 'Kopyalandı ✓'; });
+  });
+  var dlg = document.getElementById('hpYardim');
+  document.getElementById('hpYardimBtn').addEventListener('click', function(){ dlg.showModal(); });
+  ciz(); yukle();
+})();
+</script>
+{% endblock %}

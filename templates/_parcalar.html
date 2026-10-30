@@ -300,6 +300,34 @@
 {%- endmacro %}
 
 
+{% macro hiz_karti() -%}
+{% set hz = hiz_karti_bilgisi() %}
+<a class="hzk" href="{{ url_for('hiz_oyunu') }}">
+  <span class="hzk-tus" aria-hidden="true"><i>⌨️</i><b>60</b></span>
+  <span class="hzk-metin">
+    <strong>Hızlı Parmaklar <em>Yeni</em></strong>
+    <span>60 saniyede kaç kelime yazabilirsin? Türkçe yazma hızı testi, günlük sıralama.{% if not current_user.is_authenticated %} Üye olmadan da oynanır.{% endif %}</span>
+    {% if hz.rekor %}<small>Rekorun: {{ hz.rekor }} DKS</small>{% elif hz.oynayan %}<small>Bugün {{ hz.oynayan }} kişi yarıştı</small>{% endif %}
+  </span>
+  <span class="hzk-btn">Oyna ›</span>
+</a>
+<style>
+.hzk{display:flex; align-items:center; gap:14px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg,#F1EEFA,#F3FAF5); border:1px solid #DAD2EE; text-decoration:none; color:var(--murekkep)}
+.hzk:hover{color:var(--murekkep); border-color:#C3B6E4}
+.hzk-tus{position:relative; width:84px; height:64px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:14px; background:#fff; border:2px solid #14201A; box-shadow:0 3px 0 #14201A}
+.hzk-tus i{font-style:normal; font-size:30px}
+.hzk-tus b{position:absolute; right:-8px; top:-8px; background:#C0392B; color:#fff; font:800 12px/1 var(--baslik); padding:4px 6px; border-radius:999px}
+.hzk-metin{flex:1; min-width:0}
+.hzk-metin strong{display:block; font:700 19px/1.2 var(--baslik)}
+.hzk-metin strong em{font-style:normal; font:700 10.5px var(--yazi); color:var(--cim); background:#fff; border:1px solid currentColor; padding:1px 7px; border-radius:999px; vertical-align:3px; margin-left:4px}
+.hzk-metin span{display:block; font-size:13.5px; color:var(--gri); margin-top:2px}
+.hzk-metin small{display:inline-block; margin-top:4px; font-size:12px; font-weight:600; color:#5B45A8}
+.hzk-btn{flex:none; background:#5B45A8; color:#fff; font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; white-space:nowrap}
+@media (max-width:480px){ .hzk{flex-wrap:wrap} .hzk-btn{width:100%; text-align:center} }
+</style>
+{%- endmacro %}
+
+
 {% macro cengel_karti() -%}
 {% set sb = cengel_sira_bende_sayisi() %}
 {% set cdv = cengel_gelen_davetler()|length %}

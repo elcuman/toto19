@@ -3,7 +3,7 @@
 
 {% block title %}Oyunlar · Kelime ve Çengel Bulmaca · Skorbilen{% endblock %}
 {% block head %}
-<meta name="description" content="Harf Çarkı, günlük Türkçe kelime oyunu ve Çengel Düello: arkadaşlarınla ya da Robot Ziya'ya karşı ücretsiz kelime oyunları. Üye olmadan da oynanır.">
+<meta name="description" content="Harf Çarkı, Hızlı Parmaklar yazma hızı testi, günlük Türkçe kelime oyunu ve Çengel Düello: arkadaşlarınla ya da Robot Ziya'ya karşı ücretsiz kelime oyunları. Üye olmadan da oynanır.">
 <link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/oyunlar">
 {% endblock %}
 
@@ -13,6 +13,7 @@
   <p class="alt">Maç aralarında beyin jimnastiği. Hepsi ücretsiz{% if not current_user.is_authenticated %}, üye olmadan da oynanır{% endif %}.</p>
 </div>
 {{ p.harf_karti() }}
+{{ p.hiz_karti() }}
 {{ p.cengel_karti() }}
 {{ p.kelime_karti() }}
 <style>

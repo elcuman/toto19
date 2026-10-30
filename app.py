@@ -984,6 +984,21 @@ class HarfOyunu(db.Model):
     kullanici = db.relationship("Kullanici")
 
 
+class HizOyunu(db.Model):
+    """Hızlı Parmaklar (60 saniyelik yazma hızı testi). Sadece üyelerin sonuçları kaydedilir."""
+    __tablename__ = "hiz_oyunlari"
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    gun = db.Column(db.Date, nullable=False, index=True)
+    dks = db.Column(db.Integer, nullable=False, default=0)          # dakikada kelime (doğru tuş / 5)
+    dogru = db.Column(db.Integer, nullable=False, default=0)        # doğru kelime
+    yanlis = db.Column(db.Integer, nullable=False, default=0)       # yanlış kelime
+    tus = db.Column(db.Integer, nullable=False, default=0)          # doğru tuş vuruşu
+    toplam_tus = db.Column(db.Integer, nullable=False, default=0)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    kullanici = db.relationship("Kullanici")
+
+
 class CengelOyun(db.Model):
     """Çengel Düello: iki kişilik (ya da Robot Ziya'ya karşı) oklu bulmaca harf yarışı."""
     __tablename__ = "cengel_oyunlari"
@@ -2823,6 +2838,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE kelime_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE cengel_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE harf_oyunlari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE hiz_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -2928,8 +2944,8 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /harf$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/", "Disallow: /harf/",
+        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /harf$", "Allow: /hiz$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/", "Disallow: /harf/", "Disallow: /hiz/",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2938,7 +2954,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/oyunlar", "/kelime", "/harf", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/oyunlar", "/kelime", "/harf", "/hiz", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -4109,6 +4125,159 @@ def harf_karti_bilgisi():
 
 
 app.jinja_env.globals["harf_karti_bilgisi"] = harf_karti_bilgisi
+
+
+# ------------------------------------------------------------
+# HIZLI PARMAKLAR: 60 saniyede yazabildiğin kadar kelime (yazma hızı testi).
+# Kelimeler sunucuda üretilip oturuma bağlanır; puan sunucuda yeniden hesaplanır.
+# ------------------------------------------------------------
+HIZ_SURE = 60
+HIZ_KELIME_SAYISI = 320
+HIZ_UST_SINIR = 220          # bunun üstündeki DKS kaydedilmez (insan sınırının üstü)
+
+
+def _hiz_kelimeleri_yukle():
+    kume = set()
+    for ad in ("cevaplar.txt",):
+        kume.update(k for k in _kelime_dosyasi(ad) if 2 <= len(k) <= 9)
+    for ad in ("cengel.txt", "harf.txt"):
+        try:
+            with open(os.path.join(_KELIME_DIZINI, ad), encoding="utf-8") as f:
+                for satir in f:
+                    if "|" in satir and not satir.startswith("#"):
+                        k = tr_kucuk(satir.split("|", 1)[0])
+                        if 2 <= len(k) <= 9 and k.isalpha():
+                            kume.add(k)
+        except OSError:
+            pass
+    return sorted(kume)
+
+
+_HIZ_OZEL_ADLAR = set("ankara izmir bursa adana sivas van rize ordu ağrı bolu kars konya hatay aydın tokat çorum mardin edirne muş "
+                      "sinop muğla afyon amasya trabzon antalya malatya giresun kayseri uşak ırak ürdün üsküdar japon".split())
+HIZ_KELIMELER = [k for k in _hiz_kelimeleri_yukle() if k not in _HIZ_OZEL_ADLAR]
+
+
+def _hiz_puanla(kelimeler, yazilan):
+    dogru = yanlis = tus = toplam = 0
+    for i, y in enumerate(yazilan[:len(kelimeler)]):
+        y = tr_kucuk(str(y))[:30]
+        toplam += len(y) + 1
+        if y == kelimeler[i]:
+            dogru += 1
+            tus += len(y) + 1          # boşluk da sayılır
+        else:
+            yanlis += 1
+    return {"dks": round(tus / 5 * 60 / HIZ_SURE), "dogru": dogru, "yanlis": yanlis, "tus": tus, "toplam_tus": toplam,
+            "isabet": round(100 * tus / toplam) if toplam else 0}
+
+
+def hiz_siralamasi(sadece_bugun=True):
+    sorgu = db.session.query(HizOyunu.kullanici_id, db.func.max(HizOyunu.dks))
+    if sadece_bugun:
+        sorgu = sorgu.filter(HizOyunu.gun == kelime_bugun())
+    satirlar = sorgu.group_by(HizOyunu.kullanici_id).order_by(db.func.max(HizOyunu.dks).desc()).limit(50).all()
+    kullanicilar = {k.id: k for k in Kullanici.query.filter(Kullanici.id.in_([x[0] for x in satirlar])).all()} if satirlar else {}
+    gorunur = siralama_gorunur_idler()
+    ben_id = current_user.id if current_user.is_authenticated else None
+    liste = []
+    for kid, dks in satirlar:
+        k = kullanicilar.get(kid)
+        if not k or yz_mi(k):
+            continue
+        acik = kid in gorunur
+        liste.append({"ad": k.kullanici_adi if acik else "Oyuncu" + "•" * (3 + kid % 5), "gizli": not acik,
+                      "dks": dks, "ben": kid == ben_id})
+    if ben_id is None and sadece_bugun:
+        en_iyi = (session.get("hiz_en_iyi") or {})
+        if en_iyi.get("gun") == kelime_bugun().isoformat():
+            liste.append({"ad": "Sen (misafir)", "gizli": False, "dks": en_iyi["dks"], "ben": True, "misafir": True})
+    liste.sort(key=lambda x: -x["dks"])
+    for i, x in enumerate(liste, 1):
+        x["sira"] = i
+    return liste[:30]
+
+
+def _hiz_rekorum():
+    if current_user.is_authenticated:
+        return db.session.query(db.func.max(HizOyunu.dks)).filter(HizOyunu.kullanici_id == current_user.id).scalar() or 0
+    return (session.get("hiz_rekor") or 0)
+
+
+@app.route("/hiz")
+def hiz_oyunu():
+    return render_template("hiz.html", sure=HIZ_SURE, bugun=hiz_siralamasi(True), tum=hiz_siralamasi(False),
+                           rekor=_hiz_rekorum())
+
+
+@app.route("/hiz/basla", methods=["POST"])
+def hiz_basla():
+    import secrets
+    tohum = secrets.token_hex(8)
+    rnd = random.Random(tohum)
+    kelimeler = [rnd.choice(HIZ_KELIMELER) for _ in range(HIZ_KELIME_SAYISI)]
+    session["hiz"] = {"t": tohum}
+    return jsonify({"kelimeler": kelimeler, "sure": HIZ_SURE})
+
+
+@app.route("/hiz/saat", methods=["POST"])
+def hiz_saat():
+    """İlk tuşa basılınca süre sunucuda da başlar."""
+    h = session.get("hiz")
+    if h and not h.get("bas"):
+        h["bas"] = utc_now_naive().isoformat()
+        session["hiz"] = h
+    return ("", 204)
+
+
+@app.route("/hiz/bitir", methods=["POST"])
+def hiz_bitir():
+    h = session.pop("hiz", None)
+    if not h or not h.get("bas"):
+        return jsonify({"hata": "Oyun bulunamadı, yeniden başla."}), 400
+    gecen = (utc_now_naive() - datetime.fromisoformat(h["bas"])).total_seconds()
+    rnd = random.Random(h["t"])
+    kelimeler = [rnd.choice(HIZ_KELIMELER) for _ in range(HIZ_KELIME_SAYISI)]
+    yazilan = (request.get_json(silent=True) or {}).get("yazilan") or []
+    if not isinstance(yazilan, list):
+        yazilan = []
+    sonuc = _hiz_puanla(kelimeler, yazilan)
+    sonuc["kelimeler"] = kelimeler[:len(yazilan)]
+    # Süre, kelimeler alındıktan sonra sayaç ilk tuşla başlar; 60 sn'den çok önce gelen sonuç geçersiz
+    gecerli = HIZ_SURE - 3 <= gecen <= HIZ_SURE + 20 and sonuc["dks"] <= HIZ_UST_SINIR
+    sonuc["kaydedildi"] = False
+    if gecerli and sonuc["dogru"] > 0:
+        if current_user.is_authenticated:
+            onceki = _hiz_rekorum()
+            db.session.add(HizOyunu(kullanici_id=current_user.id, gun=kelime_bugun(), dks=sonuc["dks"], dogru=sonuc["dogru"],
+                                    yanlis=sonuc["yanlis"], tus=sonuc["tus"], toplam_tus=sonuc["toplam_tus"]))
+            db.session.commit()
+            sonuc["rekor"] = sonuc["dks"] > onceki
+        else:
+            sonuc["rekor"] = sonuc["dks"] > (session.get("hiz_rekor") or 0)
+            session["hiz_rekor"] = max(sonuc["dks"], session.get("hiz_rekor") or 0)
+            en = session.get("hiz_en_iyi") or {}
+            if en.get("gun") != kelime_bugun().isoformat() or sonuc["dks"] > en.get("dks", 0):
+                session["hiz_en_iyi"] = {"gun": kelime_bugun().isoformat(), "dks": sonuc["dks"]}
+            session.permanent = True
+        sonuc["kaydedildi"] = True
+    elif not gecerli:
+        sonuc["hata"] = "Sonuç geçersiz sayıldı (süre tutmadı)."
+    sonuc["siralama"] = hiz_siralamasi(True)
+    return jsonify(sonuc)
+
+
+def hiz_karti_bilgisi():
+    bilgi = {"oynayan": 0, "rekor": 0}
+    try:
+        bilgi["oynayan"] = db.session.query(db.func.count(db.distinct(HizOyunu.kullanici_id))).filter(HizOyunu.gun == kelime_bugun()).scalar() or 0
+        bilgi["rekor"] = _hiz_rekorum()
+    except Exception:
+        db.session.rollback()
+    return bilgi
+
+
+app.jinja_env.globals["hiz_karti_bilgisi"] = hiz_karti_bilgisi
 
 
 # ------------------------------------------------------------
