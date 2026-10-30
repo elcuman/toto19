@@ -34,7 +34,7 @@
 </div>
 
 <div class="cd-durum" id="cdDurum" role="status" aria-live="polite"></div>
-{% if not oyun.bot %}<button type="button" class="cd-sure-btn" id="cdSureBtn" hidden>⏰ Rakip 12 saattir oynamadı · Oyunu kazan</button>{% endif %}
+
 
 {% if oyun.durum == 'bekliyor' and ben == 0 %}
 <section class="panel cd-davet" id="cdDavet">
@@ -109,7 +109,8 @@
     <li><b>Pas:</b> Oyun başına 1 kez, harf koymadan sırayı geçebilirsin. <b>Turu bitir:</b> Harf koyduktan sonra kalan haklarını kullanmadan sırayı verir. <b>Değiştir:</b> Turun başında ıstakandaki harfleri yeniler, sıra geçer.</li>
     <li><b>İpucu:</b> Istakandaki bir harfin doğru yerini gösterir. Oyun başına 1 hak.</li>
     <li>Torbada harf kalmayıp bir oyuncunun ıstakası bitince oyun biter; rakibin elinde kalan her harf <b>-1</b>. Bulmaca dolunca da biter, çok puanı olan kazanır.</li>
-    <li>Düelloda sıra gelen oyuncu <b>12 saat</b> içinde oynamazsa rakibi oyunu kazanabilir.</li>
+    <li>Düelloda sıra gelen oyuncu <b>12 saat</b> içinde oynamazsa oyun <b>kendiliğinden biter</b>, o oyuncu kaybeder.</li>
+    <li>Üst üste 6 turda (ikinizin toplamı) hiç doğru harf konmazsa oyun kendiliğinden biter, o anki puanlar geçerli olur.</li>
   </ul>
   <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
 </dialog>
@@ -288,7 +289,7 @@
     var TH = d.tur_hakki || 3, hak = d.hak == null ? TH : d.hak;
     if (bende) { var noktalar = ''; for (var n = 0; n < TH; n++) noktalar += '<i class="' + (n < hak ? '' : 'yok') + '"></i>';
       durumEl.innerHTML = 'Sıra sende · ' + hak + ' harf hakkın var <span class="cd-haklar" aria-hidden="true">' + noktalar + '</span>'; }
-    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…' + (d.sure_kalan > 0 && d.sure_kalan < 12 * 3600 - 600 ? ' (hamle süresi: ' + sureYaz(d.sure_kalan) + ')' : '')));
+    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…' + (d.sure_kalan > 0 && d.sure_kalan < 12 * 3600 - 600 ? ' (' + sureYaz(d.sure_kalan) + ' içinde oynamazsa sen kazanırsın)' : '')));
     var sb = document.getElementById('cdSureBtn');
     if (sb) sb.hidden = !(d.durum === 'aktif' && !d.bitti && !d.bot && d.sira !== BEN && d.sure_kalan <= 0);
     // tahta
@@ -338,6 +339,7 @@
       if (s.t === 'dogru') return '<b>' + esc(s.h) + '</b> +' + s.p + (s.k && s.k.length ? ' 🎉 ' + s.k.map(esc).join(', ') : '');
       if (s.t === 'yanlis') return 'bir yanlış (-1)';
       if (s.t === 'kalan') return 'elinde ' + s.n + ' harf kaldı (' + s.p + ')';
+      if (s.t === 'otomatik') return 'üst üste doğru harf konmadı, oyun bitti';
       if (s.t === 'degistir') return 'harflerini değiştirdi';
       if (s.t === 'pas') return 'pas';
       if (s.t === 'bitir') return 'turu bitirdi';
@@ -356,7 +358,8 @@
   function sonucGoster(){
     var d = durum, p = d.puan, ben = p[BEN], o = p[1 - BEN];
     var k = d.kazanan;
-    document.getElementById('cdSonucBaslik').textContent = d.sure_doldu ? (d.cekilen === BEN ? '⏰ Süren doldu' : '🏆 Rakibin süresi doldu, kazandın!') : d.cekilen === BEN ? 'Oyundan çekildin' : (d.cekilen === 1 - BEN ? '🏆 Rakibin çekildi, kazandın!' : (k === BEN ? '🏆 Kazandın!' : (k === -1 ? 'Berabere! 🤝' : 'Bu sefer olmadı 😅')));
+    var oto = (d.son || []).some(function(x){ return x.t === 'otomatik'; });
+    document.getElementById('cdSonucBaslik').textContent = oto ? (k === BEN ? '🏆 Oyun bitti, kazandın!' : (k === -1 ? 'Oyun bitti, berabere 🤝' : 'Oyun bitti')) : d.sure_doldu ? (d.cekilen === BEN ? '⏰ Süren doldu' : '🏆 Rakibin süresi doldu, kazandın!') : d.cekilen === BEN ? 'Oyundan çekildin' : (d.cekilen === 1 - BEN ? '🏆 Rakibin çekildi, kazandın!' : (k === BEN ? '🏆 Kazandın!' : (k === -1 ? 'Berabere! 🤝' : 'Bu sefer olmadı 😅')));
     document.getElementById('cdSonucSkor').textContent = ben + ' – ' + o;
     document.getElementById('cdSonuc').showModal();
   }

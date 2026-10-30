@@ -221,7 +221,17 @@ def _simdi():
     return int(time.time())
 
 
+BOS_TUR_SINIRI = 6   # üst üste bu kadar turda (iki oyuncu toplamı) hiç doğru harf konmazsa oyun otomatik biter
+
+
 def _sira_gec(d):
+    # Oyunu uzatmaya karşı: üst üste doğru harf konmayan turlar sayılır
+    d["bos_tur"] = 0 if d.get("tur_dogru") else d.get("bos_tur", 0) + 1
+    d["tur_dogru"] = False
+    if d["bos_tur"] >= BOS_TUR_SINIRI and not d["bitti"]:
+        d["bitti"] = True
+        _kayit(d, {"o": d["sira"], "t": "otomatik", "p": 0})
+        return
     d["sira"] = 1 - d["sira"]
     d["tur_hak"] = TUR_HAKKI
     d["sira_bas"] = _simdi()
@@ -234,6 +244,15 @@ def sira_baslat(d):
 
 def sure_kalan(d):
     return SIRA_SURESI - (_simdi() - d.get("sira_bas", _simdi()))
+
+
+def otomatik_bitir(d):
+    """Sırası gelen oyuncu hamle süresini aştıysa oyun kendiliğinden biter, o oyuncu kaybeder."""
+    if d["bitti"] or sure_kalan(d) > 0:
+        return False
+    d["sure_doldu"] = True
+    cekil(d, d["sira"])
+    return True
 
 
 def sure_doldu_kazan(d, oyuncu):
@@ -293,6 +312,7 @@ def harf_koy(d, oyuncu, raf_i, hucre, rnd=None):
         _hak_kullan(d)
         return True, "yanlis"
     d["dolu"][hucre] = oyuncu
+    d["tur_dogru"] = True
     puan, tamam = 1, []
     for kel in d["bulmaca"]["kelimeler"]:
         hc = kelime_hucreleri(kel)

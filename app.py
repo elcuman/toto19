@@ -4452,6 +4452,32 @@ def _cengel_isimler(oyun):
     return [ad1, ad2]
 
 
+def _cengel_sure_kontrol(oyun):
+    """Düelloda sırası gelen oyuncu hamle süresini aştıysa oyunu kendiliğinden bitirir (o oyuncu kaybeder)."""
+    if oyun.bot or oyun.durum != "aktif":
+        return False
+    d = _cjson.loads(oyun.veri)
+    if not _cengel.otomatik_bitir(d):
+        return False
+    oyun.durum = "bitti"
+    oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+    oyun.guncelleme = datetime.utcnow()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return False
+    return True
+
+
+def cengel_sureleri_temizle():
+    """Zamanlayıcıdan (cron) çağrılır: süresi dolmuş bütün düelloları bitirir."""
+    sayi = 0
+    for o in CengelOyun.query.filter(CengelOyun.durum == "aktif", CengelOyun.bot.is_(False)).limit(500).all():
+        sayi += _cengel_sure_kontrol(o)
+    return sayi
+
+
 def _cengel_json(oyun, ben):
     d = _cjson.loads(oyun.veri)
     g = _cengel.istemci_gorunumu(d, ben if ben is not None else -1)
@@ -4560,6 +4586,8 @@ def _cengel_eskileri_temizle():
 def cengel_lobi():
     oyunlar = (CengelOyun.query.filter(_cengel_benim_filtrem())
                .order_by(CengelOyun.guncelleme.desc()).limit(30).all())
+    for o in oyunlar:
+        _cengel_sure_kontrol(o)
     aktif, biten = [], []
     galibiyet = maglubiyet = beraberlik = 0
     for o in oyunlar:
@@ -4664,6 +4692,7 @@ def cengel_yeni():
 @app.route("/cengel/<kod>")
 def cengel_oyun(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    _cengel_sure_kontrol(oyun)
     ben = _cengel_oyuncu_no(oyun)
     if ben is not None and not oyun.bot and oyun.durum == "bitti":
         d = _cjson.loads(oyun.veri)
@@ -4767,6 +4796,7 @@ def cengel_katil(kod):
 @app.route("/cengel/<kod>/durum")
 def cengel_durum(kod):
     oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    _cengel_sure_kontrol(oyun)
     if oyun.durum == "bitti" and not oyun.bot:
         d = _cjson.loads(oyun.veri)
         if _cengel_sohbet_temizle(oyun, d):
@@ -4786,6 +4816,7 @@ def cengel_hamle(kod):
     ben = _cengel_oyuncu_no(oyun)
     if ben is None:
         abort(403)
+    _cengel_sure_kontrol(oyun)
     if oyun.durum != "aktif":
         return jsonify({"hata": "Rakip henüz katılmadı." if oyun.durum == "bekliyor" else "Oyun bitti.",
                         **_cengel_json(oyun, ben)}), 400
@@ -4837,6 +4868,8 @@ def cengel_sira_bende_sayisi(kullanici_id=None):
     try:
         sayi = 0
         for o in CengelOyun.query.filter(CengelOyun.durum == "aktif", _cengel_benim_filtrem()).limit(50).all():
+            if _cengel_sure_kontrol(o):
+                continue
             ben = _cengel_oyuncu_no(o)
             if ben is not None and _cjson.loads(o.veri)["sira"] == ben and not (o.bot and ben == 1):
                 sayi += 1
@@ -8213,6 +8246,10 @@ def akilli_senkron():
     now = utc_now_naive()
     yz_sonuc = _yz_guvenli_calistir()
     _haber_guvenli_guncelle()
+    try:
+        cengel_sureleri_temizle()          # süresi dolan düellolar kendiliğinden biter
+    except Exception:
+        db.session.rollback()
     try:
         # API'ye gidemesek bile 120. dakikası dolmuş, skoru gelmiş maçları puanla
         if gecikmis_maclari_bitir():
