@@ -197,7 +197,7 @@ def yeni_oyun(tohum=None, haric=()):
     torba = list(b["cozum"].values())
     rnd.shuffle(torba)
     raf = [[torba.pop() for _ in range(min(ISTAKA, len(torba)))] for _ in range(2)]
-    return {"bulmaca": b, "dolu": {}, "puan": [0, 0], "sira": 0, "raf": raf, "torba": torba,
+    return {"bulmaca": b, "dolu": {}, "puan": [0, 0], "sira": 0, "raf": raf, "torba": torba, "sira_bas": _simdi(),
             "ipucu": [False, False], "son": [], "bitti": False, "hamle": 0}
 
 
@@ -213,9 +213,37 @@ def tur_hakki(d):
     return d.get("tur_hak", TUR_HAKKI)
 
 
+SIRA_SURESI = 12 * 3600   # hamle sırası bu kadar beklerse rakip oyunu kazanabilir
+
+
+def _simdi():
+    import time
+    return int(time.time())
+
+
 def _sira_gec(d):
     d["sira"] = 1 - d["sira"]
     d["tur_hak"] = TUR_HAKKI
+    d["sira_bas"] = _simdi()
+
+
+def sira_baslat(d):
+    """Düello başlayınca (rakip katılınca) ilk sıranın süresi başlar."""
+    d["sira_bas"] = _simdi()
+
+
+def sure_kalan(d):
+    return SIRA_SURESI - (_simdi() - d.get("sira_bas", _simdi()))
+
+
+def sure_doldu_kazan(d, oyuncu):
+    """Sırası gelen oyuncu süresi içinde oynamadıysa rakibi oyunu kazanır."""
+    if d["bitti"] or d["sira"] == oyuncu:
+        return False, "Şu an bunu yapamazsın."
+    if sure_kalan(d) > 0:
+        return False, "Rakibin hamle süresi henüz dolmadı."
+    d["sure_doldu"] = True
+    return cekil(d, d["sira"])
 
 
 def _hak_kullan(d):
@@ -225,9 +253,21 @@ def _hak_kullan(d):
         _sira_gec(d)
 
 
+YANLIS_CEZA = 1     # yanlış yere konan harf puanı düşürür
+
+
 def _bitti_mi(d):
+    """Bulmaca dolunca ya da torba boşken bir oyuncunun ıstakası bitince oyun biter.
+    İkinci durumda rakip kalan harflerle tek başına oynayamaz; elinde kalan her harf -1."""
     if len(d["dolu"]) >= len(d["bulmaca"]["cozum"]):
         d["bitti"] = True
+    elif not d["torba"] and any(not r for r in d["raf"]):
+        d["bitti"] = True
+        for o in (0, 1):
+            kalan = len(d["raf"][o])
+            if kalan:
+                d["puan"][o] -= kalan
+                _kayit(d, {"o": o, "t": "kalan", "n": kalan, "p": -kalan})
     return d["bitti"]
 
 
@@ -248,7 +288,8 @@ def harf_koy(d, oyuncu, raf_i, hucre, rnd=None):
         return False, "Bu kutu dolu."
     harf = raf[raf_i]
     if cozum[hucre] != harf:
-        _kayit(d, {"o": oyuncu, "t": "yanlis", "h": harf, "x": hucre, "p": 0})
+        d["puan"][oyuncu] -= YANLIS_CEZA
+        _kayit(d, {"o": oyuncu, "t": "yanlis", "h": harf, "x": hucre, "p": -YANLIS_CEZA})
         _hak_kullan(d)
         return True, "yanlis"
     d["dolu"][hucre] = oyuncu
@@ -265,10 +306,7 @@ def harf_koy(d, oyuncu, raf_i, hucre, rnd=None):
     _kayit(d, {"o": oyuncu, "t": "dogru", "h": harf, "x": hucre, "p": puan, "k": tamam})
     _bitti_mi(d)
     if not d["bitti"]:
-        if not raf:
-            _sira_gec(d)     # ıstaka boşaldı, bu turda koyacak harf kalmadı
-        else:
-            _hak_kullan(d)
+        _hak_kullan(d)
     return True, "dogru"
 
 
@@ -399,6 +437,8 @@ def istemci_gorunumu(d, oyuncu):
     for hucre in b["cozum"]:
         if hucre in d["dolu"]:
             hucreler[hucre] = {"h": b["cozum"][hucre], "o": d["dolu"][hucre]}
+        elif d["bitti"]:
+            hucreler[hucre] = {"h": b["cozum"][hucre], "o": -1}   # oyun bitti: kalan cevaplar gösterilir
         else:
             hucreler[hucre] = {}
     ipuclari = {}
@@ -419,6 +459,7 @@ def istemci_gorunumu(d, oyuncu):
             "tamam": sorted(set(tamam)), "puan": d["puan"], "sira": d["sira"], "ben": oyuncu,
             "raf": d["raf"][oyuncu] if oyuncu in (0, 1) else [], "torba": len(d["torba"]),
             "ipucu_kaldi": (not d["ipucu"][oyuncu]) if oyuncu in (0, 1) else False,
-            "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "cekilen": d.get("cekilen"), "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
+            "son": son, "bitti": d["bitti"], "hamle": d["hamle"], "cekilen": d.get("cekilen"),
+            "sure_kalan": sure_kalan(d), "sure_doldu": d.get("sure_doldu", False), "hak": tur_hakki(d), "tur_hakki": TUR_HAKKI,
             "pas_kaldi": pas_kaldi(d, oyuncu) if oyuncu in (0, 1) else 0,
             "kalan": len(b["cozum"]) - len(d["dolu"])}

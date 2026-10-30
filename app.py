@@ -4713,6 +4713,24 @@ def cengel_iptal(kod):
     return redirect(request.form.get("geri") or url_for("cengel_lobi"))
 
 
+@app.route("/cengel/<kod>/sure", methods=["POST"])
+def cengel_sure(kod):
+    """Rakip hamle süresinde oynamadıysa oyunu kazan."""
+    oyun = CengelOyun.query.filter_by(kod=kod).first_or_404()
+    ben = _cengel_oyuncu_no(oyun)
+    if ben is None or oyun.bot or oyun.durum != "aktif":
+        abort(403)
+    d = _cjson.loads(oyun.veri)
+    ok, mesaj = _cengel.sure_doldu_kazan(d, ben)
+    if not ok:
+        return jsonify({"hata": mesaj, **_cengel_json(oyun, ben)}), 400
+    oyun.durum = "bitti"
+    oyun.veri = _cjson.dumps(d, ensure_ascii=False)
+    oyun.guncelleme = datetime.utcnow()
+    db.session.commit()
+    return jsonify(_cengel_json(oyun, ben))
+
+
 @app.route("/cengel/<kod>/reddet", methods=["POST"])
 @login_required
 def cengel_reddet(kod):
@@ -4735,6 +4753,9 @@ def cengel_katil(kod):
         else:
             oyun.misafir2 = _cengel_misafir_ozeti(olustur=True)
             oyun.misafir2_ad = _cengel_misafir_adi()
+        d = _cjson.loads(oyun.veri)
+        _cengel.sira_baslat(d)
+        oyun.veri = _cjson.dumps(d, ensure_ascii=False)
         oyun.durum = "aktif"
         oyun.guncelleme = datetime.utcnow()
         db.session.commit()

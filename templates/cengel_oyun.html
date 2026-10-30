@@ -34,6 +34,7 @@
 </div>
 
 <div class="cd-durum" id="cdDurum" role="status" aria-live="polite"></div>
+{% if not oyun.bot %}<button type="button" class="cd-sure-btn" id="cdSureBtn" hidden>⏰ Rakip 12 saattir oynamadı · Oyunu kazan</button>{% endif %}
 
 {% if oyun.durum == 'bekliyor' and ben == 0 %}
 <section class="panel cd-davet" id="cdDavet">
@@ -104,10 +105,11 @@
     <li>Yeşil kutulardaki ipuçlarının cevaplarını ok yönünde yaz.</li>
     <li>Sıran gelince ıstakandan bir harf seç, sonra yerleşeceği beyaz kutuya dokun.</li>
     <li><b>Doğru harf +1 puan.</b> O harfle bir kelime tamamlanırsa <b>kelimenin harf sayısı kadar bonus.</b></li>
-    <li><b>Her turda 3 harf hakkın var.</b> Yanlış harf puan getirmez ama bir hakkını yer. 3 deneme bitince sıra rakibe geçer.</li>
+    <li><b>Her turda 3 harf hakkın var.</b> <b>Yanlış harf -1 puan</b> ve bir hakkını yer. 3 deneme bitince sıra rakibe geçer.</li>
     <li><b>Pas:</b> Oyun başına 1 kez, harf koymadan sırayı geçebilirsin. <b>Turu bitir:</b> Harf koyduktan sonra kalan haklarını kullanmadan sırayı verir. <b>Değiştir:</b> Turun başında ıstakandaki harfleri yeniler, sıra geçer.</li>
     <li><b>İpucu:</b> Istakandaki bir harfin doğru yerini gösterir. Oyun başına 1 hak.</li>
-    <li>Bulmaca dolunca çok puanı olan kazanır.</li>
+    <li>Torbada harf kalmayıp bir oyuncunun ıstakası bitince oyun biter; rakibin elinde kalan her harf <b>-1</b>. Bulmaca dolunca da biter, çok puanı olan kazanır.</li>
+    <li>Düelloda sıra gelen oyuncu <b>12 saat</b> içinde oynamazsa rakibi oyunu kazanabilir.</li>
   </ul>
   <form method="dialog"><button class="btn btn-blok">Anladım</button></form>
 </dialog>
@@ -134,11 +136,14 @@
 .cd-vs{font-weight:700; color:var(--gri)}
 .cd-durum{text-align:center; font-weight:700; min-height:24px; margin:4px 0 8px; font-size:15px}
 .cd-durum.bende{color:var(--cim)}
+.cd-sure-btn{display:block; margin:0 auto 8px; border:0; border-radius:999px; background:#D93025; color:#fff; font-weight:700; padding:8px 16px; cursor:pointer}
+.cd-sure-btn[hidden]{display:none}
 .cd-tahta{display:grid; gap:2px; background:#B9CDBE; border:2px solid #B9CDBE; border-radius:8px; overflow:hidden; width:min(100%, 470px); margin:0 auto; touch-action:manipulation; container-type:inline-size}
 .cd-h{position:relative; aspect-ratio:1; min-width:0; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center; user-select:none}
 .cd-h.harf{cursor:pointer}
 .cd-h.harf .cd-hrf{font:800 clamp(18px, 6.4cqi, 30px)/1 var(--baslik)}
 .cd-h.o0 .cd-hrf{color:#0E7A4C} .cd-h.o1 .cd-hrf{color:#2F5D8C}
+.cd-h.o-1 .cd-hrf{color:#B7C2BC}
 .cd-h.tamam{background:#F3FAF5}
 .cd-h.yeni{animation:cdYeni 1.2s ease}
 @keyframes cdYeni{0%{background:#FFE58A}100%{background:#fff}}
@@ -283,7 +288,9 @@
     var TH = d.tur_hakki || 3, hak = d.hak == null ? TH : d.hak;
     if (bende) { var noktalar = ''; for (var n = 0; n < TH; n++) noktalar += '<i class="' + (n < hak ? '' : 'yok') + '"></i>';
       durumEl.innerHTML = 'Sıra sende · ' + hak + ' harf hakkın var <span class="cd-haklar" aria-hidden="true">' + noktalar + '</span>'; }
-    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…'));
+    else durumEl.textContent = d.bitti ? 'Oyun bitti' : (d.durum === 'bekliyor' ? 'Rakibin katılması bekleniyor…' : (d.bot ? 'Robot Ziya düşünüyor…' : 'Rakibin sırası…' + (d.sure_kalan > 0 && d.sure_kalan < 12 * 3600 - 600 ? ' (hamle süresi: ' + sureYaz(d.sure_kalan) + ')' : '')));
+    var sb = document.getElementById('cdSureBtn');
+    if (sb) sb.hidden = !(d.durum === 'aktif' && !d.bitti && !d.bot && d.sira !== BEN && d.sure_kalan <= 0);
     // tahta
     tahta.style.gridTemplateColumns = 'repeat(' + C + ', minmax(0, 1fr))';
     var tamam = {}; d.tamam.forEach(function(x){ tamam[x] = 1; });
@@ -320,6 +327,7 @@
     sonHamle = d.hamle; ilk = false;
     if (d.bitti && !sonucGosterildi) { sonucGosterildi = true; setTimeout(sonucGoster, 900); }
   }
+  function sureYaz(sn){ var s = Math.max(0, sn), sa = Math.floor(s / 3600), dk = Math.floor(s % 3600 / 60); return sa ? sa + ' sa ' + dk + ' dk' : dk + ' dk'; }
   function sonMetin(d){
     // Rakibin son turunu özetle (en fazla 3 deneme)
     var tur = [];
@@ -328,7 +336,8 @@
     var kim = esc(d.bot ? 'Robot Ziya' : (d.isimler[1 - BEN] || 'Rakip'));
     var parca = tur.map(function(s){
       if (s.t === 'dogru') return '<b>' + esc(s.h) + '</b> +' + s.p + (s.k && s.k.length ? ' 🎉 ' + s.k.map(esc).join(', ') : '');
-      if (s.t === 'yanlis') return 'bir yanlış';
+      if (s.t === 'yanlis') return 'bir yanlış (-1)';
+      if (s.t === 'kalan') return 'elinde ' + s.n + ' harf kaldı (' + s.p + ')';
       if (s.t === 'degistir') return 'harflerini değiştirdi';
       if (s.t === 'pas') return 'pas';
       if (s.t === 'bitir') return 'turu bitirdi';
@@ -347,7 +356,7 @@
   function sonucGoster(){
     var d = durum, p = d.puan, ben = p[BEN], o = p[1 - BEN];
     var k = d.kazanan;
-    document.getElementById('cdSonucBaslik').textContent = d.cekilen === BEN ? 'Oyundan çekildin' : (d.cekilen === 1 - BEN ? '🏆 Rakibin çekildi, kazandın!' : (k === BEN ? '🏆 Kazandın!' : (k === -1 ? 'Berabere! 🤝' : 'Bu sefer olmadı 😅')));
+    document.getElementById('cdSonucBaslik').textContent = d.sure_doldu ? (d.cekilen === BEN ? '⏰ Süren doldu' : '🏆 Rakibin süresi doldu, kazandın!') : d.cekilen === BEN ? 'Oyundan çekildin' : (d.cekilen === 1 - BEN ? '🏆 Rakibin çekildi, kazandın!' : (k === BEN ? '🏆 Kazandın!' : (k === -1 ? 'Berabere! 🤝' : 'Bu sefer olmadı 😅')));
     document.getElementById('cdSonucSkor').textContent = ben + ' – ' + o;
     document.getElementById('cdSonuc').showModal();
   }
@@ -361,7 +370,7 @@
         mesgul = false;
         if (!x.ok) { cubuk.innerHTML = '⚠️ ' + esc(x.j.hata || 'Olmadı'); if (x.j.hucreler) ciz(x.j); return; }
         var halaBende = x.j.sira === BEN && !x.j.bitti, kalan = halaBende ? ' ' + x.j.hak + ' hakkın kaldı.' : ' Sıra rakibe geçti.';
-        if (govde.tip === 'koy' && x.j.sonuc === 'yanlis') cubuk.innerHTML = '❌ Yanlış harf.' + kalan;
+        if (govde.tip === 'koy' && x.j.sonuc === 'yanlis') cubuk.innerHTML = '❌ Yanlış harf, -1.' + kalan;
         else if (govde.tip === 'koy') { var s = x.j.son.filter(function(z){ return z.o === BEN; }).pop(); cubuk.innerHTML = (s && s.k && s.k.length ? '🎉 <b>' + s.k.map(esc).join(', ') + '</b> tamamlandı! +' + s.p : '✅ Doğru! +1') + kalan; }
         else if (govde.tip === 'pas') cubuk.textContent = 'Sıra rakibe geçti.';
         seciliTas = null;
@@ -390,6 +399,11 @@
   document.getElementById('cdPas').addEventListener('click', function(){ istek({tip:'pas'}); });
   document.getElementById('cdDegistir').addEventListener('click', function(){ if (confirm('Istakandaki harfler değişsin mi? Bu tur biter, sıra rakibe geçer.')) istek({tip:'degistir'}); });
   document.getElementById('cdIpucu').addEventListener('click', function(){ istek({tip:'ipucu'}); });
+  var sureBtn = document.getElementById('cdSureBtn');
+  if (sureBtn) sureBtn.addEventListener('click', function(){ if (confirm('Rakip süresinde oynamadı. Oyunu kazanmış sayılmak istiyor musun?')) istek_url('/cengel/' + KOD + '/sure'); });
+  function istek_url(url){
+    fetch(url, {method:'POST', credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(j){ if (j.hata) cubuk.textContent = j.hata; if (j.hucreler) ciz(j); });
+  }
   var kop = document.getElementById('cdKopyala');
   if (kop) kop.addEventListener('click', function(){ var l = kop.dataset.link; (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(function(){ kop.textContent = 'Kopyalandı ✓'; }, function(){ prompt('Düello linki:', l); }); });
 
@@ -400,6 +414,7 @@
     if (!bekle) return;
     fetch('/cengel/' + KOD + '/durum', {credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
       if (!durum || d.hamle !== durum.hamle || d.durum !== durum.durum) ciz(d);
+      else if ((d.sure_kalan <= 0) !== (durum.sure_kalan <= 0)) ciz(d);
       else { durum.sohbet = d.sohbet; durum.rakip_ayrildi = d.rakip_ayrildi; durum.sohbet_acik = d.sohbet_acik; sohbetCiz(d); }
     }).catch(function(){});
   }
