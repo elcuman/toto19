@@ -8251,9 +8251,11 @@ def akilli_senkron():
     except Exception:
         db.session.rollback()
     try:
-        # API'ye gidemesek bile 120. dakikası dolmuş, skoru gelmiş maçları puanla
-        if gecikmis_maclari_bitir():
-            recalculate_all_points()
+        # API'ye gidemesek bile 120. dakikası dolmuş, skoru gelmiş maçları puanla.
+        # Puanlar her turda baştan hesaplanır: grup değişiklikleri (üye çıkması, hesap silinmesi)
+        # sonrası "grupta tek bilen" 10/8 bonusları da kendiliğinden düzelir.
+        gecikmis_maclari_bitir()
+        recalculate_all_points()
     except Exception:
         db.session.rollback()
 
