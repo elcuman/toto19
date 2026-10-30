@@ -328,6 +328,34 @@
 {%- endmacro %}
 
 
+{% macro karti_2048() -%}
+{% set o2 = karti_2048_bilgisi() %}
+<a class="o2k" href="{{ url_for('oyun_2048') }}">
+  <span class="o2k-tahta" aria-hidden="true"><i class="a">2</i><i class="b">4</i><i class="c">8</i><i class="d">2048</i></span>
+  <span class="o2k-metin">
+    <strong>2048 <em>Yeni</em></strong>
+    <span>Kaydır, aynı sayıları birleştir, 2048'e ulaş. Günlük ve tüm zamanlar sıralaması.{% if not current_user.is_authenticated %} Üye olmadan da oynanır.{% endif %}</span>
+    {% if o2.rekor %}<small>Rekorun: {{ o2.rekor }}</small>{% elif o2.oynayan %}<small>Bugün {{ o2.oynayan }} kişi oynadı</small>{% endif %}
+  </span>
+  <span class="o2k-btn">Oyna ›</span>
+</a>
+<style>
+.o2k{display:flex; align-items:center; gap:14px; padding:14px 16px; margin:0 0 16px; border-radius:var(--r-buyuk); background:linear-gradient(135deg,#FAF3E8,#F3FAF5); border:1px solid #E9D9BF; text-decoration:none; color:var(--murekkep)}
+.o2k:hover{color:var(--murekkep); border-color:#D8C09A}
+.o2k-tahta{display:grid; grid-template-columns:repeat(2,38px); gap:4px; padding:4px; background:#BBADA0; border-radius:8px; flex:none}
+.o2k-tahta i{width:38px; height:38px; border-radius:5px; display:flex; align-items:center; justify-content:center; font:800 15px var(--baslik); font-style:normal; color:#776E65}
+.o2k-tahta .a{background:#EEE4DA} .o2k-tahta .b{background:#EDE0C8} .o2k-tahta .c{background:#F2B179; color:#fff} .o2k-tahta .d{background:#EDC22E; color:#fff; font-size:10px}
+.o2k-metin{flex:1; min-width:0}
+.o2k-metin strong{display:block; font:700 19px/1.2 var(--baslik)}
+.o2k-metin strong em{font-style:normal; font:700 10.5px var(--yazi); color:var(--cim); background:#fff; border:1px solid currentColor; padding:1px 7px; border-radius:999px; vertical-align:3px; margin-left:4px}
+.o2k-metin span{display:block; font-size:13.5px; color:var(--gri); margin-top:2px}
+.o2k-metin small{display:inline-block; margin-top:4px; font-size:12px; font-weight:600; color:#A0682A}
+.o2k-btn{flex:none; background:#8F7A66; color:#fff; font-weight:700; font-size:14px; padding:8px 14px; border-radius:999px; white-space:nowrap}
+@media (max-width:480px){ .o2k{flex-wrap:wrap} .o2k-btn{width:100%; text-align:center} }
+</style>
+{%- endmacro %}
+
+
 {% macro cengel_karti() -%}
 {% set sb = cengel_sira_bende_sayisi() %}
 {% set cdv = cengel_gelen_davetler()|length %}

@@ -999,6 +999,19 @@ class HizOyunu(db.Model):
     kullanici = db.relationship("Kullanici")
 
 
+class Oyun2048(db.Model):
+    """2048 skorları (sadece üyeler; skor sunucuda hamle tekrarıyla hesaplanır)."""
+    __tablename__ = "oyun2048"
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey("kullanicilar.id", ondelete="CASCADE"), nullable=False, index=True)
+    gun = db.Column(db.Date, nullable=False, index=True)
+    skor = db.Column(db.Integer, nullable=False, default=0)
+    en_buyuk = db.Column(db.Integer, nullable=False, default=0)
+    hamle = db.Column(db.Integer, nullable=False, default=0)
+    olusturulma = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    kullanici = db.relationship("Kullanici")
+
+
 class CengelOyun(db.Model):
     """Çengel Düello: iki kişilik (ya da Robot Ziya'ya karşı) oklu bulmaca harf yarışı."""
     __tablename__ = "cengel_oyunlari"
@@ -2839,6 +2852,7 @@ def initialize_database():
                 db.session.execute(db.text("ALTER TABLE cengel_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE harf_oyunlari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE hiz_oyunlari ENABLE ROW LEVEL SECURITY"))
+                db.session.execute(db.text("ALTER TABLE oyun2048 ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE anket_oylari ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE ziyaret_gunluk ENABLE ROW LEVEL SECURITY"))
                 db.session.execute(db.text("ALTER TABLE sayfa_gunluk ENABLE ROW LEVEL SECURITY"))
@@ -2944,8 +2958,8 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /harf$", "Allow: /hiz$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
-        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/", "Disallow: /harf/", "Disallow: /hiz/",
+        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /harf$", "Allow: /hiz$", "Allow: /2048$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/", "Disallow: /harf/", "Disallow: /hiz/", "Disallow: /2048/",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
     return Response("\n".join(satirlar) + "\n", mimetype="text/plain")
@@ -2954,7 +2968,7 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/oyunlar", "/kelime", "/harf", "/hiz", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/oyunlar", "/kelime", "/harf", "/hiz", "/2048", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -4278,6 +4292,98 @@ def hiz_karti_bilgisi():
 
 
 app.jinja_env.globals["hiz_karti_bilgisi"] = hiz_karti_bilgisi
+
+
+# ------------------------------------------------------------
+# 2048: tohum sunucudan gelir, istemci hamle dizisini yollar, skor sunucuda yeniden oynatılarak hesaplanır.
+# ------------------------------------------------------------
+import oyun2048 as _o2048
+
+
+def siralama_2048(sadece_bugun=True):
+    sorgu = db.session.query(Oyun2048.kullanici_id, db.func.max(Oyun2048.skor))
+    if sadece_bugun:
+        sorgu = sorgu.filter(Oyun2048.gun == kelime_bugun())
+    satirlar = sorgu.group_by(Oyun2048.kullanici_id).order_by(db.func.max(Oyun2048.skor).desc()).limit(50).all()
+    kullanicilar = {k.id: k for k in Kullanici.query.filter(Kullanici.id.in_([x[0] for x in satirlar])).all()} if satirlar else {}
+    gorunur = siralama_gorunur_idler()
+    ben_id = current_user.id if current_user.is_authenticated else None
+    liste = []
+    for kid, skor in satirlar:
+        k = kullanicilar.get(kid)
+        if not k or yz_mi(k):
+            continue
+        acik = kid in gorunur
+        liste.append({"ad": k.kullanici_adi if acik else "Oyuncu" + "•" * (3 + kid % 5), "gizli": not acik,
+                      "skor": skor, "ben": kid == ben_id})
+    if ben_id is None and sadece_bugun:
+        en = session.get("o2048_bugun") or {}
+        if en.get("gun") == kelime_bugun().isoformat():
+            liste.append({"ad": "Sen (misafir)", "gizli": False, "skor": en["skor"], "ben": True, "misafir": True})
+    liste.sort(key=lambda x: -x["skor"])
+    for i, x in enumerate(liste, 1):
+        x["sira"] = i
+    return liste[:30]
+
+
+def rekor_2048():
+    if current_user.is_authenticated:
+        return db.session.query(db.func.max(Oyun2048.skor)).filter(Oyun2048.kullanici_id == current_user.id).scalar() or 0
+    return session.get("o2048_rekor") or 0
+
+
+@app.route("/2048")
+def oyun_2048():
+    return render_template("oyun2048.html", bugun=siralama_2048(True), tum=siralama_2048(False), rekor=rekor_2048())
+
+
+@app.route("/2048/basla", methods=["POST"])
+def oyun_2048_basla():
+    import secrets
+    tohum = secrets.randbits(32)
+    session["o2048"] = {"t": tohum}
+    return jsonify({"tohum": tohum})
+
+
+@app.route("/2048/bitir", methods=["POST"])
+def oyun_2048_bitir():
+    veri = request.get_json(silent=True) or {}
+    h = session.get("o2048")
+    if not h or veri.get("tohum") != h.get("t"):
+        return jsonify({"hata": "Oyun bulunamadı (sayfa başka yerde açılmış olabilir). Yeni oyun başlat."}), 400
+    hamleler = str(veri.get("hamleler") or "")[:30000]
+    sonuc = _o2048.oynat(h["t"], hamleler)
+    sonuc.pop("tahta", None)
+    session.pop("o2048", None)
+    if sonuc["skor"] > 0:
+        if current_user.is_authenticated:
+            onceki = rekor_2048()
+            db.session.add(Oyun2048(kullanici_id=current_user.id, gun=kelime_bugun(), skor=sonuc["skor"],
+                                    en_buyuk=sonuc["en_buyuk"], hamle=sonuc["hamle"]))
+            db.session.commit()
+            sonuc["rekor"] = sonuc["skor"] > onceki
+        else:
+            sonuc["rekor"] = sonuc["skor"] > (session.get("o2048_rekor") or 0)
+            session["o2048_rekor"] = max(sonuc["skor"], session.get("o2048_rekor") or 0)
+            en = session.get("o2048_bugun") or {}
+            if en.get("gun") != kelime_bugun().isoformat() or sonuc["skor"] > en.get("skor", 0):
+                session["o2048_bugun"] = {"gun": kelime_bugun().isoformat(), "skor": sonuc["skor"]}
+            session.permanent = True
+    sonuc["siralama"] = siralama_2048(True)
+    return jsonify(sonuc)
+
+
+def karti_2048_bilgisi():
+    bilgi = {"rekor": 0, "oynayan": 0}
+    try:
+        bilgi["rekor"] = rekor_2048()
+        bilgi["oynayan"] = db.session.query(db.func.count(db.distinct(Oyun2048.kullanici_id))).filter(Oyun2048.gun == kelime_bugun()).scalar() or 0
+    except Exception:
+        db.session.rollback()
+    return bilgi
+
+
+app.jinja_env.globals["karti_2048_bilgisi"] = karti_2048_bilgisi
 
 
 # ------------------------------------------------------------

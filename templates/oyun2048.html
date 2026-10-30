@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}2048 · Ücretsiz Oyna · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="2048 oyna: kaydır, aynı sayıları birleştir, 2048'e ulaş. Arkadaşlarınla günlük ve tüm zamanlar sıralamasında yarış. Ücretsiz, üye olmadan da oynanır.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/2048">
+<meta property="og:title" content="2048 · Skorbilen">
+<meta property="og:description" content="Kaydır, birleştir, 2048'e ulaş. Rekorunu kır!">
+<meta property="og:url" content="https://{{ ANA_DOMAIN_ADI }}/2048">
+{% endblock %}
+
+{% block content %}
+<div class="o2-bas">
+  <h1>2048</h1>
+  <div class="o2-kutular">
+    <div class="o2-kutu"><small>SKOR</small><b id="o2Skor">0</b></div>
+    <div class="o2-kutu"><small>REKOR</small><b id="o2Rekor">{{ rekor }}</b></div>
+  </div>
+</div>
+<div class="o2-ust">
+  <p>Kaydırarak aynı sayıları birleştir, <b>2048</b>'e ulaş!</p>
+  <button type="button" class="btn btn-kucuk" id="o2Yeni">Yeni oyun</button>
+</div>
+
+<div class="o2-tahta-kap">
+  <div class="o2-tahta" id="o2Tahta" aria-label="2048 tahtası" tabindex="0"></div>
+  <div class="o2-perde" id="o2Perde" hidden>
+    <h2 id="o2PerdeBaslik">Oyun bitti</h2>
+    <p id="o2PerdeMetin"></p>
+    <p class="o2-rekor-rozet" id="o2RekorRozet" hidden>🏆 Yeni rekor!</p>
+    <div class="o2-perde-dugmeler">
+      <button type="button" class="btn" id="o2PerdeYeni">Yeni oyun</button>
+      <button type="button" class="btn btn-ikincil" id="o2Devam" hidden>Devam et</button>
+      <button type="button" class="btn btn-ikincil" id="o2Paylas">Paylaş</button>
+    </div>
+  </div>
+</div>
+<p class="o2-alt">Telefonda tahtada parmağını kaydır, bilgisayarda ok tuşlarını kullan. <button type="button" class="o2-bitir" id="o2Bitir">Skoru kaydet ve bitir</button></p>
+{% if not current_user.is_authenticated %}<p class="sessiz kucuk" style="text-align:center; margin:0 0 14px">Skorun sadece bu tarayıcıda tutulur. <a href="{{ url_for('kayit') }}">Üye ol</a>, sıralamada herkes görsün.</p>{% endif %}
+
+<section class="panel o2-sira">
+  <div class="o2-sira-bas">
+    <h2>🏆 En yüksek skorlar</h2>
+    <div class="segment o2-sekme" role="tablist">
+      <button type="button" role="tab" aria-selected="true" data-s="bugun">Bugün</button>
+      <button type="button" role="tab" aria-selected="false" data-s="tum">Tüm zamanlar</button>
+    </div>
+  </div>
+  <ol class="o2-liste" id="o2SiraBugun"></ol>
+  <ol class="o2-liste" id="o2SiraTum" hidden></ol>
+  <p class="sessiz kucuk" style="margin:8px 0 0">Oyun bitince ya da "Skoru kaydet" deyince skorun sayılır. {% if not current_user.is_authenticated %}İsimleri görmek için <a href="{{ url_for('giris', next='/2048') }}">giriş yap</a>.{% else %}İsimler sadece aynı grupta olduğun kişilerde görünür.{% endif %}</p>
+</section>
+
+<style>
+.o2-bas{display:flex; align-items:center; justify-content:space-between; margin:4px 0 6px}
+.o2-bas h1{margin:0; font:800 46px/1 var(--baslik); color:#776E65}
+.o2-kutular{display:flex; gap:6px}
+.o2-kutu{min-width:72px; padding:6px 10px; border-radius:8px; background:#BBADA0; color:#fff; text-align:center}
+.o2-kutu small{display:block; font-size:10.5px; font-weight:700; color:#EEE4DA; letter-spacing:.06em}
+.o2-kutu b{font:800 20px/1.1 var(--baslik)}
+.o2-ust{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px}
+.o2-ust p{margin:0; color:var(--gri); font-size:14px}
+.o2-ust .btn{white-space:nowrap; flex:none}
+.o2-tahta-kap{position:relative; width:min(100%, 440px); margin:0 auto}
+.o2-tahta{display:grid; grid-template-columns:repeat(4, 1fr); gap:3%; padding:3%; aspect-ratio:1; background:#BBADA0; border-radius:10px; touch-action:none; user-select:none; outline:none; container-type:inline-size}
+.o2-h{border-radius:6px; background:rgba(238,228,218,.35); display:flex; align-items:center; justify-content:center; font:800 11cqi/1 var(--baslik); color:#776E65}
+.o2-h.v8, .o2-h.v16, .o2-h.v32, .o2-h.v64, .o2-h.v128, .o2-h.v256, .o2-h.v512, .o2-h.v1024, .o2-h.v2048, .o2-h.vbuyuk{color:#F9F6F2}
+.o2-h.v2{background:#EEE4DA} .o2-h.v4{background:#EDE0C8} .o2-h.v8{background:#F2B179} .o2-h.v16{background:#F59563}
+.o2-h.v32{background:#F67C5F} .o2-h.v64{background:#F65E3B} .o2-h.v128{background:#EDCF72; font-size:9.5cqi} .o2-h.v256{background:#EDCC61; font-size:9.5cqi}
+.o2-h.v512{background:#EDC850; font-size:9.5cqi} .o2-h.v1024{background:#EDC53F; font-size:7.5cqi} .o2-h.v2048{background:#EDC22E; font-size:7.5cqi; box-shadow:0 0 18px rgba(243,215,116,.7)}
+.o2-h.vbuyuk{background:#3C3A32; font-size:6.5cqi}
+.o2-h.yeni{animation:o2Yeni .18s ease}
+.o2-h.birlesti{animation:o2Birles .18s ease}
+@keyframes o2Yeni{from{transform:scale(.2); opacity:.2}}
+@keyframes o2Birles{50%{transform:scale(1.15)}}
+.o2-perde{position:absolute; inset:0; border-radius:10px; background:rgba(238,228,218,.88); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:16px}
+.o2-perde[hidden]{display:none}
+.o2-perde h2{margin:0 0 6px; font:800 34px var(--baslik); color:#776E65}
+.o2-perde p{margin:0 0 10px; color:#5c544c; font-weight:600}
+.o2-rekor-rozet{background:#FFF4D6; border:1px solid #F0DC9C; border-radius:999px; padding:3px 12px; color:#7A5D00 !important}
+.o2-perde-dugmeler{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+.o2-alt{text-align:center; color:var(--gri); font-size:13px; margin:10px 0 6px}
+.o2-bitir{background:none; border:0; color:var(--gri); text-decoration:underline; cursor:pointer; font-size:13px; padding:2px}
+.o2-sira-bas{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px}
+.o2-sira-bas h2{margin:0; font-size:19px}
+.o2-sekme{margin:0} .o2-sekme button{padding:0 12px; white-space:nowrap}
+.o2-liste{list-style:none; margin:0; padding:0}
+.o2-liste li{display:grid; grid-template-columns:28px 1fr auto; gap:8px; align-items:center; padding:8px 4px; border-top:1px solid var(--cizgi); font-size:15px}
+.o2-liste li:first-child{border-top:0}
+.o2-liste .no{font-weight:800; color:var(--gri)} .o2-liste li:nth-child(1) .no{color:#C99A0A}
+.o2-liste .gizli{color:var(--gri); letter-spacing:1px}
+.o2-liste .sk{font:800 17px var(--baslik); font-variant-numeric:tabular-nums}
+.o2-liste li.ben{background:#FFF7D6; border-radius:8px}
+.o2-liste .not{display:block; font-size:12px; color:var(--gri)}
+@media (max-width:400px){ .o2-bas h1{font-size:38px} .o2-kutu{min-width:62px; padding:5px 8px} .o2-ust p{font-size:13px} }
+</style>
+
+<script>
+(function(){
+  var B = 4, ANAHTAR = 'o2048_durum';
+  var tahta, rnd, tohum, hamleler = '', skor = 0, bitti = false, kazandi = false, devam = false, kaydediliyor = false, sonYeni = -1, birlesen = {};
+  var bugun = {{ bugun | tojson }}, tum = {{ tum | tojson }};
+  var el = document.getElementById('o2Tahta');
+  function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+
+  // Sunucudaki oyun2048.py ile birebir aynı üreteç ve kurallar (skor sunucuda yeniden hesaplanır)
+  function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function ekle(){
+    var bos = []; for (var i = 0; i < 16; i++) if (!tahta[i]) bos.push(i);
+    if (!bos.length) return -1;
+    var k = bos[Math.floor(rnd() * bos.length)]; tahta[k] = rnd() < 0.1 ? 4 : 2; return k;
+  }
+  function satirlar(y){
+    var s = [], r, c, a;
+    for (var x = 0; x < B; x++) {
+      a = [];
+      for (var z = 0; z < B; z++) {
+        if (y === 'L') a.push(x * B + z); else if (y === 'R') a.push(x * B + (B - 1 - z));
+        else if (y === 'U') a.push(z * B + x); else a.push((B - 1 - z) * B + x);
+      }
+      s.push(a);
+    }
+    return s;
+  }
+  function hamle(t, y, isaretle){
+    var degisti = false, puan = 0;
+    satirlar(y).forEach(function(idx){
+      var eski = idx.map(function(i){ return t[i]; }), dolu = eski.filter(Boolean), yeni = [], hedef = [];
+      for (var i = 0; i < dolu.length; i++) {
+        if (i + 1 < dolu.length && dolu[i] === dolu[i + 1]) { yeni.push(dolu[i] * 2); puan += dolu[i] * 2; hedef.push(true); i++; }
+        else { yeni.push(dolu[i]); hedef.push(false); }
+      }
+      while (yeni.length < B) { yeni.push(0); hedef.push(false); }
+      for (var j = 0; j < B; j++) { if (yeni[j] !== eski[j]) degisti = true; t[idx[j]] = yeni[j]; if (isaretle && hedef[j]) isaretle[idx[j]] = true; }
+    });
+    return [degisti, puan];
+  }
+  function hamleVar(){
+    if (tahta.indexOf(0) >= 0) return true;
+    return ['L', 'U', 'R', 'D'].some(function(y){ return hamle(tahta.slice(), y)[0]; });
+  }
+  function kur(t, h){
+    tohum = t; rnd = mulberry32(t); tahta = new Array(16).fill(0); ekle(); ekle(); skor = 0; hamleler = '';
+    bitti = kazandi = devam = false;
+    (h || '').split('').forEach(function(y){ var r = hamle(tahta, y); if (r[0]) { skor += r[1]; hamleler += y; ekle(); } });
+    kazandi = tahta.some(function(v){ return v >= 2048; }); devam = kazandi;
+    sakla(); ciz();
+    if (!hamleVar()) oyunBitti();
+  }
+  function sakla(){ try { localStorage.setItem(ANAHTAR, JSON.stringify({t: tohum, h: hamleler})); } catch(e) {} }
+  function ciz(){
+    el.innerHTML = tahta.map(function(v, i){
+      var s = v ? (v > 2048 ? ' vbuyuk' : ' v' + v) : '';
+      return '<div class="o2-h' + s + (i === sonYeni ? ' yeni' : '') + (birlesen[i] ? ' birlesti' : '') + '">' + (v || '') + '</div>';
+    }).join('');
+    document.getElementById('o2Skor').textContent = skor;
+    var r = document.getElementById('o2Rekor'); if (skor > +r.textContent) r.textContent = skor;
+  }
+  function oyna(y){
+    if (bitti || (kazandi && !devam)) return;
+    birlesen = {};
+    var r = hamle(tahta, y, birlesen);
+    if (!r[0]) return;
+    skor += r[1]; hamleler += y; sonYeni = ekle(); sakla(); ciz(); sonYeni = -1;
+    if (!kazandi && tahta.some(function(v){ return v >= 2048; })) { kazandi = true; perde('🎉 2048!', 'Başardın! Devam edip rekorunu büyütebilirsin.', true); return; }
+    if (!hamleVar()) oyunBitti();
+  }
+  function perde(baslik, metin, devamEdilir){
+    document.getElementById('o2PerdeBaslik').textContent = baslik;
+    document.getElementById('o2PerdeMetin').textContent = metin;
+    document.getElementById('o2Devam').style.display = devamEdilir ? '' : 'none';
+    document.getElementById('o2RekorRozet').hidden = true;
+    document.getElementById('o2Perde').hidden = false;
+  }
+  function oyunBitti(){ bitti = true; perde('Oyun bitti', 'Skorun: ' + skor + ' · Kaydediliyor…', false); kaydet(); }
+  function kaydet(){
+    if (kaydediliyor) return; kaydediliyor = true;
+    fetch('/2048/bitir', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tohum: tohum, hamleler: hamleler})})
+      .then(function(r){ return r.json(); }).then(function(j){
+        kaydediliyor = false;
+        try { localStorage.removeItem(ANAHTAR); } catch(e) {}
+        if (j.hata) { document.getElementById('o2PerdeMetin').textContent = 'Skorun: ' + skor + ' · ' + j.hata; return; }
+        document.getElementById('o2PerdeMetin').textContent = 'Skorun: ' + j.skor + ' · En büyük taş: ' + j.en_buyuk;
+        document.getElementById('o2RekorRozet').hidden = !j.rekor;
+        if (j.siralama) { bugun = j.siralama; siraCiz(); }
+      }).catch(function(){ kaydediliyor = false; document.getElementById('o2PerdeMetin').textContent = 'Bağlantı hatası, skor kaydedilemedi.'; });
+  }
+  function yeniOyun(){
+    document.getElementById('o2Perde').hidden = true;
+    fetch('/2048/basla', {method:'POST', credentials:'same-origin'}).then(function(r){ return r.json(); }).then(function(j){ kur(j.tohum, ''); el.focus(); });
+  }
+
+  // Klavye ve kaydırma
+  var YON = {ArrowLeft:'L', ArrowRight:'R', ArrowUp:'U', ArrowDown:'D', a:'L', d:'R', w:'U', s:'D'};
+  document.addEventListener('keydown', function(e){
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '') || document.querySelector('dialog[open]')) return;
+    var y = YON[e.key]; if (y) { e.preventDefault(); oyna(y); }
+  });
+  var bx = 0, by = 0, dokun = false;
+  el.addEventListener('touchstart', function(e){ var t = e.touches[0]; bx = t.clientX; by = t.clientY; dokun = true; }, {passive:true});
+  el.addEventListener('touchmove', function(e){ if (dokun) e.preventDefault(); }, {passive:false});
+  el.addEventListener('touchend', function(e){
+    if (!dokun) return; dokun = false;
+    var t = e.changedTouches[0], dx = t.clientX - bx, dy = t.clientY - by;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    oyna(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
+  });
+  document.getElementById('o2Yeni').addEventListener('click', function(){ if (bitti || !hamleler || confirm('Yeni oyun başlasın mı? Bu oyunun skoru kaydedilmez.')) yeniOyun(); });
+  document.getElementById('o2PerdeYeni').addEventListener('click', yeniOyun);
+  document.getElementById('o2Devam').addEventListener('click', function(){ devam = true; document.getElementById('o2Perde').hidden = true; el.focus(); });
+  document.getElementById('o2Bitir').addEventListener('click', function(){ if (!bitti && hamleler && confirm('Oyun bitsin ve ' + skor + ' skoru kaydedilsin mi?')) oyunBitti(); });
+  document.getElementById('o2Paylas').addEventListener('click', function(){
+    var m = '🧩 2048 skorum: ' + skor + ' (en büyük taş ' + Math.max.apply(null, tahta) + '). Geçebilir misin?\nskorbilen.com/2048';
+    if (navigator.share) navigator.share({text: m}).catch(function(){});
+    else if (navigator.clipboard) navigator.clipboard.writeText(m).then(function(){ document.getElementById('o2Paylas').textContent = 'Kopyalandı ✓'; });
+  });
+
+  function satirHtml(liste){
+    return liste.length ? liste.map(function(s){
+      return '<li class="' + (s.ben ? 'ben' : '') + '"><span class="no">' + s.sira + '</span><span class="' + (s.gizli ? 'gizli' : '') + '">' + esc(s.ad) +
+        (s.misafir ? '<span class="not">Sadece sen görüyorsun</span>' : '') + '</span><span class="sk">' + s.skor + '</span></li>';
+    }).join('') : '<li style="display:block" class="sessiz">Henüz kimse yok. İlk sen ol!</li>';
+  }
+  function siraCiz(){ document.getElementById('o2SiraBugun').innerHTML = satirHtml(bugun); document.getElementById('o2SiraTum').innerHTML = satirHtml(tum); }
+  document.querySelector('.o2-sekme').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    this.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+    document.getElementById('o2SiraBugun').hidden = b.dataset.s !== 'bugun'; document.getElementById('o2SiraTum').hidden = b.dataset.s !== 'tum';
+  });
+  siraCiz();
+
+  // Yarım kalan oyun varsa devam et (tohum sunucudaki oturumla eşleşmeli)
+  var kayit = null; try { kayit = JSON.parse(localStorage.getItem(ANAHTAR) || 'null'); } catch(e) {}
+  if (kayit && kayit.t != null) kur(kayit.t, kayit.h); else yeniOyun();
+})();
+</script>
+{% endblock %}
