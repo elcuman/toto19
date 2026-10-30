@@ -62,8 +62,8 @@
 .o2-ust p{margin:0; color:var(--gri); font-size:14px}
 .o2-ust .btn{white-space:nowrap; flex:none}
 .o2-tahta-kap{position:relative; width:min(100%, 440px); margin:0 auto}
-.o2-tahta{display:grid; grid-template-columns:repeat(4, 1fr); gap:3%; padding:3%; aspect-ratio:1; background:#BBADA0; border-radius:10px; touch-action:none; user-select:none; outline:none; container-type:inline-size}
-.o2-h{border-radius:6px; background:rgba(238,228,218,.35); display:flex; align-items:center; justify-content:center; font:800 11cqi/1 var(--baslik); color:#776E65}
+.o2-tahta{display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); grid-template-rows:repeat(4, minmax(0, 1fr)); gap:3%; padding:3%; aspect-ratio:1; background:#BBADA0; border-radius:10px; touch-action:none; user-select:none; outline:none; container-type:inline-size}
+.o2-h{min-width:0; min-height:0; overflow:hidden; border-radius:6px; background:rgba(238,228,218,.35); display:flex; align-items:center; justify-content:center; font:800 11cqi/1 var(--baslik); color:#776E65}
 .o2-h.v8, .o2-h.v16, .o2-h.v32, .o2-h.v64, .o2-h.v128, .o2-h.v256, .o2-h.v512, .o2-h.v1024, .o2-h.v2048, .o2-h.vbuyuk{color:#F9F6F2}
 .o2-h.v2{background:#EEE4DA} .o2-h.v4{background:#EDE0C8} .o2-h.v8{background:#F2B179} .o2-h.v16{background:#F59563}
 .o2-h.v32{background:#F67C5F} .o2-h.v64{background:#F65E3B} .o2-h.v128{background:#EDCF72; font-size:9.5cqi} .o2-h.v256{background:#EDCC61; font-size:9.5cqi}
@@ -72,7 +72,7 @@
 .o2-h.yeni{animation:o2Yeni .18s ease}
 .o2-h.birlesti{animation:o2Birles .18s ease}
 @keyframes o2Yeni{from{transform:scale(.2); opacity:.2}}
-@keyframes o2Birles{50%{transform:scale(1.15)}}
+@keyframes o2Birles{50%{transform:scale(1.1)}}
 .o2-perde{position:absolute; inset:0; border-radius:10px; background:rgba(238,228,218,.88); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:16px}
 .o2-perde[hidden]{display:none}
 .o2-perde h2{margin:0 0 6px; font:800 34px var(--baslik); color:#776E65}
