@@ -53,7 +53,7 @@
   <div class="hc-serit acik" id="hcSonucSerit" aria-label="Harf sonuçları"></div>
   <div class="btn-dizi"><button type="button" class="btn" id="hcPaylas">Sonucu paylaş</button><a class="btn btn-ikincil" href="{{ url_for('oyunlar') }}">Diğer oyunlar</a></div>
   <p class="sessiz kucuk">Yeni çark her gece 00:00'da.</p>
-  <details class="hc-cevaplar"><summary>Cevapları gör</summary><ol id="hcCevaplar"></ol></details>
+  <details class="hc-cevaplar"><summary>Soruları ve cevapları gör</summary><ol id="hcCevaplar"></ol></details>
 </section>
 
 <section class="panel hc-sira" id="hcSiraPanel"{% if not veri.bitti %} hidden{% endif %}>
@@ -131,8 +131,13 @@ body.hc-tam .hc-form{margin-top:8px}
 .hc-sonuc h2{margin:0 0 4px}
 .hc-sonuc-ozet{font-size:17px; margin:0 0 12px}
 .hc-cevaplar{margin-top:10px} .hc-cevaplar summary{cursor:pointer; font-weight:700}
-.hc-cevaplar ol{list-style:none; padding:0; margin:8px 0 0; columns:2; column-gap:16px; font-size:14px}
-.hc-cevaplar li{break-inside:avoid; padding:3px 0}
+.hc-cevaplar ol{list-style:none; padding:0; margin:8px 0 0; font-size:14px; text-align:left}
+.hc-cevaplar li{display:flex; gap:8px; align-items:flex-start; padding:7px 0; border-top:1px solid var(--cizgi)}
+.hc-cevaplar li:first-child{border-top:0}
+.hc-cevaplar .hf{flex:none; margin-top:1px}
+.hc-c-govde{display:flex; flex-direction:column; min-width:0}
+.hc-c-soru{color:var(--murekkep)}
+.hc-c-cevap b{letter-spacing:.03em}
 .hc-cevaplar .hf{display:inline-block; width:22px; height:22px; border-radius:50%; text-align:center; line-height:22px; color:#fff; font-weight:800; font-size:12px; background:#7D97B3; margin-right:6px}
 .hc-cevaplar .hf.d{background:#1E8C4E} .hc-cevaplar .hf.y{background:#C0392B}
 .hc-cevaplar small{color:var(--gri)}
@@ -279,7 +284,8 @@ body.hc-tam .hc-form{margin-top:8px}
     document.getElementById('hcSonucBaslik').textContent = veri.dogru >= 25 ? '🔥 Muhteşem!' : (veri.dogru >= 18 ? '👏 Çok iyi!' : (veri.dogru >= 10 ? '👍 Fena değil' : 'Yarın tekrar dene 💪'));
     document.getElementById('hcSonucOzet').innerHTML = '✅ <b>' + veri.dogru + '</b> doğru · ❌ <b>' + veri.yanlis + '</b> yanlış · ⏭ <b>' + veri.bos + '</b> boş · ⏱ ' + sure(gecen);
     document.getElementById('hcCevaplar').innerHTML = veri.sorular.map(function(s){
-      return '<li><span class="hf ' + (s.d || '') + '">' + esc(s.h) + '</span><b>' + esc(s.k) + '</b>' + (s.d === 'y' && s.v ? ' <small>(senin: ' + esc(s.v) + ')</small>' : '') + '</li>';
+      return '<li><span class="hf ' + (s.d || '') + '">' + esc(s.h) + '</span><span class="hc-c-govde"><span class="hc-c-soru">' + esc(s.i || '') + '</span>' +
+        '<span class="hc-c-cevap"><b>' + esc(s.k) + '</b>' + (s.d === 'y' && s.v ? ' <small>· senin: ' + esc(s.v) + '</small>' : (s.d ? '' : ' <small>· boş</small>')) + '</span></span></li>';
     }).join('');
     var sp = document.getElementById('hcSiraPanel'); sp.hidden = false;
     var ol = document.getElementById('hcSira');
