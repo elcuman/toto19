@@ -5168,7 +5168,7 @@ def dashboard():
         oyun_oz=oyun_oz, seri=seri, bugun_aktif=bugun_aktif,
         bugun_metni=(lambda g: f"{g.day} {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'][g.month-1]}, "
                      f"{['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'][g.weekday()]}")(kelime_bugun()),
-        haberler=[],
+        haberler=son_haberler(),
         yaklasan_maclar=yaklasan_maclar,
         biten_maclar=biten_maclar,
         tahminler=tahminler,

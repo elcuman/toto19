@@ -82,7 +82,14 @@
   </a>
   {% endif %}
 {% endif %}
+<a class="bg-kart" href="{{ url_for('ziya_tahminleri') }}">
+  <span class="bg-ikon">🤖</span>
+  <span class="bg-metin"><strong>Robot Ziya'nın analizleri</strong><span>Bu haftanın maçları: kazanma olasılıkları, beklenen goller, form ve maç önü yorumlar.</span></span>
+  <span class="bg-ok">Gör ›</span>
+</a>
 </div>
+
+{{ p.haber_slider(haberler) }}
 
 {% set kurdugum = (gruplar or []) | selectattr('kurucu_id', 'equalto', current_user.id) | first %}
 {% if kurdugum %}
