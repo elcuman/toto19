@@ -19,8 +19,6 @@
 
 {{ p.lig_duyurusu(url_for('kayit'), "Ücretsiz hesap aç, grubunu kur", url_for('nasil_oynanir'), "Nasıl oynanır?") }}
 
-{{ p.haber_slider(haberler) }}
-
 {{ p.kelime_karti() }}
 {{ p.cengel_karti() }}
 
@@ -54,11 +52,12 @@
 
 {% if yaklasan %}
 <section class="panel">
-  <div class="panel-bas"><h2>Yaklaşan maçlar</h2></div>
+  <div class="panel-bas"><h2>Yaklaşan maçlar</h2><a href="{{ url_for('maclar_listesi') }}">Tüm maçlar ve analizler ›</a></div>
   {% for mac in yaklasan %}
   <article class="mac">
     <div class="mac-ust">
       <span>{% if mac.baslangic %}{{ mac.baslangic | tr_saat("%d.%m %H:%M") }}{% endif %}, {{ mac.lig }}</span>
+      {% if not mac.ozel_grup_id %}<a href="{{ mac_sayfa_url(mac) }}" style="font-weight:700">Analiz ›</a>{% endif %}
     </div>
     {{ p.fikstur(mac) }}
   </article>

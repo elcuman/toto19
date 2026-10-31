@@ -13,12 +13,27 @@
   <p class="alt">Maç aralarında beyin jimnastiği. Hepsi ücretsiz{% if not current_user.is_authenticated %}, üye olmadan da oynanır{% endif %}.</p>
 </div>
 {{ p.harf_karti() }}
+<p class="oy-tanit"><b>Harf Çarkı:</b> Alfabenin 29 harfi, 29 ipucu, 5 dakika. Her gün herkese aynı çark; cevap o harfle başlıyor, Ğ'de ise Ğ'yi içeriyor. Bilmediğini pas geç, tur sonunda geri gel. <a href="{{ url_for('harf_oyunu') }}#rehber">Kurallar ve taktikler ›</a></p>
 {{ p.hiz_karti() }}
+<p class="oy-tanit"><b>Hızlı Parmaklar:</b> Türkçe kelimelerle 60 saniyelik yazma hızı testi. Sonucun dakikada kelime (DKS) olarak hesaplanır, skorun sunucuda doğrulanır ve günlük sıralamaya girer. <a href="{{ url_for('hiz_oyunu') }}#rehber">Hızını artırmanın yolları ›</a></p>
 {{ p.karti_2048() }}
+<p class="oy-tanit"><b>2048:</b> Aynı sayıları birleştirip 2048 taşına ulaş. Her oyun hamle hamle sunucuda yeniden oynatılarak doğrulanır, böylece sıralamada hile olmaz. <a href="{{ url_for('oyun_2048') }}#rehber">Köşe taktiği ve ipuçları ›</a></p>
 {{ p.cengel_karti() }}
+<p class="oy-tanit"><b>Çengel Düello:</b> Çengel bulmacayı iki kişilik düelloya çeviren, Skorbilen'e özgü oyun. Ortak torbadan harf çek, ipuçlarına göre yerleştir, kelime tamamlayıp bonus topla. Arkadaşına link at ya da Robot Ziya'ya karşı oyna. <a href="{{ url_for('cengel_lobi') }}#rehber">Kurallar ›</a></p>
 {{ p.kelime_karti() }}
+<p class="oy-tanit"><b>Günlük Kelime:</b> 5 harfli kelimeyi 6 denemede bul. Konu herkese aynı, kelime herkese farklı; yani arkadaşından kopya çekemezsin ama aynı konu üzerinde yarışırsınız. <a href="{{ url_for('kelime_oyunu') }}#rehber">Nasıl oynanır ›</a></p>
+
+<section class="panel rehber">
+  <h2>Skorbilen oyunları hakkında</h2>
+  <p>Skorbilen'deki oyunların hepsi ücretsizdir ve tarayıcıda çalışır; uygulama indirmen gerekmez. Günlük oyunlarda (Kelime ve Harf Çarkı) her gün yeni bir bulmaca gelir, böylece arkadaş grubunla aynı gün aynı zorlukta yarışırsınız. Hızlı Parmaklar ve 2048 ise istediğin kadar tekrar oynayabileceğin beceri oyunlarıdır.</p>
+  <p>Sıralamaların adil olması için cevaplar oyun bitene kadar tarayıcına gönderilmez, skorlar sunucuda hesaplanır ve doğrulanır. Sıralamalarda isimler yalnızca aynı tahmin grubundaki arkadaşlarına görünür; diğer oyuncuların isimleri gizli tutulur, yalnızca sıraları görünür.</p>
+  <p>Oyunlar tahmin ligi puanlarını etkilemez; maç aralarında beyin jimnastiği yapmak, arkadaşlarınla atışmak için var. Maç tahmini yapmak istersen <a href="{{ url_for('nasil_oynanir') }}">tahmin ligi nasıl oynanır</a> sayfasına göz at.</p>
+</section>
 <style>
 .oy-bas h1{margin:4px 0 4px; font-size:30px}
 .oy-bas .alt{margin:0 0 16px}
+.oy-tanit{margin:-6px 2px 18px; font-size:14.5px; line-height:1.55; color:var(--gri)}
+.oy-tanit b{color:var(--murekkep)}
+.rehber{margin-top:8px; line-height:1.6} .rehber h2{font-size:21px}
 </style>
 {% endblock %}

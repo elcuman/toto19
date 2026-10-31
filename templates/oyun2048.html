@@ -234,4 +234,6 @@
   if (kayit && kayit.t != null) kur(kayit.t, kayit.h); else yeniOyun();
 })();
 </script>
+{% import "_rehberler.html" as rehber %}
+{{ rehber.oyun2048() }}
 {% endblock %}

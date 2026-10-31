@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+{% set m = mac %}
+{% set baslik = m.ev_sahibi ~ " – " ~ m.deplasman %}
+{% set tarih = m.baslangic | tr_saat("%d.%m.%Y") %}
+{% set saat = m.baslangic | tr_saat("%H:%M") %}
+
+{% block title %}{% if bitti %}{{ baslik }} {{ m.ev_skor }}-{{ m.deplasman_skor }} maç sonucu ve analiz{% else %}{{ baslik }} maç önü analizi ve skor tahmini ({{ tarih }}){% endif %} · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="{% if bitti %}{{ baslik }} maçı {{ m.ev_skor }}-{{ m.deplasman_skor }} bitti. Robot Ziya'nın tahmini, Skorbilen kullanıcılarının tahmin dağılımı ve maç analizi.{% else %}{{ m.lig }} {{ tarih }} {{ saat }}: {{ baslik }} maçı için kazanma olasılıkları (%{{ p_ev }} / %{{ p_x }} / %{{ p_dep }}), beklenen goller, takımların formu ve son karşılaşmalar.{% endif %}">
+<link rel="canonical" href="{{ mac_sayfa_url(m, True) }}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ baslik }}{% if bitti %} {{ m.ev_skor }}-{{ m.deplasman_skor }}{% else %} · maç önü analizi{% endif %}">
+<meta property="og:description" content="{% if favori %}Robot Ziya'ya göre favori: {{ favori }}.{% else %}Robot Ziya'ya göre güçler dengeli.{% endif %} Sen ne dersin? Arkadaşlarınla skor tahmini yap.">
+<meta property="og:url" content="{{ mac_sayfa_url(m, True) }}">
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "SportsEvent", "name": baslik, "sport": "Futbol",
+  "startDate": (m.baslangic.isoformat() ~ "Z"), "eventStatus": "https://schema.org/EventScheduled",
+  "homeTeam": {"@type": "SportsTeam", "name": m.ev_sahibi}, "awayTeam": {"@type": "SportsTeam", "name": m.deplasman},
+  "superEvent": {"@type": "SportsEvent", "name": m.lig}, "url": mac_sayfa_url(m, True)} | tojson }}</script>
+{% endblock %}
+
+{% block content %}
+<nav class="mc-iz" aria-label="Konum"><a href="{{ url_for('maclar_listesi') }}">Maçlar</a> › <span>{{ m.lig }}</span></nav>
+<h1 class="mc-baslik">{{ baslik }}{% if bitti %} <span class="mc-sonuc">{{ m.ev_skor }}–{{ m.deplasman_skor }}</span>{% endif %}</h1>
+<p class="mc-alt">{{ m.lig }}{% if m.hafta %} · {{ m.hafta }}. hafta{% endif %} · {{ tarih }} {{ saat }} (Türkiye saati){% if bitti %} · Maç bitti{% elif basladi %} · Maç oynanıyor{% endif %}</p>
+
+<article class="panel mc-kart">
+  <div class="zt-takimlar">
+    {{ p.takim_ev(m, form=True) }}
+    <div class="zt-vs">{% if bitti %}<span class="zt-skor">{{ m.ev_skor }}–{{ m.deplasman_skor }}</span><small>Sonuç</small>{% else %}VS{% endif %}</div>
+    {{ p.takim_dep(m, form=True) }}
+  </div>
+  <div class="zt-olasilik" role="img" aria-label="{{ m.ev_sahibi }} kazanır %{{ p_ev }}, beraberlik %{{ p_x }}, {{ m.deplasman }} kazanır %{{ p_dep }}">
+    <span class="zt-o-ev" style="flex:{{ [p_ev,1]|max }}">%{{ p_ev }}</span>
+    <span class="zt-o-x" style="flex:{{ [p_x,1]|max }}">%{{ p_x }}</span>
+    <span class="zt-o-dep" style="flex:{{ [p_dep,1]|max }}">%{{ p_dep }}</span>
+  </div>
+  <div class="zt-olasilik-etiket"><span>{{ m.ev_sahibi }}</span><span>Beraberlik</span><span>{{ m.deplasman }}</span></div>
+  <dl class="zt-istatistik">
+    <div><dt>Beklenen gol</dt><dd>{{ lam_ev }} – {{ lam_dep }}</dd></div>
+    <div><dt>3+ gol ihtimali</dt><dd>%{{ uc_arti }}</dd></div>
+    <div><dt>İki takım da gol atar</dt><dd>%{{ kg }}</dd></div>
+  </dl>
+</article>
+
+<section class="mc-bolum">
+  <h2>Maç önü değerlendirme</h2>
+  <p>{{ m.lig }}{% if m.hafta %} ({{ m.hafta }}. hafta){% endif %}: {{ m.ev_sahibi }} ile {{ m.deplasman }}, {{ tarih }} tarihinde saat {{ saat }} itibarıyla karşı karşıya {% if bitti %}geldi ve maç {{ m.ev_skor }}-{{ m.deplasman_skor }} sona erdi{% else %}geliyor{% endif %}.
+  {% if favori %}Robot Ziya'nın istatistik modeline göre {{ favori }} {{ 'ev sahibi avantajıyla ' if favori == m.ev_sahibi else '' }}bir adım önde: {{ m.ev_sahibi }} için kazanma ihtimali %{{ p_ev }}, beraberlik %{{ p_x }}, {{ m.deplasman }} için %{{ p_dep }}.{% else %}Robot Ziya'nın istatistik modeline göre güçler dengeli; beraberlik ihtimali %{{ p_x }} ile en olası sonuç.{% endif %}
+  Model, iki takımın bu sezon attığı ve yediği gollerden maçta toplam {{ (lam_ev + lam_dep) | round(1) }} gol bekliyor; üç ve daha fazla gol ihtimali %{{ uc_arti }}, iki takımın da gol bulma ihtimali %{{ kg }}.</p>
+  <p class="mc-yorum">💬 {{ yorum }}</p>
+</section>
+
+<section class="mc-bolum">
+  <h2>Takımların durumu</h2>
+  <div class="mc-takim-tablo">
+    {% for t, yer in [(ev, 'İç sahada'), (dep, 'Deplasmanda')] %}
+    <div class="mc-takim">
+      <h3>{{ t.ad }}</h3>
+      <ul>
+        {% if t.sira %}<li><span>Puan durumu</span><b>{{ t.sira }}. ({{ t.puan }} puan, {{ t.oynanan }} maç)</b></li>{% endif %}
+        {% if t.at is not none %}<li><span>{{ yer }} maç başına gol</span><b>{{ t.at }} attı · {{ t.ye }} yedi</b></li>{% endif %}
+        <li><span>Son maçlar</span><b class="mc-form">{{ p.mini_form(t.ad, m.lig_id) }}</b></li>
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  {% if ikili %}<p><strong>Son karşılaşmalar:</strong> {{ ikili | join(" · ") }}</p>{% else %}<p class="sessiz">Bu sezon iki takım arasında oynanmış maç kaydı yok.</p>{% endif %}
+</section>
+
+<section class="mc-bolum">
+  <h2>🤖 Robot Ziya'nın skor tahmini</h2>
+  {% if ziya_skor %}
+    <p>Robot Ziya bu maç için <strong>{{ ziya_skor }}</strong> dedi{% if bitti %}{% set zs = ziya_skor.split('-') | map('int') | list %}{% set zy = (zs[0] > zs[1]) - (zs[0] < zs[1]) %}{% set gy = (m.ev_skor > m.deplasman_skor) - (m.ev_skor < m.deplasman_skor) %}{% if zs[0] == m.ev_skor and zs[1] == m.deplasman_skor %} ve skoru tam bildi 🎯{% elif zy == gy %}; sonucu bildi ama skoru tutturamadı{% else %}; bu sefer yanıldı{% endif %}{% endif %}.</p>
+    {% if analiz %}<p class="mc-analiz">{{ analiz }}</p>{% endif %}
+  {% else %}
+    <p class="zt-kilit">🔒 Ziya'nın kesin skor tahmini, oyunda kopyalanmasın diye maç başlayınca açılır. O zamana kadar sen tahminini yap, maçtan sonra kimin daha iyi bildiğine bakın.</p>
+  {% endif %}
+</section>
+
+<section class="mc-bolum">
+  <h2>Skorbilen kullanıcıları ne diyor?</h2>
+  {% if dagilim.n >= 3 %}
+    <p>{{ dagilim.n }} kullanıcının tahminine göre:</p>
+    <div class="zt-olasilik mc-kullanici">
+      <span class="zt-o-ev" style="flex:{{ [dagilim.p_ev,1]|max }}">%{{ dagilim.p_ev }}</span>
+      <span class="zt-o-x" style="flex:{{ [dagilim.p_x,1]|max }}">%{{ dagilim.p_x }}</span>
+      <span class="zt-o-dep" style="flex:{{ [dagilim.p_dep,1]|max }}">%{{ dagilim.p_dep }}</span>
+    </div>
+    <div class="zt-olasilik-etiket"><span>{{ m.ev_sahibi }}</span><span>Beraberlik</span><span>{{ m.deplasman }}</span></div>
+    {% if basladi %}
+      <p><strong>En çok tahmin edilen skorlar:</strong> {% for s in dagilim.skorlar %}{{ s.skor }} (%{{ s.yuzde }}){{ ", " if not loop.last }}{% endfor %}.</p>
+      {% if bitti %}<p>Maç sonunda {{ dagilim.tam }} kişi skoru tam, {{ dagilim.sonuc }} kişi maçın sonucunu bildi.</p>{% endif %}
+    {% else %}
+      <p class="sessiz kucuk">Skor tahminleri, gruplarda kopyalanmasın diye maç başlayınca gösterilir.</p>
+    {% endif %}
+  {% else %}
+    <p>Bu maç için henüz yeterli tahmin yok. İlk tahmin edenlerden ol!</p>
+  {% endif %}
+</section>
+
+<div class="zt-cta">
+  <span><strong>Sen ne dersin?</strong> Arkadaşlarınla grup kur, bu maça skor tahmini yap, maçtan sonra puanlar kendiliğinden hesaplansın. Ücretsiz, bahis yok.</span>
+  {% if current_user.is_authenticated %}<a class="btn btn-kucuk" href="{{ url_for('gruplar') }}">Tahmin gir</a>{% else %}<a class="btn btn-kucuk" href="{{ url_for('kayit') }}">Hemen oyna</a>{% endif %}
+</div>
+
+{% if benzer %}
+<section class="mc-bolum">
+  <h2>{{ m.lig }}: aynı günlerdeki maçlar</h2>
+  <ul class="mc-benzer">
+    {% for b in benzer %}
+    <li><a href="{{ mac_sayfa_url(b) }}">{{ b.ev_sahibi }} – {{ b.deplasman }}</a> <span>{% if b.bitti_mi() and b.ev_skor is not none %}{{ b.ev_skor }}–{{ b.deplasman_skor }}{% else %}{{ b.baslangic | tr_saat("%d.%m %H:%M") }}{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<p class="sessiz kucuk">Olasılıklar Poisson modeliyle bu sezonki maç sonuçlarından hesaplanır, son maçlar daha ağırlıklı sayılır. Eğlence amaçlıdır, bahis tavsiyesi değildir. <a href="{{ url_for('ziya_tahminleri') }}">Robot Ziya'nın bu haftaki tüm tahminleri ›</a></p>
+
+<style>
+.mc-iz{font-size:13px; color:var(--gri); margin:2px 0 6px} .mc-iz a{color:var(--gri)}
+.mc-baslik{margin:0 0 4px; font-size:28px; line-height:1.15}
+.mc-sonuc{display:inline-block; background:var(--sari-acik); border-radius:8px; padding:0 8px; margin-left:4px}
+.mc-alt{color:var(--gri); font-size:14px; margin:0 0 12px}
+.mc-kart{padding:14px 16px}
+.mc-bolum{margin:18px 0}
+.mc-bolum h2{font-size:20px; margin:0 0 8px}
+.mc-bolum p{font-size:15px; line-height:1.55; margin:0 0 8px}
+.mc-yorum{background:var(--cim-acik); border-radius:10px; padding:10px 12px}
+.mc-analiz{color:var(--gri)}
+.mc-takim-tablo{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px}
+.mc-takim{background:var(--kart); border:1px solid var(--cizgi); border-radius:var(--r); padding:10px 12px}
+.mc-takim h3{margin:0 0 6px; font-size:16px}
+.mc-takim ul{list-style:none; margin:0; padding:0; font-size:13.5px}
+.mc-takim li{display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-top:1px solid var(--cizgi)} .mc-takim li:first-child{border-top:0}
+.mc-takim li span{color:var(--gri)} .mc-takim li b{text-align:right}
+.mc-kullanici{margin-top:6px}
+.mc-benzer{list-style:none; margin:0; padding:0}
+.mc-benzer li{display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--cizgi); font-size:15px} .mc-benzer li:first-child{border-top:0}
+.mc-benzer span{color:var(--gri); white-space:nowrap}
+.zt-takimlar{display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:center; margin:6px 0 12px}
+.zt-vs{text-align:center; font:700 18px var(--baslik); color:var(--gri-acik); min-width:54px}
+.zt-skor{display:block; font:700 24px/1 var(--baslik); color:var(--murekkep); background:var(--sari-acik); border-radius:8px; padding:4px 8px}
+.zt-vs small{display:block; font-size:11px; color:var(--gri); margin-top:2px}
+.zt-olasilik{display:flex; height:30px; border-radius:8px; overflow:hidden; font:700 13px/30px var(--yazi); color:#fff; text-align:center}
+.zt-olasilik span{min-width:34px}
+.zt-o-ev{background:var(--cim)} .zt-o-x{background:var(--gri-acik)} .zt-o-dep{background:#2F5D8C}
+.zt-olasilik-etiket{display:flex; justify-content:space-between; font-size:12px; color:var(--gri); margin:4px 2px 10px}
+.zt-istatistik{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0}
+.zt-istatistik div{background:var(--zemin); border-radius:8px; padding:8px; text-align:center}
+.zt-istatistik dt{font-size:11.5px; color:var(--gri)}
+.zt-istatistik dd{margin:2px 0 0; font:700 17px var(--baslik)}
+.zt-kilit{font-size:14px; color:var(--gri); background:var(--zemin); border-radius:8px; padding:10px 12px}
+.zt-cta{display:flex; align-items:center; gap:12px; justify-content:space-between; background:var(--cim-acik); border:1px solid #CFE6D9; border-radius:var(--r); padding:12px 14px; margin:8px 0 18px; font-size:14.5px}
+@media (max-width:520px){ .mc-takim-tablo{grid-template-columns:1fr} .mc-baslik{font-size:23px} .zt-cta{flex-direction:column; align-items:flex-start} .zt-istatistik dd{font-size:15px} }
+</style>
+{% endblock %}

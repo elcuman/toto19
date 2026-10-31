@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Hakkımızda · Skorbilen (Tahmin Ligi){% endblock %}
+{% block head %}
+<meta name="description" content="Skorbilen nedir, kim yapıyor, nasıl çalışır? Arkadaş gruplarının parasız maç skoru tahmin ligi, Robot Ziya'nın istatistik modeli ve Türkçe kelime oyunları hakkında.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/hakkimizda">
+{% endblock %}
+
+{% block content %}
+<article class="panel hk-yazi">
+  <h1>Hakkımızda</h1>
+  <p><strong>Skorbilen</strong> (Tahmin Ligi), arkadaş ve iş yeri gruplarının futbol maçlarına skor tahmini yaparak kendi aralarında yarıştığı, tamamen <strong>ücretsiz ve parasız</strong> bir oyundur. Bahis, kupon ya da para ödülü yoktur; ödül, grubun "haftanın kralı" olmak ve sezon sonunda tablonun tepesinde durmaktır.</p>
+
+  <h2>Neden kurduk?</h2>
+  <p>Ofiste, WhatsApp gruplarında ve kahvede her hafta aynı sohbet döner: "Bu maç kaç biter?" Tahminler mesajların arasında kaybolur, kimin ne dediği unutulur, puanları biri elle tutmaya çalışır. Skorbilen bu sohbeti düzenli bir lige çevirmek için doğdu. Grubunu kurarsın, arkadaşlarını tek linkle çağırırsın, maç başlamadan tahminini yazarsın; maç bitince puanlar kendiliğinden hesaplanır.</p>
+
+  <h2>Neler var?</h2>
+  <ul>
+    <li><strong>Grup ligleri:</strong> Süper Lig, Şampiyonlar Ligi, Avrupa kupaları, Premier Lig, La Liga, Serie A ve Bundesliga arasından grubunun takip edeceği ligleri ve puan kurallarını kendin seçersin.</li>
+    <li><strong>Haftanın kralı ve sezon sıralaması:</strong> Her hafta en çok puan toplayan öne çıkar; sezon boyunca toplam puanlar tutulur.</li>
+    <li><strong>Robot Ziya:</strong> Takımların bu sezonki gollerinden, iç saha ve deplasman performansından ve son maçlarından olasılık hesaplayan istatistik botumuz. Her maç için kazanma ihtimallerini ve beklenen golleri <a href="{{ url_for('maclar_listesi') }}">maç sayfalarında</a> yayımlar, kesin skor tahminini ise maç başlayınca açar. Gruplarda sizinle birlikte yarışır.</li>
+    <li><strong>Oyunlar:</strong> Maç aralarında oynamak için Türkçe <a href="{{ url_for('kelime_oyunu') }}">günlük kelime oyunu</a>, <a href="{{ url_for('harf_oyunu') }}">Harf Çarkı</a>, arkadaşına karşı <a href="{{ url_for('cengel_lobi') }}">Çengel Düello</a>, <a href="{{ url_for('hiz_oyunu') }}">yazma hızı testi</a> ve <a href="{{ url_for('oyun_2048') }}">2048</a>.</li>
+  </ul>
+
+  <h2>Nasıl çalışıyor?</h2>
+  <p>Fikstür ve skorlar halka açık spor veri kaynaklarından otomatik alınır. Tahminler maç başlayınca kilitlenir; grup arkadaşlarının tahminleri de o anda görünür, böylece kimse kimseyi kopyalayamaz. Puanlama kuralları her grubun sayfasında açıkça yazar; bir grubun kuralı değişirse yeni kural sadece değişiklikten sonra başlayan maçlara uygulanır.</p>
+
+  <h2>Gizlilik ve güvenlik</h2>
+  <p>Üye olmak için kullanıcı adı ve şifre yeterlidir; telefon ya da kimlik bilgisi istemeyiz. Tahminlerin sadece üyesi olduğun gruplarda görünür. Ayrıntılar için <a href="{{ url_for('gizlilik') }}">gizlilik politikası</a> sayfasına bakabilirsin.</p>
+
+  <h2>Bize ulaş</h2>
+  <p>Öneri, hata bildirimi ya da iş birliği için <a href="{{ url_for('iletisim') }}">iletişim</a> sayfasını kullanabilir, üyeysen site içinden doğrudan yöneticiye yazabilirsin. Skorbilen Türkiye'de, futbolu seven küçük bir ekip tarafından geliştiriliyor.</p>
+</article>
+<style>
+.hk-yazi h1{margin:0 0 10px} .hk-yazi h2{font-size:20px; margin:18px 0 6px}
+.hk-yazi p, .hk-yazi li{font-size:15.5px; line-height:1.6} .hk-yazi ul{padding-left:20px} .hk-yazi li{margin-bottom:6px}
+</style>
+{% endblock %}

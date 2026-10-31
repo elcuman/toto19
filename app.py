@@ -2944,7 +2944,7 @@ def index():
         Mac.lig_id.in_(gosterilecek_lig_id_listesi()), Mac.baslangic.isnot(None), Mac.baslangic > now,
         ~Mac.durum.in_(["bitti", "iptal", "ertelendi"]),
     ).order_by(Mac.baslangic.asc()).limit(5).all()
-    return render_template("anasayfa.html", ozet=ozet, yaklasan=yaklasan, haberler=son_haberler())
+    return render_template("anasayfa.html", ozet=ozet, yaklasan=yaklasan, haberler=[])  # kopya haber başlıkları herkese açık sayfada gösterilmez (AdSense)
 
 
 # ------------------------------------------------------------
@@ -2963,6 +2963,11 @@ def gizlilik():
     return render_template("gizlilik.html", iletisim_eposta=ILETISIM_EPOSTA)
 
 
+@app.route("/hakkimizda")
+def hakkimizda():
+    return render_template("hakkimizda.html")
+
+
 @app.route("/iletisim")
 def iletisim():
     return render_template("iletisim.html", iletisim_eposta=ILETISIM_EPOSTA)
@@ -2972,7 +2977,7 @@ def iletisim():
 def robots_txt():
     satirlar = [
         "User-agent: *",
-        "Allow: /$", "Allow: /oyunlar", "Allow: /kelime", "Allow: /harf$", "Allow: /hiz$", "Allow: /2048$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
+        "Allow: /$", "Allow: /oyunlar", "Allow: /mac/", "Allow: /maclar", "Allow: /hakkimizda", "Allow: /kelime", "Allow: /harf$", "Allow: /hiz$", "Allow: /2048$", "Allow: /cengel$", "Allow: /tlogo/", "Allow: /robot-ziya-tahminleri", "Allow: /puan-durumu", "Allow: /nasil-oynanir", "Allow: /gizlilik", "Allow: /iletisim",
         "Disallow: /admin", "Disallow: /cron", "Disallow: /sifremi-unuttum", "Disallow: /geri-bildirim", "Disallow: /destek", "Disallow: /paylas", "Disallow: /z", "Disallow: /grup", "Disallow: /sohbet", "Disallow: /api", "Disallow: /cengel/", "Disallow: /harf/", "Disallow: /hiz/", "Disallow: /2048/",
         "", f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
     ]
@@ -2982,7 +2987,17 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     kok = request.url_root.rstrip("/")
-    sayfalar = ["/", "/oyunlar", "/kelime", "/harf", "/hiz", "/2048", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    sayfalar = ["/", "/maclar", "/hakkimizda", "/oyunlar", "/kelime", "/harf", "/hiz", "/2048", "/cengel", "/robot-ziya-tahminleri", "/puan-durumu", "/nasil-oynanir", "/gizlilik", "/iletisim"]
+    # Herkese açık maç sayfaları: son 30 gün ve önümüzdeki 14 gün
+    try:
+        simdi = utc_now_naive()
+        for m in (Mac.query.filter(Mac.lig_id.in_(secilebilir_lig_id_listesi()), Mac.ozel_grup_id.is_(None), super_lig_takim_filtresi(),
+                                   Mac.baslangic.isnot(None), Mac.baslangic >= simdi - timedelta(days=30),
+                                   Mac.baslangic < simdi + timedelta(days=14), Mac.durum != "iptal")
+                  .order_by(Mac.baslangic.desc()).limit(600).all()):
+            sayfalar.append(f"/mac/{m.id}-{mac_slug(m)}")
+    except Exception:
+        db.session.rollback()
     govde = "".join(f"<url><loc>{kok}{s}</loc></url>" for s in sayfalar)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{govde}</urlset>'
     return Response(xml, mimetype="application/xml")
@@ -7477,6 +7492,120 @@ def ziya_sayfa_verisi():
 
 
 app.jinja_env.globals["ANA_DOMAIN_ADI"] = ANA_DOMAIN or "skorbilen.com"
+
+
+# ------------------------------------------------------------
+# HERKESE AÇIK MAÇ SAYFALARI: her maç için veriye dayalı önizleme / sonuç sayfası
+# (form, olasılıklar, son karşılaşmalar, Robot Ziya'nın yorumu, kullanıcıların tahmin dağılımı).
+# Gruba özel maçlar ve takip edilmeyen ligler burada yayınlanmaz.
+# ------------------------------------------------------------
+_TR_ASCII = str.maketrans({"ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u", "â": "a", "î": "i", "û": "u",
+                           "Ç": "c", "Ğ": "g", "İ": "i", "I": "i", "Ö": "o", "Ş": "s", "Ü": "u"})
+
+
+def mac_slug(m):
+    metin = f"{m.ev_sahibi} {m.deplasman}".translate(_TR_ASCII).lower()
+    return _re.sub(r"[^a-z0-9]+", "-", metin).strip("-")[:80] or "mac"
+
+
+def mac_sayfa_url(m, dis=False):
+    return url_for("mac_sayfasi", mac_id=m.id, slug=mac_slug(m), _external=dis)
+
+
+app.jinja_env.globals["mac_sayfa_url"] = mac_sayfa_url
+
+
+def mac_sayfasi_yayinlanir_mi(m):
+    if not m or m.ozel_grup_id or not m.baslangic or m.durum in ("iptal",):
+        return False
+    if m.lig_id not in secilebilir_lig_id_listesi():
+        return False
+    if m.lig_id == NATIONS_LEAGUE_ID and not any(t.lower() in (m.ev_sahibi + " " + m.deplasman).lower()
+                                                 for t in NATIONS_LEAGUE_TAKIP_EDILEN_TAKIMLAR):
+        return False
+    return True
+
+
+def _mac_tahmin_dagilimi(m, yz_id):
+    """Kullanıcıların (Robot Ziya hariç) tahmin dağılımı; her kişi bir kez sayılır."""
+    kisiler = {}
+    for t in Tahmin.query.filter(Tahmin.mac_id == m.id).order_by(Tahmin.id.asc()).all():
+        if t.kullanici_id != yz_id and t.ev_skor is not None and t.deplasman_skor is not None:
+            kisiler.setdefault(t.kullanici_id, (t.ev_skor, t.deplasman_skor))
+    n = len(kisiler)
+    if not n:
+        return {"n": 0}
+    ev = sum(1 for a, b in kisiler.values() if a > b)
+    x = sum(1 for a, b in kisiler.values() if a == b)
+    sk = {}
+    for a, b in kisiler.values():
+        sk[f"{a}-{b}"] = sk.get(f"{a}-{b}", 0) + 1
+    enler = sorted(sk.items(), key=lambda kv: -kv[1])[:5]
+    sonuc = {"n": n, "p_ev": round(100 * ev / n), "p_x": round(100 * x / n), "p_dep": 100 - round(100 * ev / n) - round(100 * x / n),
+             "skorlar": [{"skor": k, "n": v, "yuzde": round(100 * v / n)} for k, v in enler]}
+    if m.bitti_mi() and m.ev_skor is not None:
+        sonuc["tam"] = sum(1 for a, b in kisiler.values() if a == m.ev_skor and b == m.deplasman_skor)
+        gercek = (m.ev_skor > m.deplasman_skor) - (m.ev_skor < m.deplasman_skor)
+        sonuc["sonuc"] = sum(1 for a, b in kisiler.values() if (a > b) - (a < b) == gercek)
+    return sonuc
+
+
+def mac_sayfa_verisi(m):
+    import math
+    simdi = utc_now_naive()
+    ist = _yz_lig_istatistigi(m.lig_id, simdi)
+    lam_ev, lam_dep, _, _ = yz_beklenen_goller(m, ist)
+    p_ev, p_x, p_dep = yz_sonuc_olasiliklari(lam_ev, lam_dep)
+    ev, dep = _ziya_takim_ozeti(m.ev_sahibi, "ic", ist), _ziya_takim_ozeti(m.deplasman, "dis", ist)
+    kg = (1 - math.exp(-lam_ev)) * (1 - math.exp(-lam_dep))
+    uc_arti = 1 - sum(_poisson(i, lam_ev) * _poisson(j, lam_dep) for i in range(3) for j in range(3 - i))
+    ikili = ist["ikili"].get(frozenset((takim_adi_normalize(m.ev_sahibi), takim_adi_normalize(m.deplasman))), [])[-5:]
+    basladi = m.basladi_mi() or m.bitti_mi()
+    yz = yz_kullanici_getir(olustur=False)
+    t = Tahmin.query.filter_by(kullanici_id=yz.id, mac_id=m.id).first() if yz else None
+    analiz = YzAnaliz.query.filter_by(mac_id=m.id).first()
+    fav = None
+    if max(p_ev, p_x, p_dep) != p_x:
+        fav = m.ev_sahibi if p_ev >= p_dep else m.deplasman
+    return {
+        "mac": m, "ev": ev, "dep": dep, "lam_ev": round(lam_ev, 1), "lam_dep": round(lam_dep, 1),
+        "p_ev": _yuzde(p_ev), "p_x": _yuzde(p_x), "p_dep": _yuzde(p_dep), "kg": _yuzde(kg), "uc_arti": _yuzde(uc_arti),
+        "ikili": list(reversed(ikili)), "yorum": _ziya_yorum(m, ev, dep, p_ev, p_x, p_dep, lam_ev, lam_dep),
+        "basladi": basladi, "bitti": m.bitti_mi() and m.ev_skor is not None, "favori": fav,
+        "ziya_skor": (f"{t.ev_skor}-{t.deplasman_skor}" if (t and basladi) else None),
+        "ziya_puan": (t.puan if t else None), "analiz": (analiz.metin if (analiz and basladi) else None),
+        "dagilim": _mac_tahmin_dagilimi(m, yz.id if yz else None),
+    }
+
+
+@app.route("/mac/<int:mac_id>")
+@app.route("/mac/<int:mac_id>-<slug>")
+def mac_sayfasi(mac_id, slug=None):
+    m = db.session.get(Mac, mac_id)
+    if not mac_sayfasi_yayinlanir_mi(m):
+        abort(404)
+    if slug != mac_slug(m):
+        return redirect(mac_sayfa_url(m), code=301)
+    try:
+        veri = mac_sayfa_verisi(m)
+    except Exception as e:
+        db.session.rollback()
+        print("[mac-sayfa] hata:", e)
+        abort(404)
+    benzer = (Mac.query.filter(Mac.lig_id == m.lig_id, Mac.id != m.id, Mac.ozel_grup_id.is_(None), Mac.baslangic.isnot(None),
+                               Mac.baslangic >= m.baslangic - timedelta(days=3), Mac.baslangic <= m.baslangic + timedelta(days=3))
+              .order_by(Mac.baslangic.asc()).limit(10).all())
+    return render_template("mac.html", **veri, benzer=[b for b in benzer if mac_sayfasi_yayinlanir_mi(b)])
+
+
+@app.route("/maclar")
+def maclar_listesi():
+    simdi = utc_now_naive()
+    sorgu = Mac.query.filter(Mac.lig_id.in_(secilebilir_lig_id_listesi()), Mac.ozel_grup_id.is_(None), super_lig_takim_filtresi(),
+                             Mac.baslangic.isnot(None), Mac.durum != "iptal")
+    yaklasan = sorgu.filter(Mac.baslangic >= simdi - timedelta(hours=3), Mac.baslangic < simdi + timedelta(days=8)).order_by(Mac.baslangic.asc()).limit(80).all()
+    biten = sorgu.filter(Mac.durum == "bitti", Mac.baslangic >= simdi - timedelta(days=8), Mac.baslangic < simdi).order_by(Mac.baslangic.desc()).limit(60).all()
+    return render_template("maclar.html", yaklasan=[m for m in yaklasan if m.durum != "bitti"], biten=biten)
 
 
 @app.route("/derbi")

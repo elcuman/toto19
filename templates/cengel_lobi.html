@@ -157,4 +157,6 @@ document.querySelectorAll('.cl-kart').forEach(function(f){ f.addEventListener('s
 .cl-skor{font:700 18px var(--baslik); white-space:nowrap}
 @media (max-width:600px){ .cl-secim{grid-template-columns:1fr} }
 </style>
+{% import "_rehberler.html" as rehber %}
+{{ rehber.cengel() }}
 {% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "_parcalar.html" as p with context %}
+
+{% block title %}Bu Haftanın Maçları · Maç Önü Analiz ve Skor Tahminleri · Skorbilen{% endblock %}
+{% block head %}
+<meta name="description" content="Süper Lig, Şampiyonlar Ligi, Avrupa kupaları ve büyük Avrupa liglerinde bu haftanın maçları: maç önü analiz, kazanma olasılıkları, Robot Ziya'nın tahminleri ve son sonuçlar.">
+<link rel="canonical" href="https://{{ ANA_DOMAIN_ADI }}/maclar">
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:4px 0 4px">Bu haftanın maçları</h1>
+<p class="alt" style="margin:0 0 14px">Her maç için takımların formu, kazanma olasılıkları, beklenen goller, son karşılaşmalar ve Robot Ziya'nın yorumu. Maç bitince sonuç, Ziya'nın skor tahmini ve Skorbilen kullanıcılarının ne kadar bildiği.</p>
+
+<h2 class="mcl-bolum">Yaklaşan maçlar</h2>
+{% if yaklasan %}
+<section class="panel" style="padding:0">
+  <ul class="mcl-liste">
+    {% set ns = namespace(gun=None) %}
+    {% for m in yaklasan %}
+      {% set gun = m.baslangic | tr_saat("%d.%m.%Y") %}
+      {% if gun != ns.gun %}{% set ns.gun = gun %}<li class="mcl-gun">{{ gun }}</li>{% endif %}
+      <li><a href="{{ mac_sayfa_url(m) }}"><span class="mcl-saat">{{ m.baslangic | tr_saat("%H:%M") }}</span><span class="mcl-ad">{{ m.ev_sahibi }} – {{ m.deplasman }}<small>{{ m.lig }}</small></span><span class="mcl-ok">Analiz ›</span></a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<div class="bos"><strong>Önümüzdeki günlerde maç yok.</strong>Fikstür gelince burada.</div>
+{% endif %}
+
+{% if biten %}
+<h2 class="mcl-bolum">Son sonuçlar</h2>
+<section class="panel" style="padding:0">
+  <ul class="mcl-liste">
+    {% for m in biten %}
+      <li><a href="{{ mac_sayfa_url(m) }}"><span class="mcl-saat">{{ m.baslangic | tr_saat("%d.%m") }}</span><span class="mcl-ad">{{ m.ev_sahibi }} <b>{{ m.ev_skor }}–{{ m.deplasman_skor }}</b> {{ m.deplasman }}<small>{{ m.lig }}</small></span><span class="mcl-ok">›</span></a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<style>
+.mcl-bolum{margin:16px 0 8px; font-size:20px}
+.mcl-liste{list-style:none; margin:0; padding:0}
+.mcl-liste li{border-top:1px solid var(--cizgi)} .mcl-liste li:first-child{border-top:0}
+.mcl-liste li.mcl-gun{padding:8px 16px; background:var(--zemin); font-weight:700; font-size:13.5px; color:var(--gri)}
+.mcl-liste a{display:flex; align-items:center; gap:12px; padding:10px 16px; text-decoration:none; color:inherit}
+.mcl-saat{font:700 15px var(--baslik); color:var(--gri); min-width:44px}
+.mcl-ad{flex:1; min-width:0; font-weight:600}
+.mcl-ad small{display:block; font-weight:400; font-size:12.5px; color:var(--gri)}
+.mcl-ok{color:var(--cim); font-weight:700; font-size:14px; white-space:nowrap}
+</style>
+{% endblock %}

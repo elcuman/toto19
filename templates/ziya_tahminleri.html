@@ -72,6 +72,7 @@
       {% else %}
         <p class="zt-kilit">🔒 Ziya'nın kesin skor tahmini maç başlayınca açılır.</p>
       {% endif %}
+      <p class="zt-detay"><a href="{{ mac_sayfa_url(k.mac) }}">Maçın detaylı analizi ›</a></p>
     </article>
   {% endfor %}
 {% else %}
@@ -84,7 +85,7 @@
   <ul class="zt-sonuclar">
     {% for r in sonuclar %}
     <li>
-      <span class="zt-s-mac">{{ r.mac.ev_sahibi }} <strong>{{ r.mac.ev_skor }}–{{ r.mac.deplasman_skor }}</strong> {{ r.mac.deplasman }}<small>{{ r.mac.baslangic | tr_saat("%d.%m") }} · {{ r.mac.lig }}</small></span>
+      <span class="zt-s-mac"><a href="{{ mac_sayfa_url(r.mac) }}" style="color:inherit">{{ r.mac.ev_sahibi }}</a> <strong>{{ r.mac.ev_skor }}–{{ r.mac.deplasman_skor }}</strong> {{ r.mac.deplasman }}<small>{{ r.mac.baslangic | tr_saat("%d.%m") }} · {{ r.mac.lig }}</small></span>
       <span class="zt-s-ziya">Ziya: <strong>{{ r.ziya_skor }}</strong> {{ p.puan_etiketi(r.puan) }}</span>
     </li>
     {% endfor %}
@@ -121,6 +122,7 @@
 .zt-kilit{font-size:13.5px; color:var(--gri); background:var(--zemin); border-radius:8px; padding:8px 10px; margin:0}
 .zt-acik{margin:0 0 6px; font-size:15px}
 .zt-analiz{font-size:13.5px; color:var(--gri); margin:0}
+.zt-detay{margin:8px 0 0; font-size:14px; font-weight:700}
 .zt-sonuclar{list-style:none; margin:0; padding:0}
 .zt-sonuclar li{display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 0; border-top:1px solid var(--cizgi)}
 .zt-sonuclar li:first-child{border-top:0}

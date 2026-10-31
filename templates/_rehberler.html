@@ -1,0 +1,137 @@
+{# Oyun sayfalarının altındaki rehber / taktik / SSS metinleri #}
+
+{% macro _stil() %}
+<style>
+.rehber{margin-top:22px; line-height:1.6}
+.rehber h2{font-size:22px; margin:0 0 8px}
+.rehber h3{font-size:17px; margin:18px 0 6px}
+.rehber p{margin:0 0 10px}
+.rehber ul{margin:0 0 10px; padding-left:20px}
+.rehber li{margin-bottom:5px}
+.rehber details{border-top:1px solid var(--cizgi); padding:10px 0}
+.rehber details:last-of-type{border-bottom:1px solid var(--cizgi)}
+.rehber summary{cursor:pointer; font-weight:700}
+.rehber details p{margin:8px 0 0}
+</style>
+{% endmacro %}
+
+{% macro kelime() %}
+<section class="panel rehber" id="rehber">
+  <h2>Günlük Kelime Oyunu nasıl oynanır?</h2>
+  <p>Her gün yeni bir <b>5 harfli Türkçe kelime</b> seni bekliyor ve onu bulmak için <b>6 hakkın</b> var. Skorbilen'in kelime oyununu benzerlerinden ayıran şey şu: o günün <b>konusu herkese aynı</b>, ama <b>kelime herkese farklı</b>. Örneğin konu "Mutfak ve gastronomi" ise sen "kaşık"ı ararken arkadaşın "tencere"yi arıyor olabilir. Böylece cevabı arkadaşından kopyalamak işe yaramaz, ama konu üzerine sohbet edip yarışabilirsiniz.</p>
+  <p>Her tahminden sonra harfler renklenir: <b>yeşil</b> harf doğru yerde, <b>sarı</b> harf kelimede var ama başka yerde, <b>gri</b> harf kelimede hiç yok. Bu ipuçlarını birleştirerek kelimeyi daraltırsın.</p>
+
+  <h3>Taktikler</h3>
+  <ul>
+    <li><b>Sesli harfleri erken test et.</b> Türkçede 8 sesli harf var; ilk tahminde A, E, İ gibi sık seslileri, ikinci tahminde farklı seslileri denemek alanı hızla daraltır.</li>
+    <li><b>Sık ünsüzleri kullan.</b> R, L, N, K, M, T, S Türkçe kelimelerde çok geçer. "KALEM", "SERİN" gibi açılışlar iyi başlangıçtır.</li>
+    <li><b>Ses uyumunu hatırla.</b> Türkçe kelimelerin çoğu büyük ünlü uyumuna uyar: kalın sesliyle başlayan kelime genelde kalın sesliyle devam eder.</li>
+    <li><b>Konuyu kullan.</b> Köşedeki konu bilerek geniş tutuldu; ama "Spor" diyorsa önce spor terimlerini düşünmek tahmin sayını azaltır.</li>
+    <li><b>Gri harfleri tekrar kullanma.</b> Her tahmin yeni bilgi getirmeli; bilinen yanlış harfleri kullanmak hak israfıdır.</li>
+  </ul>
+
+  <h3>Sık sorulan sorular</h3>
+  <details><summary>Kelime ne zaman yenilenir?</summary><p>Her gün gece yarısı (Türkiye saati) yeni konu ve yeni kelimeler gelir.</p></details>
+  <details><summary>Üye olmadan oynayabilir miyim?</summary><p>Evet. Misafir olarak oynarsın ve sıralamada kendini "Sen (misafir)" olarak görürsün. Üye olursan sonuçların kalıcı olarak kaydedilir ve arkadaşlarınla aynı sıralamada isminle görünürsün.</p></details>
+  <details><summary>Sıralama nasıl belirleniyor?</summary><p>Kelimeyi daha az denemede bulan önde olur; eşitlikte daha kısa sürede bulan üste çıkar.</p></details>
+  <details><summary>Bu oyun tahmin ligi puanımı etkiler mi?</summary><p>Hayır. Kelime oyunu maç aralarında eğlenmek için; lig puanlarına etkisi yoktur.</p></details>
+</section>
+{{ _stil() }}
+{% endmacro %}
+
+{% macro harf() %}
+<section class="panel rehber" id="rehber">
+  <h2>Harf Çarkı nasıl oynanır?</h2>
+  <p>Harf Çarkı, alfabenin <b>29 harfinin</b> her biri için bir ipucu verdiğimiz günlük bir bilgi yarışmasıdır. Cevap o harfle başlar; Türkçede hiçbir kelime Ğ ile başlamadığı için <b>Ğ harfinde cevap Ğ'yi içerir</b>. Toplam <b>5 dakikan</b> var ve her harfe yalnızca <b>bir cevap</b> hakkın bulunur.</p>
+  <p>Bilmediğin bir harfi <b>pas</b> geçebilirsin; tur bitince pas geçtiğin harflere geri dönersin. Süre dolduğunda ya da bütün harfleri cevapladığında oyun biter ve sonuç ekranında her sorunun ipucunu ve doğru cevabını görürsün. Sorular her gün herkese aynıdır, bu yüzden arkadaşlarınla aynı çark üzerinde yarışırsınız.</p>
+
+  <h3>Taktikler</h3>
+  <ul>
+    <li><b>Emin değilsen pas geç.</b> Yanlış cevap o harfi yakar; pas geçtiğin harf ise tur sonunda tekrar karşına gelir. Kısa süre sonra cevap aklına gelebilir.</li>
+    <li><b>Zamanı böl.</b> 29 harf için 300 saniye, harf başına yaklaşık 10 saniye demek. Bir soruda takılıp kalma.</li>
+    <li><b>İpucundaki kelime türüne dikkat et.</b> İpucu fiil soruyorsa cevap da çoğu zaman "-mek/-mak" ile biter; isim soruyorsa yalın hâli yaz.</li>
+    <li><b>Büyük-küçük harfe takılma.</b> Cevabı büyük ya da küçük harfle yazman fark etmez; önemli olan kelimeyi Türkçe karakterleriyle doğru yazmak.</li>
+  </ul>
+
+  <h3>Sık sorulan sorular</h3>
+  <details><summary>Sıralama nasıl belirleniyor?</summary><p>En çok doğru cevap veren önde olur. Eşitlikte daha az yanlış yapan, o da eşitse daha erken bitiren üste çıkar.</p></details>
+  <details><summary>Cevapları oyun bitmeden görebilir miyim?</summary><p>Hayır. Cevaplar oyun bitene kadar tarayıcına hiç gönderilmez; bu sayede herkes eşit şartlarda yarışır.</p></details>
+  <details><summary>Telefonda ekrana sığmıyor, ne yapmalıyım?</summary><p>Oyun başlayınca mobilde tam ekran moduna geçer ve klavye açıkken soru ve cevap alanı görünür kalır.</p></details>
+  <details><summary>Günde kaç kez oynayabilirim?</summary><p>Her gün bir kez. Yeni çark gece yarısı gelir.</p></details>
+</section>
+{{ _stil() }}
+{% endmacro %}
+
+{% macro cengel() %}
+<section class="panel rehber" id="rehber">
+  <h2>Çengel Düello nasıl oynanır?</h2>
+  <p>Çengel Düello, klasik çengel bulmacayı <b>iki kişilik bir düelloya</b> çeviren Skorbilen'e özgü bir oyundur. İki oyuncu aynı bulmacayı paylaşır; ortak torbadan çekilen harfler ıstakalara dağıtılır. Sırası gelen oyuncu ıstakasındaki harfleri, ipuçlarına bakarak doğru olduğunu düşündüğü kutulara yerleştirir.</p>
+  <ul>
+    <li>Her turda en fazla <b>3 harf</b> koyabilirsin; oyun boyunca <b>1 kez pas</b> hakkın var.</li>
+    <li>Doğru yere konan her harf <b>+1 puan</b>. Bir harf bir kelimeyi tamamlarsa o kelimenin harf sayısı kadar <b>bonus</b> kazanırsın.</li>
+    <li>Yanlış yere konan harf <b>−1 puan</b> getirir ve harf ıstakanda kalır.</li>
+    <li>Torba boşaldığında oyunculardan birinin ıstakası biterse oyun sona erer; elinde kalan her harf <b>−1</b> sayılır.</li>
+    <li>Torba boşken iki taraf da üst üste 3 tur doğru harf koyamazsa oyun otomatik biter. Böylece kimse oyunu sonsuza dek uzatamaz.</li>
+  </ul>
+  <p>Arkadaşına davet linki gönderebilir, üye arkadaşlarına site içinden davet yollayabilir ya da üç farklı zorlukta <b>Robot Ziya</b>'ya karşı oynayabilirsin. Oyun sırasında altta rakibinle sohbet edebilirsin; sohbet iki taraf da oyundan ayrılınca silinir.</p>
+
+  <h3>Taktikler</h3>
+  <ul>
+    <li><b>Kelime tamamlayan harfi kolla.</b> Bonus puan tek harften çok daha değerli; son harfi eksik kelimeleri öncelikle doldur.</li>
+    <li><b>Emin olmadığın yere koyma.</b> Yanlış harf hem puan kaybettirir hem de rakibine ipucu verir.</li>
+    <li><b>Kesişimlerden yararlan.</b> Yatay ve dikey kelimelerin kesiştiği kutular iki ipucundan doğrulanabilir; en güvenli hamleler oradadır.</li>
+    <li><b>Pas hakkını sona sakla.</b> Torba bitmek üzereyken elinde zor harfler varsa pas, rakibini önce hamle yapmaya zorlar.</li>
+  </ul>
+
+  <h3>Sık sorulan sorular</h3>
+  <details><summary>Üye olmadan oynayabilir miyim?</summary><p>Evet. Misafir olarak Robot Ziya'ya karşı oynayabilir ya da davet linkiyle bir arkadaşınla düello yapabilirsin. Site içi davet bildirimleri yalnızca üyeler içindir.</p></details>
+  <details><summary>Rakibim cevap vermiyorsa ne olur?</summary><p>Bekleyen bir oyundan istediğin zaman çekilebilir, henüz kabul edilmemiş bir daveti iptal edebilirsin.</p></details>
+  <details><summary>Kaç farklı bulmaca var?</summary><p>Bulmaca havuzunda bin sekiz yüzü aşkın farklı bulmaca var; her düello bunlardan rastgele biriyle başlar.</p></details>
+</section>
+{{ _stil() }}
+{% endmacro %}
+
+{% macro hiz() %}
+<section class="panel rehber" id="rehber">
+  <h2>Hızlı Parmaklar nasıl oynanır?</h2>
+  <p>Hızlı Parmaklar bir <b>Türkçe yazma hızı testi</b>dir. Ekranda sık kullanılan Türkçe kelimeler sıralanır; ilk tuşa bastığın anda <b>60 saniyelik</b> süre başlar. Her kelimeyi yazıp <b>boşluk</b> tuşuna bastığında bir sonrakine geçersin. Doğru yazdığın kelimeler yeşil, hatalılar kırmızı işaretlenir.</p>
+  <p>Sonucun <b>DKS (dakikada kelime sayısı)</b> olarak hesaplanır. Uluslararası standarda uygun olarak, doğru yazılan her 5 tuş vuruşu bir kelime sayılır. Böylece kısa ve uzun kelimeler adil şekilde değerlendirilir. Sonuç ekranında doğru ve yanlış kelime sayını, toplam tuş vuruşunu ve isabet oranını da görürsün.</p>
+
+  <h3>Hızını artırmak için</h3>
+  <ul>
+    <li><b>Klavyeye bakma.</b> On parmak yazmayı öğrenmek başta yavaşlatır ama birkaç haftada hızını belirgin şekilde artırır.</li>
+    <li><b>Önce doğruluk.</b> Hatalı kelimeler sayılmaz; hızlı ama hatalı yazmak düşük DKS getirir. %95 üzeri isabeti hedefle.</li>
+    <li><b>Bir kelime ileriyi oku.</b> Yazarken gözün bir sonraki kelimede olsun; duraksamalar en çok zaman kaybettiren şeydir.</li>
+    <li><b>Türkçe karakterleri çalış.</b> Ç, Ş, Ğ, Ü, Ö, İ, ı tuşları en sık takılınan yerlerdir; Türkçe Q klavyede yerlerini ezberle.</li>
+  </ul>
+  <p>Ortalama bir kullanıcı 35–45 DKS yazar; 60'ın üzeri çok iyi, 80'in üzeri profesyonel seviyedir.</p>
+
+  <h3>Sık sorulan sorular</h3>
+  <details><summary>Telefonda oynanır mı?</summary><p>Oynanır, ama fiziksel klavyede sonuçlar daha anlamlıdır. Sıralama tüm cihazlar için ortaktır.</p></details>
+  <details><summary>Kaç kez deneyebilirim?</summary><p>İstediğin kadar. Sıralamada günün ve tüm zamanların en iyi skorun görünür.</p></details>
+  <details><summary>Skorum neden sayılmadı?</summary><p>Süre ve skor sunucuda doğrulanır. Sayfa arka plana alınıp süre bozulursa ya da sonuç insan sınırlarının çok üstündeyse kayıt geçersiz sayılır.</p></details>
+</section>
+{{ _stil() }}
+{% endmacro %}
+
+{% macro oyun2048() %}
+<section class="panel rehber" id="rehber">
+  <h2>2048 nasıl oynanır?</h2>
+  <p>2048, 4×4'lük bir tahtada oynanan bir sayı bulmacasıdır. Bilgisayarda <b>yön tuşlarıyla</b>, telefonda <b>kaydırarak</b> bütün taşları aynı yöne itersin. Aynı sayıya sahip iki taş çarpıştığında <b>birleşir</b> ve toplamları kadar puan kazanırsın: iki 2 bir 4, iki 4 bir 8 olur. Her hamleden sonra boş bir kareye yeni bir 2 ya da 4 düşer.</p>
+  <p>Amaç <b>2048</b> taşını oluşturmak; ama oyun orada bitmek zorunda değil, devam edip daha büyük skorlar kovalayabilirsin. Hamle yapacak yer kalmadığında oyun biter. Skorun sunucuda hamle hamle yeniden oynatılarak doğrulanır, böylece sıralama herkes için adildir.</p>
+
+  <h3>Taktikler</h3>
+  <ul>
+    <li><b>En büyük taşı bir köşeye sabitle.</b> Örneğin sol alt köşeyi seç ve büyük taşı oradan hiç çıkarma.</li>
+    <li><b>Çoğunlukla iki yön kullan.</b> Köşen sol alt ise ağırlıklı olarak aşağı ve sola kaydır; sağa nadiren, yukarıya neredeyse hiç kaydırma.</li>
+    <li><b>Kenar sırasını dolu tut.</b> Köşe taşının bulunduğu satır doluysa yatay hamlelerde büyük taş yerinden oynamaz.</li>
+    <li><b>Zincir kur.</b> Büyük taşın yanına bir küçüğünü (1024'ün yanına 512 gibi) dizmek birleşmeleri kolaylaştırır.</li>
+    <li><b>Acele etme.</b> Süre sınırı yok; her hamleden önce yeni taşın nereye düşebileceğini düşün.</li>
+  </ul>
+
+  <h3>Sık sorulan sorular</h3>
+  <details><summary>Üye olmadan skorum kaydedilir mi?</summary><p>Misafir olarak oynayıp sıralamada kendini görebilirsin. Üye olursan skorların hesabına kalıcı olarak kaydedilir.</p></details>
+  <details><summary>2048'i yapınca oyun bitiyor mu?</summary><p>Hayır, hamle yapabildiğin sürece devam edebilirsin.</p></details>
+</section>
+{{ _stil() }}
+{% endmacro %}
