@@ -1,22 +1,76 @@
 {% extends "base.html" %}
 
-{% block title %}Profil · Skorbilen{% endblock %}
+{% block title %}Ben · Skorbilen{% endblock %}
 
 {% block content %}
-<div class="sayfa-bas">
-  <div>
+<div class="bn-bas">
+  <span class="bn-avatar" aria-hidden="true">{{ current_user.kullanici_adi[:1] | upper }}</span>
+  <div class="bn-ad">
     <h1>{{ current_user.kullanici_adi }}</h1>
     <p class="alt">{% if current_user.olusturulma %}{{ current_user.olusturulma | tr_saat("%d.%m.%Y") }} tarihinden beri oynuyor{% endif %}</p>
   </div>
+  <div class="bn-seri" title="Üst üste aktif olduğun gün sayısı"><span aria-hidden="true">🔥</span><b>{{ seri }}</b><small>gün seri</small></div>
 </div>
 
-<div class="serit" style="grid-template-columns:repeat(2,1fr)">
-  <div><div class="deger">{{ toplam_puan }}</div><div class="ad">Toplam puan</div></div>
-  <div style="border-left:1px solid var(--cizgi); border-top:0"><div class="deger">{{ toplam_tahmin }}</div><div class="ad">Girilen tahmin</div></div>
+<div class="bn-ist">
+  <div><b>{{ toplam_puan }}</b><span>Toplam puan</span></div>
+  <div><b>{{ toplam_tahmin }}</b><span>Tahmin</span></div>
+  <div><b>{{ tam }}</b><span>Tam skor</span></div>
+  <div><b>{% if biten %}%{{ (100 * tutan / biten) | round | int }}{% else %}–{% endif %}</b><span>Sonuç isabeti</span></div>
 </div>
+
+{% if rozetler %}
+{% set kazanilan = rozetler | selectattr('kazandi') | list %}
+<section class="panel">
+  <div class="panel-bas"><h2>Rozetler</h2><span class="sessiz kucuk">{{ kazanilan|length }}/{{ rozetler|length }}</span></div>
+  <ul class="bn-rozetler">
+    {% for r in rozetler %}
+    <li class="{{ 'var' if r.kazandi else 'yok' }}" title="{{ r.aciklama }}">
+      <span class="bn-r-ikon" aria-hidden="true">{{ r.ikon }}</span>
+      <strong>{{ r.ad }}</strong>
+      <small>{{ r.aciklama }}</small>
+      {% if not r.kazandi and r.hedef > 1 %}<span class="bn-r-bar" aria-label="{{ r.deger }} / {{ r.hedef }}"><i style="width:{{ (100 * r.deger / r.hedef) | round | int }}%"></i></span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if oyun_oz %}
+<section class="panel">
+  <h2>Oyun rekorların</h2>
+  <ul class="bn-rekor">
+    <li><span>🔥 En uzun seri</span><b>{{ en_uzun }} gün</b></li>
+    <li><span>⌨️ Hızlı Parmaklar</span><b>{{ oyun_oz.hiz.en_iyi or '–' }}{% if oyun_oz.hiz.en_iyi %} DKS{% endif %}</b></li>
+    <li><span>🧩 2048</span><b>{{ oyun_oz.o2048.en_iyi or '–' }}{% if oyun_oz.o2048.en_buyuk %} <small>(en büyük taş {{ oyun_oz.o2048.en_buyuk }})</small>{% endif %}</b></li>
+    <li><span>🔤 Günün kelimesi</span><b>{% if oyun_oz.kelime.oynadi %}{{ 'Bugün ' ~ oyun_oz.kelime.deneme ~ '/6' if oyun_oz.kelime.kazandi else 'Bugün bulamadın' }}{% else %}<a href="{{ url_for('kelime_oyunu') }}">Bugün oyna ›</a>{% endif %}</b></li>
+  </ul>
+</section>
+{% endif %}
+
+{% if gruplar %}
+<section class="panel">
+  <div class="panel-bas"><h2>Gruplarım</h2><a class="kucuk" href="{{ url_for('grup_yonet') }}">Grup kur / katıl</a></div>
+  <ul class="bn-liste">
+    {% for g in gruplar %}<li><a href="{{ url_for('grup', grup_id=g.id) }}"><span>{{ g.ad }}</span><span aria-hidden="true">›</span></a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <section class="panel">
-  <h2>Puanlama</h2>
+  <h2>Ayarlar</h2>
+  <ul class="bn-liste">
+    <li><a href="{{ url_for('kullanici_adi_degistir') }}"><span>Kullanıcı adını değiştir</span><span aria-hidden="true">›</span></a></li>
+    <li><a href="{{ url_for('sifre_degistir') }}"><span>Şifreyi değiştir</span><span aria-hidden="true">›</span></a></li>
+    {% if destek_acik_mi() %}<li><a href="{{ url_for('destek') }}"><span>Admin'le birebir yazış{% if destek_yanit_var %} <span class="ust-rozet">yeni</span>{% endif %}</span><span aria-hidden="true">›</span></a></li>{% endif %}
+    <li><a href="{{ url_for('geri_bildirim') }}"><span>Fikrin ya da önerin mi var? Bize yaz</span><span aria-hidden="true">›</span></a></li>
+    <li><a href="{{ url_for('nasil_oynanir') }}"><span>Nasıl oynanır, puanlama</span><span aria-hidden="true">›</span></a></li>
+    <li><a href="{{ url_for('cikis') }}" class="bn-cikis"><span>Çıkış yap</span><span aria-hidden="true">›</span></a></li>
+  </ul>
+</section>
+
+<details class="panel bn-puan">
+  <summary><h2 style="display:inline">Puanlama</h2></summary>
   <ul class="kurallar">
     <li><span class="etiket etiket-tam">+10</span> Skoru grupta tek sen bildin</li>
     <li><span class="etiket etiket-sonuc">+8</span> Sonucu grupta tek sen bildin</li>
@@ -28,19 +82,39 @@
     <li><span class="etiket etiket-cenabet">−1</span> Tahmin girmedin</li>
   </ul>
   <p class="sessiz kucuk" style="margin:0">Tahminler maç başlayınca kapanır, diğer üyelerin tahminleri o an açılır.</p>
-</section>
-
-<a class="btn btn-ikincil btn-blok" href="{{ url_for('kullanici_adi_degistir') }}" style="margin-bottom:10px">Kullanıcı adını değiştir</a>
-<a class="btn btn-ikincil btn-blok" href="{{ url_for('sifre_degistir') }}" style="margin-bottom:10px">Şifreyi değiştir</a>
-<a class="btn btn-tehlike btn-blok" href="{{ url_for('cikis') }}">Çıkış yap</a>
-
-<p class="gb-link">{% if destek_acik_mi() %}<a href="{{ url_for('destek') }}">Bir sorun mu var? Admin'le birebir yazış{% if destek_yanit_var %} <span class="ust-rozet">yeni</span>{% endif %}</a> · {% endif %}<a href="{{ url_for('geri_bildirim') }}">Fikrin ya da önerin mi var? Bize yaz</a></p>
-<style>.gb-link{text-align:center; margin:18px 0 0; font-size:14.5px}.gb-link a{color:var(--gri); text-decoration:underline; text-underline-offset:3px}</style>
+</details>
 
 <style>
-.kurallar{list-style:none; margin:0 0 12px; padding:0}
+.bn-bas{display:flex; align-items:center; gap:12px; margin:4px 0 14px}
+.bn-avatar{flex:none; width:56px; height:56px; border-radius:50%; background:var(--cim); color:#fff; display:flex; align-items:center; justify-content:center; font:700 26px/1 var(--baslik)}
+.bn-ad{flex:1; min-width:0} .bn-ad h1{margin:0; font-size:28px; overflow-wrap:anywhere} .bn-ad .alt{margin:2px 0 0; font-size:13.5px}
+.bn-seri{flex:none; display:flex; flex-direction:column; align-items:center; min-width:66px; padding:7px 8px; border-radius:var(--r-buyuk); background:#FFF3E6; border:1px solid #F6D2AE; color:#B4510F; line-height:1.05}
+.bn-seri b{font:700 24px/1 var(--baslik)} .bn-seri small{font-size:11px; font-weight:600}
+.bn-ist{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px}
+.bn-ist div{background:var(--kart, #fff); border:1px solid var(--cizgi); border-radius:var(--r); padding:10px 6px; text-align:center}
+.bn-ist b{display:block; font:700 24px/1.1 var(--baslik)} .bn-ist span{font-size:11.5px; color:var(--gri)}
+.bn-rozetler{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px}
+.bn-rozetler li{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:10px 6px; border-radius:var(--r); border:1px solid var(--cizgi); background:var(--zemin)}
+.bn-rozetler li.var{background:#FFF8E1; border-color:#F1D98A}
+.bn-rozetler li.yok{opacity:.6} .bn-rozetler li.yok .bn-r-ikon{filter:grayscale(1)}
+.bn-r-ikon{font-size:26px}
+.bn-rozetler strong{font-size:13px; line-height:1.2}
+.bn-rozetler small{font-size:11px; color:var(--gri); line-height:1.25}
+.bn-r-bar{width:80%; height:4px; border-radius:2px; background:var(--cizgi); margin-top:4px; overflow:hidden}
+.bn-r-bar i{display:block; height:100%; background:var(--cim)}
+.bn-rekor,.bn-liste{list-style:none; margin:0; padding:0}
+.bn-rekor li{display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--cizgi)}
+.bn-rekor li:first-child,.bn-liste li:first-child{border-top:0}
+.bn-rekor small{font-weight:400; color:var(--gri)}
+.bn-liste li{border-top:1px solid var(--cizgi)}
+.bn-liste a{display:flex; justify-content:space-between; align-items:center; padding:12px 2px; color:var(--murekkep); text-decoration:none; font-weight:600}
+.bn-liste a:hover{color:var(--cim)}
+.bn-cikis{color:var(--kirmizi) !important}
+.bn-puan summary{cursor:pointer; list-style:none} .bn-puan summary::after{content:" ›"; color:var(--gri)}
+.kurallar{list-style:none; margin:12px 0 12px; padding:0}
 .kurallar li{display:flex; gap:12px; align-items:center; padding:8px 0; border-top:1px solid var(--cizgi)}
 .kurallar li:first-child{border-top:0}
 .kurallar .etiket{min-width:40px; justify-content:center; font-family:var(--baslik); font-size:15px}
+@media (max-width:380px){ .bn-ist b{font-size:20px} .bn-rozetler{grid-template-columns:repeat(2,minmax(0,1fr))} }
 </style>
 {% endblock %}

@@ -3891,7 +3891,14 @@ def _kelime_yanit(durum, cevap):
 
 @app.route("/oyunlar")
 def oyunlar():
-    return render_template("oyunlar.html")
+    oz = None
+    if current_user.is_authenticated:
+        try:
+            oz = gunluk_oyun_ozeti(current_user.id)
+        except Exception as e:
+            db.session.rollback()
+            print("[oyunlar] özet hatası:", e)
+    return render_template("oyunlar.html", oz=oz)
 
 
 def oyun_rozeti():
@@ -3903,6 +3910,100 @@ def oyun_rozeti():
 
 
 app.jinja_env.globals["oyun_rozeti"] = oyun_rozeti
+
+
+# ------------------------------------------------------------
+# BUGÜN / BEN ekranları için kişisel özet: günlük oyun durumu, seri (streak), rekorlar, rozetler.
+# ------------------------------------------------------------
+def kullanici_aktif_gunleri(uid, gun_sayisi=120):
+    """Kullanıcının bir şey yaptığı (tahmin girdiği ya da oyun oynadığı) Türkiye günleri."""
+    bugun = kelime_bugun()
+    bas = bugun - timedelta(days=gun_sayisi)
+    gunler = set()
+    for model in (KelimeOyunu, HarfOyunu, HizOyunu, Oyun2048):
+        gunler |= {g for (g,) in db.session.query(model.gun).filter(model.kullanici_id == uid, model.gun >= bas).distinct().all()}
+    for (z,) in db.session.query(Tahmin.olusturulma).filter(Tahmin.kullanici_id == uid, Tahmin.olusturulma.isnot(None),
+                                                           Tahmin.olusturulma >= datetime.combine(bas, datetime.min.time())).all():
+        gunler.add((z + TURKIYE_UTC_OFFSET).date())
+    return gunler
+
+
+def seri_hesapla(gunler):
+    """(şu anki seri, en uzun seri, bugün aktif mi). Bugün henüz bir şey yapmadıysa dünkü seri sürüyor sayılır."""
+    bugun = kelime_bugun()
+    bugun_aktif = bugun in gunler
+    g = bugun if bugun_aktif else bugun - timedelta(days=1)
+    simdiki = 0
+    while g in gunler:
+        simdiki += 1
+        g -= timedelta(days=1)
+    en_uzun, sayac, onceki = 0, 0, None
+    for gun in sorted(gunler):
+        sayac = sayac + 1 if (onceki and (gun - onceki).days == 1) else 1
+        en_uzun, onceki = max(en_uzun, sayac), gun
+    return simdiki, en_uzun, bugun_aktif
+
+
+def gunluk_oyun_ozeti(uid):
+    """Bugünün oyun durumu + kalıcı rekorlar (Oyunlar ve Bugün ekranları)."""
+    bugun = kelime_bugun()
+    oz = {}
+    k = KelimeOyunu.query.filter_by(kullanici_id=uid, gun=bugun).first()
+    deneme = len([t for t in (k.tahminler or "").split(",") if t]) if k else 0
+    oz["kelime"] = {"oynadi": bool(k and k.bitti), "kazandi": bool(k and k.kazandi), "deneme": deneme,
+                    "devam": bool(k and not k.bitti and deneme)}
+    h = HarfOyunu.query.filter_by(kullanici_id=uid, gun=bugun).first()
+    oz["harf"] = {"oynadi": bool(h and h.bitti), "dogru": h.dogru if h else 0, "devam": bool(h and not h.bitti),
+                  "toplam": len(_harf.HARFLER)}
+    oz["hiz"] = {"en_iyi": db.session.query(db.func.max(HizOyunu.dks)).filter(HizOyunu.kullanici_id == uid).scalar() or 0,
+                 "bugun": db.session.query(db.func.max(HizOyunu.dks)).filter(HizOyunu.kullanici_id == uid, HizOyunu.gun == bugun).scalar() or 0}
+    oz["o2048"] = {"en_iyi": db.session.query(db.func.max(Oyun2048.skor)).filter(Oyun2048.kullanici_id == uid).scalar() or 0,
+                   "en_buyuk": db.session.query(db.func.max(Oyun2048.en_buyuk)).filter(Oyun2048.kullanici_id == uid).scalar() or 0}
+    aktif = CengelOyun.query.filter(CengelOyun.durum == "aktif",
+                                    db.or_(CengelOyun.oyuncu1_id == uid, CengelOyun.oyuncu2_id == uid)).count()
+    oz["cengel"] = {"sira": cengel_sira_bende_sayisi(), "davet": len(cengel_gelen_davetler()), "aktif": aktif}
+    return oz
+
+
+def kullanici_rozetleri(uid, en_uzun_seri=0):
+    tahmin_sayi = Tahmin.query.filter_by(kullanici_id=uid).count()
+    tam = Tahmin.query.filter(Tahmin.kullanici_id == uid, Tahmin.puan >= 5).count()
+    tek = Tahmin.query.filter(Tahmin.kullanici_id == uid, Tahmin.puan >= 8).count()
+    kelime_kazanc = KelimeOyunu.query.filter_by(kullanici_id=uid, kazandi=True).count()
+    harf_rekor = db.session.query(db.func.max(HarfOyunu.dogru)).filter(HarfOyunu.kullanici_id == uid).scalar() or 0
+    hiz_rekor = db.session.query(db.func.max(HizOyunu.dks)).filter(HizOyunu.kullanici_id == uid).scalar() or 0
+    tas_rekor = db.session.query(db.func.max(Oyun2048.en_buyuk)).filter(Oyun2048.kullanici_id == uid).scalar() or 0
+    duello_zafer = 0
+    for o in CengelOyun.query.filter(CengelOyun.durum == "bitti", CengelOyun.bot.is_(False),
+                                     db.or_(CengelOyun.oyuncu1_id == uid, CengelOyun.oyuncu2_id == uid)).limit(300).all():
+        try:
+            pu = _cjson.loads(o.veri).get("puan", [0, 0])
+            ben = 0 if o.oyuncu1_id == uid else 1
+            duello_zafer += pu[ben] > pu[1 - ben]
+        except Exception:
+            pass
+    tanim = [
+        ("⚽", "İlk adım", "İlk tahminini gir", tahmin_sayi, 1),
+        ("🎯", "Tam isabet", "Bir maçın skorunu tam bil", tam, 1),
+        ("🏹", "Keskin nişancı", "10 maçın skorunu tam bil", tam, 10),
+        ("🦄", "Tek bilen", "Grupta sonucu ya da skoru tek sen bil", tek, 1),
+        ("📅", "Sadık tahminci", "100 tahmin gir", tahmin_sayi, 100),
+        ("🔥", "Haftalık seri", "7 gün üst üste gel", en_uzun_seri, 7),
+        ("🌋", "Aylık seri", "30 gün üst üste gel", en_uzun_seri, 30),
+        ("🔤", "Kelime avcısı", "Günün kelimesini 10 kez bul", kelime_kazanc, 10),
+        ("🎡", "Alfabe kurdu", "Harf Çarkı'nda 20 doğru yap", harf_rekor, 20),
+        ("⌨️", "Hızlı parmak", "Dakikada 60 kelime yaz", hiz_rekor, 60),
+        ("🧩", "2048", "2048 taşını yap", tas_rekor, 2048),
+        ("⚔️", "Düellocu", "Bir arkadaşını Çengel'de yen", duello_zafer, 1),
+    ]
+    return [{"ikon": i, "ad": a, "aciklama": d, "deger": min(v, h), "hedef": h, "kazandi": v >= h}
+            for i, a, d, v, h in tanim]
+
+
+@app.route("/ben")
+@login_required
+def ben():
+    return redirect(url_for("profil"))
 
 
 def _kelime_dunku(dun):
@@ -5057,9 +5158,19 @@ def dashboard():
         + ceza_toplamlari(kullanici_id=current_user.id).get(current_user.id, 0)
     toplam_tahmin = Tahmin.query.filter_by(kullanici_id=current_user.id).count()
 
+    try:
+        oyun_oz = gunluk_oyun_ozeti(current_user.id)
+        seri, _, bugun_aktif = seri_hesapla(kullanici_aktif_gunleri(current_user.id, 60))
+    except Exception as e:
+        db.session.rollback()
+        print("[bugun] özet hatası:", e)
+        oyun_oz, seri, bugun_aktif = None, 0, False
     return render_template(
         "dashboard.html",
-        haberler=son_haberler(),
+        oyun_oz=oyun_oz, seri=seri, bugun_aktif=bugun_aktif,
+        bugun_metni=(lambda g: f"{g.day} {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'][g.month-1]}, "
+                     f"{['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'][g.weekday()]}")(kelime_bugun()),
+        haberler=[],
         yaklasan_maclar=yaklasan_maclar,
         biten_maclar=biten_maclar,
         tahminler=tahminler,
@@ -6101,7 +6212,22 @@ def profil():
     total_points = (db.session.query(db.func.coalesce(db.func.sum(Tahmin.puan), 0)).filter(Tahmin.kullanici_id == current_user.id).scalar() or 0) \
         + ceza_toplamlari(kullanici_id=current_user.id).get(current_user.id, 0)
     prediction_count = Tahmin.query.filter_by(kullanici_id=current_user.id).count()
-    return render_template("profil.html", toplam_puan=total_points, toplam_tahmin=prediction_count)
+    uid = current_user.id
+    puanli = Tahmin.query.filter(Tahmin.kullanici_id == uid, Tahmin.puan.isnot(None))
+    biten = puanli.count()
+    tutan = puanli.filter(Tahmin.puan > 0).count()
+    tam = puanli.filter(Tahmin.puan >= 5).count()
+    try:
+        seri, en_uzun, _ = seri_hesapla(kullanici_aktif_gunleri(uid, 365))
+        rozetler = kullanici_rozetleri(uid, en_uzun)
+        oyun_oz = gunluk_oyun_ozeti(uid)
+    except Exception as e:
+        db.session.rollback()
+        print("[ben] hata:", e)
+        seri, en_uzun, rozetler, oyun_oz = 0, 0, [], None
+    return render_template("profil.html", toplam_puan=total_points, toplam_tahmin=prediction_count,
+                           biten=biten, tutan=tutan, tam=tam, seri=seri, en_uzun=en_uzun, rozetler=rozetler,
+                           oyun_oz=oyun_oz, gruplar=[u.grup for u in GrupUyeligi.query.filter_by(kullanici_id=uid).all() if u.grup])
 
 
 KULLANICI_ADI_RE = __import__("re").compile(r"^[0-9A-Za-zÇĞİÖŞÜçğıöşü._\- ]{3,30}$")

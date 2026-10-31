@@ -1,39 +1,112 @@
 {% extends "base.html" %}
 {% import "_parcalar.html" as p with context %}
 
-{% block title %}Ana sayfa · Skorbilen{% endblock %}
+{% block title %}Ana sayfa · Skorbilen<style>
+.bg-bas{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:4px 0 12px}
+.bg-bas h1{margin:0; font-size:34px}
+.bg-bas .alt{margin:2px 0 0}
+.bg-tarih{margin:0; font-size:13px; color:var(--gri); font-weight:600}
+.bg-seri{flex:none; display:flex; flex-direction:column; align-items:center; min-width:74px; padding:8px 10px; border-radius:var(--r-buyuk); background:#FFF3E6; border:1px solid #F6D2AE; color:#B4510F; line-height:1.05}
+.bg-seri b{font:700 26px/1 var(--baslik)} .bg-seri small{font-size:11.5px; font-weight:600}
+.bg-seri-ates{font-size:20px} .bg-seri.sonuk{filter:grayscale(.75); opacity:.8}
+.bg-seri-not{margin:-4px 0 12px; font-size:13.5px; color:#B4510F; font-weight:600}
+.bg-liste{display:flex; flex-direction:column; gap:10px; margin-bottom:18px}
+.bg-kart{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:var(--r-buyuk); background:var(--kart, #fff); border:1px solid var(--cizgi); color:var(--murekkep); text-decoration:none}
+.bg-kart:hover{border-color:var(--cim); color:var(--murekkep)}
+.bg-ikon{flex:none; width:44px; height:44px; border-radius:12px; background:var(--zemin); display:flex; align-items:center; justify-content:center; font-size:22px}
+.bg-metin{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.bg-metin strong{font:700 17px/1.2 var(--baslik)}
+.bg-metin span{font-size:13.5px; color:var(--gri); line-height:1.35}
+.bg-ok{flex:none; font-weight:700; font-size:13.5px; color:var(--cim); white-space:nowrap}
+.bg-kart.acil{background:var(--kirmizi); border-color:var(--kirmizi); color:#fff; box-shadow:0 6px 18px rgba(214,69,56,.25)}
+.bg-kart.acil .bg-metin span,.bg-kart.acil .bg-ok{color:#fff; opacity:.95}
+.bg-kart.acil .bg-ikon{background:rgba(255,255,255,.2)}
+.bg-kart.acil-mavi{background:#2F5D8A; border-color:#2F5D8A; color:#fff}
+.bg-kart.acil-mavi .bg-metin span,.bg-kart.acil-mavi .bg-ok{color:#fff}
+.bg-kart.acil-mavi .bg-ikon{background:rgba(255,255,255,.18)}
+.bg-kart.tamam .bg-ikon{background:#E6F4EA}
+.bg-kart.bitti{opacity:.72}
+.bg-kart.bitti .bg-ok{color:var(--gri)}
+</style>
+{% endblock %}
 
 {% block content %}
 
 {% set bekleyen = tahmin_acik_maclar | rejectattr('id', 'in', tahminler.keys() | list) | list %}
 
-<div class="sayfa-bas">
+<div class="bg-bas">
   <div>
-    <h1>Selam, {{ current_user.kullanici_adi }}</h1>
-    <p class="alt">
-      {% if not bekleyen %}Yaklaşan maçların hepsine tahmin girdin. 👍{% else %}Haydi, maçlar başlamadan tahminlerini gir.{% endif %}
-    </p>
+    <p class="bg-tarih">{{ bugun_metni }}</p>
+    <h1>Bugün</h1>
+    <p class="alt">Selam {{ current_user.kullanici_adi }}, seni bekleyenler burada.</p>
+  </div>
+  <div class="bg-seri{{ ' sonuk' if not bugun_aktif }}" title="Üst üste aktif olduğun gün sayısı">
+    <span class="bg-seri-ates" aria-hidden="true">🔥</span><b>{{ seri }}</b><small>gün seri</small>
   </div>
 </div>
+{% if seri and not bugun_aktif %}<p class="bg-seri-not">Serin {{ seri }} gün! Bugün bir tahmin gir ya da bir oyun oyna, seri bozulmasın.</p>{% endif %}
 
 {% if destek_yanit_var %}
 <a class="destek-yanit" href="{{ url_for('destek') }}">🛟 <strong>Admin mesajına yanıt verdi.</strong> <span>Okumak için dokun ›</span></a>
 <style>.destek-yanit{display:block; background:#EAF2FB; border:1px solid #BFD5EE; color:#1F4A7A; border-radius:var(--r); padding:11px 14px; margin-bottom:12px; text-decoration:none; font-size:14.5px}.destek-yanit span{white-space:nowrap}</style>
 {% endif %}
 
-
-
+{% set tahmin_link = url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') %}
+<div class="bg-liste">
 {% if bekleyen %}
-{% set ilk = bekleyen | sort(attribute='baslangic') | first %}
-<a class="tahmin-uyari" href="{{ url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') }}">
-  <span class="tahmin-uyari-sayi">{{ bekleyen|length }}</span>
-  <span class="tahmin-uyari-metin">
-    <strong>{{ bekleyen|length }} maça henüz tahmin girmedin!</strong>
-    <span>İlk maç {{ ilk.baslangic | tr_saat("%d.%m %H:%M") }}'de başlıyor. Tahmin girmezsen maç başına 1 puan düşer.</span>
-  </span>
-  <span class="tahmin-uyari-ok" aria-hidden="true">Tahmin gir ›</span>
-</a>
+  {% set ilk = bekleyen | sort(attribute='baslangic') | first %}
+  <a class="bg-kart acil" href="{{ tahmin_link }}">
+    <span class="bg-ikon">⚽</span>
+    <span class="bg-metin"><strong>{{ bekleyen|length }} maça tahmin bekliyor</strong><span>İlk maç {{ ilk.baslangic | tr_saat("%d.%m %H:%M") }}. Tahmin girmezsen maç başına 1 puan düşer.</span></span>
+    <span class="bg-ok">Tahmin gir ›</span>
+  </a>
+{% elif gruplar %}
+  <a class="bg-kart tamam" href="{{ tahmin_link }}">
+    <span class="bg-ikon">✅</span>
+    <span class="bg-metin"><strong>Tahminlerin tamam</strong><span>Yaklaşan maçların hepsine tahmin girdin.</span></span>
+    <span class="bg-ok">Ligim ›</span>
+  </a>
+{% else %}
+  <a class="bg-kart acil" href="{{ url_for('grup_yonet') }}">
+    <span class="bg-ikon">👥</span>
+    <span class="bg-metin"><strong>Henüz bir grubun yok</strong><span>Grup kur ya da arkadaşının davet koduyla katıl, tahmine başla.</span></span>
+    <span class="bg-ok">Başla ›</span>
+  </a>
 {% endif %}
+
+{% if oyun_oz %}
+  {% set c = oyun_oz.cengel %}
+  {% if c.davet or c.sira %}
+  <a class="bg-kart acil-mavi" href="{{ url_for('cengel_lobi') }}">
+    <span class="bg-ikon">⚔️</span>
+    <span class="bg-metin"><strong>{% if c.sira %}Çengel'de sıra sende{% if c.sira > 1 %} ({{ c.sira }} düello){% endif %}{% else %}Çengel düello davetin var{% endif %}</strong><span>{% if c.davet %}{{ c.davet }} davet bekliyor. {% endif %}Rakibin hamleni bekliyor.</span></span>
+    <span class="bg-ok">Oyna ›</span>
+  </a>
+  {% endif %}
+
+  {% set k = oyun_oz.kelime %}
+  <a class="bg-kart{{ ' bitti' if k.oynadi }}" href="{{ url_for('kelime_oyunu') }}">
+    <span class="bg-ikon">🔤</span>
+    <span class="bg-metin"><strong>Günün kelimesi</strong><span>{% if k.oynadi %}{% if k.kazandi %}Çözdün: {{ k.deneme }}/6 👏{% else %}Bugün bulamadın, yarın yeni kelime.{% endif %}{% elif k.devam %}Yarıda kaldı: {{ k.deneme }}/6 deneme. Devam et.{% else %}Henüz çözmedin. Bugünün konusu seni bekliyor.{% endif %}</span></span>
+    <span class="bg-ok">{{ 'Sonuç' if k.oynadi else 'Oyna' }} ›</span>
+  </a>
+
+  {% set h = oyun_oz.harf %}
+  <a class="bg-kart{{ ' bitti' if h.oynadi }}" href="{{ url_for('harf_oyunu') }}">
+    <span class="bg-ikon">🎡</span>
+    <span class="bg-metin"><strong>Harf Çarkı</strong><span>{% if h.oynadi %}Bugün {{ h.dogru }}/{{ h.toplam }} doğru yaptın.{% elif h.devam %}Oyunun yarıda kaldı.{% else %}Bugünün çarkını henüz çevirmedin. 5 dakika sürer.{% endif %}</span></span>
+    <span class="bg-ok">{{ 'Sonuç' if h.oynadi else 'Oyna' }} ›</span>
+  </a>
+
+  {% if not (c.davet or c.sira) %}
+  <a class="bg-kart" href="{{ url_for('cengel_lobi') }}">
+    <span class="bg-ikon">⚔️</span>
+    <span class="bg-metin"><strong>Çengel Düello</strong><span>{% if c.aktif %}{{ c.aktif }} düellon sürüyor, sıra rakipte.{% else %}Bir arkadaşını düelloya davet et ya da Robot Ziya'ya karşı oyna.{% endif %}</span></span>
+    <span class="bg-ok">Aç ›</span>
+  </a>
+  {% endif %}
+{% endif %}
+</div>
 
 {% set kurdugum = (gruplar or []) | selectattr('kurucu_id', 'equalto', current_user.id) | first %}
 {% if kurdugum %}
@@ -41,18 +114,6 @@
 {% else %}
 {{ p.lig_duyurusu(url_for('grup_kur'), "Yeni grup kur") }}
 {% endif %}
-
-{{ p.kelime_karti() }}
-{{ p.cengel_karti() }}
-
-<div class="serit">
-  <div><div class="deger">{{ toplam_puan }}</div><div class="ad">Toplam puan</div></div>
-  <div><div class="deger">{{ toplam_tahmin }}</div><div class="ad">Tahmin</div></div>
-  <div><div class="deger">{{ gruplar|length }}</div><div class="ad">Grup</div></div>
-  <div><div class="deger">{{ yaklasan_maclar|length }}</div><div class="ad">Yaklaşan maç</div></div>
-</div>
-
-{{ p.haber_slider(haberler) }}
 
 <section class="panel">
   <div class="panel-bas">
@@ -133,5 +194,32 @@
 .tahmin-uyari-ok{flex:none; background:#fff; color:var(--kirmizi); font-weight:700; font-size:14px; padding:8px 12px; border-radius:999px; white-space:nowrap}
 @media (max-width:420px){ .tahmin-uyari-ok{display:none} }
 @keyframes uyariNabiz{0%,100%{box-shadow:0 6px 18px rgba(214,69,56,.28)} 50%{box-shadow:0 6px 26px rgba(214,69,56,.55)}}
+</style>
+<style>
+.bg-bas{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:4px 0 12px}
+.bg-bas h1{margin:0; font-size:34px}
+.bg-bas .alt{margin:2px 0 0}
+.bg-tarih{margin:0; font-size:13px; color:var(--gri); font-weight:600}
+.bg-seri{flex:none; display:flex; flex-direction:column; align-items:center; min-width:74px; padding:8px 10px; border-radius:var(--r-buyuk); background:#FFF3E6; border:1px solid #F6D2AE; color:#B4510F; line-height:1.05}
+.bg-seri b{font:700 26px/1 var(--baslik)} .bg-seri small{font-size:11.5px; font-weight:600}
+.bg-seri-ates{font-size:20px} .bg-seri.sonuk{filter:grayscale(.75); opacity:.8}
+.bg-seri-not{margin:-4px 0 12px; font-size:13.5px; color:#B4510F; font-weight:600}
+.bg-liste{display:flex; flex-direction:column; gap:10px; margin-bottom:18px}
+.bg-kart{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:var(--r-buyuk); background:var(--kart, #fff); border:1px solid var(--cizgi); color:var(--murekkep); text-decoration:none}
+.bg-kart:hover{border-color:var(--cim); color:var(--murekkep)}
+.bg-ikon{flex:none; width:44px; height:44px; border-radius:12px; background:var(--zemin); display:flex; align-items:center; justify-content:center; font-size:22px}
+.bg-metin{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.bg-metin strong{font:700 17px/1.2 var(--baslik)}
+.bg-metin span{font-size:13.5px; color:var(--gri); line-height:1.35}
+.bg-ok{flex:none; font-weight:700; font-size:13.5px; color:var(--cim); white-space:nowrap}
+.bg-kart.acil{background:var(--kirmizi); border-color:var(--kirmizi); color:#fff; box-shadow:0 6px 18px rgba(214,69,56,.25)}
+.bg-kart.acil .bg-metin span,.bg-kart.acil .bg-ok{color:#fff; opacity:.95}
+.bg-kart.acil .bg-ikon{background:rgba(255,255,255,.2)}
+.bg-kart.acil-mavi{background:#2F5D8A; border-color:#2F5D8A; color:#fff}
+.bg-kart.acil-mavi .bg-metin span,.bg-kart.acil-mavi .bg-ok{color:#fff}
+.bg-kart.acil-mavi .bg-ikon{background:rgba(255,255,255,.18)}
+.bg-kart.tamam .bg-ikon{background:#E6F4EA}
+.bg-kart.bitti{opacity:.72}
+.bg-kart.bitti .bg-ok{color:var(--gri)}
 </style>
 {% endblock %}

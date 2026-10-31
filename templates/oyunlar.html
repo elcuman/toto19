@@ -12,16 +12,21 @@
   <h1>Oyunlar</h1>
   <p class="alt">Maç aralarında beyin jimnastiği. Hepsi ücretsiz{% if not current_user.is_authenticated %}, üye olmadan da oynanır{% endif %}.</p>
 </div>
+<h2 class="oy-grup">Günlük oyunlar</h2>
+{{ p.kelime_karti() }}
+{% if oz %}{% set k = oz.kelime %}<p class="oy-durum{{ ' tamam' if k.oynadi }}">{% if k.oynadi %}{{ '✅ Bugün çözdün: ' ~ k.deneme ~ '/6' if k.kazandi else '❌ Bugün bulamadın' }}{% elif k.devam %}⏳ Yarıda kaldı: {{ k.deneme }}/6{% else %}🟡 Bugün henüz oynamadın{% endif %}</p>{% endif %}
+<p class="oy-tanit"><b>Günlük Kelime:</b> 5 harfli kelimeyi 6 denemede bul. Konu herkese aynı, kelime herkese farklı; yani arkadaşından kopya çekemezsin ama aynı konu üzerinde yarışırsınız. <a href="{{ url_for('kelime_oyunu') }}#rehber">Nasıl oynanır ›</a></p>
 {{ p.harf_karti() }}
+{% if oz %}{% set h = oz.harf %}<p class="oy-durum{{ ' tamam' if h.oynadi }}">{% if h.oynadi %}✅ Bugün {{ h.dogru }}/{{ h.toplam }} doğru{% elif h.devam %}⏳ Oyunun yarıda kaldı{% else %}🟡 Bugün henüz oynamadın{% endif %}</p>{% endif %}
 <p class="oy-tanit"><b>Harf Çarkı:</b> Alfabenin 29 harfi, 29 ipucu, 5 dakika. Her gün herkese aynı çark; cevap o harfle başlıyor, Ğ'de ise Ğ'yi içeriyor. Bilmediğini pas geç, tur sonunda geri gel. <a href="{{ url_for('harf_oyunu') }}#rehber">Kurallar ve taktikler ›</a></p>
+<h2 class="oy-grup">Düello ve rekor oyunları</h2>
+{{ p.cengel_karti() }}
+{% if oz %}{% set c = oz.cengel %}<p class="oy-durum{{ ' acil' if (c.sira or c.davet) }}">{% if c.sira %}⚔️ Sıra sende: {{ c.sira }} düello{% elif c.davet %}✉️ {{ c.davet }} davet bekliyor{% elif c.aktif %}⏳ {{ c.aktif }} düello sürüyor, sıra rakipte{% else %}Aktif düellon yok{% endif %}</p>{% endif %}
+<p class="oy-tanit"><b>Çengel Düello:</b> Çengel bulmacayı iki kişilik düelloya çeviren, Skorbilen'e özgü oyun. Ortak torbadan harf çek, ipuçlarına göre yerleştir, kelime tamamlayıp bonus topla. Arkadaşına link at ya da Robot Ziya'ya karşı oyna. <a href="{{ url_for('cengel_lobi') }}#rehber">Kurallar ›</a></p>
 {{ p.hiz_karti() }}
 <p class="oy-tanit"><b>Hızlı Parmaklar:</b> Türkçe kelimelerle 60 saniyelik yazma hızı testi. Sonucun dakikada kelime (DKS) olarak hesaplanır, skorun sunucuda doğrulanır ve günlük sıralamaya girer. <a href="{{ url_for('hiz_oyunu') }}#rehber">Hızını artırmanın yolları ›</a></p>
 {{ p.karti_2048() }}
 <p class="oy-tanit"><b>2048:</b> Aynı sayıları birleştirip 2048 taşına ulaş. Her oyun hamle hamle sunucuda yeniden oynatılarak doğrulanır, böylece sıralamada hile olmaz. <a href="{{ url_for('oyun_2048') }}#rehber">Köşe taktiği ve ipuçları ›</a></p>
-{{ p.cengel_karti() }}
-<p class="oy-tanit"><b>Çengel Düello:</b> Çengel bulmacayı iki kişilik düelloya çeviren, Skorbilen'e özgü oyun. Ortak torbadan harf çek, ipuçlarına göre yerleştir, kelime tamamlayıp bonus topla. Arkadaşına link at ya da Robot Ziya'ya karşı oyna. <a href="{{ url_for('cengel_lobi') }}#rehber">Kurallar ›</a></p>
-{{ p.kelime_karti() }}
-<p class="oy-tanit"><b>Günlük Kelime:</b> 5 harfli kelimeyi 6 denemede bul. Konu herkese aynı, kelime herkese farklı; yani arkadaşından kopya çekemezsin ama aynı konu üzerinde yarışırsınız. <a href="{{ url_for('kelime_oyunu') }}#rehber">Nasıl oynanır ›</a></p>
 
 <section class="panel rehber">
   <h2>Skorbilen oyunları hakkında</h2>
@@ -32,6 +37,10 @@
 <style>
 .oy-bas h1{margin:4px 0 4px; font-size:30px}
 .oy-bas .alt{margin:0 0 16px}
+.oy-grup{font-size:18px; margin:18px 0 10px; color:var(--gri)}
+.oy-durum{margin:-8px 2px 8px; display:inline-block; font-size:13.5px; font-weight:700; padding:5px 10px; border-radius:999px; background:#FFF6DA; color:#7A5A00}
+.oy-durum.tamam{background:#E6F4EA; color:#1E6B36}
+.oy-durum.acil{background:#2F5D8A; color:#fff}
 .oy-tanit{margin:-6px 2px 18px; font-size:14.5px; line-height:1.55; color:var(--gri)}
 .oy-tanit b{color:var(--murekkep)}
 .rehber{margin-top:8px; line-height:1.6} .rehber h2{font-size:21px}
