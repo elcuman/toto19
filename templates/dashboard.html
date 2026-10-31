@@ -21,6 +21,20 @@
 {% endif %}
 
 {% set tahmin_link = url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') %}
+{% if admin_ziyaret %}{% set zv = admin_ziyaret %}
+<a class="bg-ziyaret" href="{{ url_for('admin_ziyaretler') }}">
+  <div class="bgz-ust"><strong>📈 Ziyaretçiler</strong><span>Tümü ›</span></div>
+  <div class="bgz-sayi">
+    <div><b>{{ zv.bugun }}</b><small>bugün</small></div>
+    <div><b>{{ zv.su_an }}</b><small>şu an</small></div>
+    <div><b>{{ zv.uye }}</b><small>giriş yapmış</small></div>
+    <div><b>{{ zv.dun }}</b><small>dün</small></div>
+  </div>
+  {% if zv.kaynaklar %}<p class="bgz-kaynak"><span>Nereden:</span> {% for k, n in zv.kaynaklar %}<em>{{ k }} <b>{{ n }}</b></em>{% endfor %}</p>{% endif %}
+  {% if zv.cihaz %}<p class="bgz-kaynak"><span>Cihaz:</span> {% for k, n in zv.cihaz.items() %}<em>{{ k or '?' }} <b>{{ n }}</b></em>{% endfor %}</p>{% endif %}
+</a>
+{% endif %}
+
 <div class="bg-liste">
 {% if bekleyen %}
   {% set ilk = bekleyen | sort(attribute='baslangic') | first %}
@@ -183,6 +197,13 @@
 .bg-bas h1{margin:0; font-size:34px}
 .bg-bas .alt{margin:2px 0 0}
 .bg-tarih{margin:0; font-size:13px; color:var(--gri); font-weight:600}
+.bg-ziyaret{display:block; margin:0 0 12px; padding:12px 14px; border-radius:var(--r-buyuk); background:var(--murekkep); color:#fff; text-decoration:none}
+.bg-ziyaret:hover{color:#fff}
+.bgz-ust{display:flex; justify-content:space-between; font-size:15px} .bgz-ust span{opacity:.75; font-size:13.5px}
+.bgz-sayi{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:8px 0 6px; text-align:center}
+.bgz-sayi b{display:block; font:700 24px/1.1 var(--baslik)} .bgz-sayi small{font-size:11.5px; opacity:.75}
+.bgz-kaynak{margin:4px 0 0; font-size:12.5px; line-height:1.6} .bgz-kaynak span{opacity:.7}
+.bgz-kaynak em{font-style:normal; display:inline-block; background:rgba(255,255,255,.12); border-radius:999px; padding:1px 8px; margin:2px 3px 0 0}
 .bg-liste{display:flex; flex-direction:column; gap:10px; margin-bottom:18px}
 .bg-kart{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:var(--r-buyuk); background:var(--kart, #fff); border:1px solid var(--cizgi); color:var(--murekkep); text-decoration:none}
 .bg-kart:hover{border-color:var(--cim); color:var(--murekkep)}

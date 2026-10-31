@@ -5166,6 +5166,7 @@ def dashboard():
     return render_template(
         "dashboard.html",
         oyun_oz=oyun_oz, seri=seri, bugun_aktif=bugun_aktif,
+        admin_ziyaret=_bugun_ziyaret_karti() if current_user.admin else None,
         bugun_metni=(lambda g: f"{g.day} {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'][g.month-1]}, "
                      f"{['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'][g.weekday()]}")(kelime_bugun()),
         haberler=son_haberler(),
@@ -6339,6 +6340,26 @@ def admin():
         sifre_talepleri=bekleyen_sifre_talepleri(),
         ziyaret=_guvenli_ziyaret_ozeti(),
     )
+
+
+def _bugun_ziyaret_karti():
+    """Yöneticinin Bugün ekranındaki ziyaretçi kartı: bugün kaç kişi, şu an kaç kişi, nereden geldiler."""
+    try:
+        bugun = (utc_now_naive() + TURKIYE_UTC_OFFSET).date()
+        q = ZiyaretGunluk.query.filter_by(gun=bugun)
+        kaynaklar = (db.session.query(db.func.coalesce(ZiyaretGunluk.kaynak, "Doğrudan"), db.func.count(ZiyaretGunluk.id).label("t"))
+                     .filter(ZiyaretGunluk.gun == bugun)
+                     .group_by(db.func.coalesce(ZiyaretGunluk.kaynak, "Doğrudan")).order_by(db.desc("t")).limit(5).all())
+        cihaz = dict(db.session.query(ZiyaretGunluk.cihaz, db.func.count(ZiyaretGunluk.id))
+                     .filter(ZiyaretGunluk.gun == bugun).group_by(ZiyaretGunluk.cihaz).all())
+        dun = ZiyaretGunluk.query.filter_by(gun=bugun - timedelta(days=1)).count()
+        return {"bugun": q.count(), "uye": q.filter(ZiyaretGunluk.kullanici_id.isnot(None)).count(), "dun": dun,
+                "su_an": ZiyaretGunluk.query.filter(ZiyaretGunluk.son_saat >= utc_now_naive() - timedelta(minutes=5)).count(),
+                "kaynaklar": [(k or "Doğrudan", int(t)) for k, t in kaynaklar], "cihaz": cihaz}
+    except Exception as e:
+        db.session.rollback()
+        print("[bugun-ziyaret] hata:", e)
+        return None
 
 
 def _guvenli_ziyaret_ozeti():
