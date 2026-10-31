@@ -6338,11 +6338,34 @@ def admin():
         upcoming_matches=upcoming_matches,
         ziya=_ziya_admin_ozeti(),
         sifre_talepleri=bekleyen_sifre_talepleri(),
-        ziyaret=_guvenli_ziyaret_ozeti(),
+        ziyaret=_guvenli_ziyaret_ozeti(), admin_ziyaret=_bugun_ziyaret_karti(detay=True),
     )
 
 
-def _bugun_ziyaret_karti():
+def _haftalik_admin_analizi(bugun):
+    """Admin sayfası: son 7 günün etkileşim ve reklam açısından özet rakamları."""
+    bas = bugun - timedelta(days=6)
+    bas_dt = datetime.combine(bas, datetime.min.time()) - TURKIYE_UTC_OFFSET
+    q = ZiyaretGunluk.query.filter(ZiyaretGunluk.gun >= bas)
+    ziy = q.count()
+    sayfa = int(db.session.query(db.func.coalesce(db.func.sum(ZiyaretGunluk.sayfa_sayisi), 0)).filter(ZiyaretGunluk.gun >= bas).scalar() or 0)
+    uye_gunleri = (db.session.query(ZiyaretGunluk.kullanici_id, db.func.count(db.distinct(ZiyaretGunluk.gun)))
+                   .filter(ZiyaretGunluk.gun >= bas, ZiyaretGunluk.kullanici_id.isnot(None)).group_by(ZiyaretGunluk.kullanici_id).all())
+    dis = q.filter(ZiyaretGunluk.kaynak.isnot(None)).count()
+    return {"ziyaretci": ziy, "sayfa": sayfa, "ort_sayfa": round(sayfa / ziy, 1) if ziy else 0,
+            "toplam_uye": Kullanici.query.count(), "aktif_uye": len(uye_gunleri),
+            "sik_uye": sum(1 for _, g in uye_gunleri if g >= 4),
+            "yeni_uye": Kullanici.query.filter(Kullanici.olusturulma >= bas_dt).count(),
+            "dis_oran": round(100 * dis / ziy) if ziy else 0,
+            "tahmin": Tahmin.query.filter(Tahmin.olusturulma >= bas_dt).count(),
+            "kelime": KelimeOyunu.query.filter(KelimeOyunu.gun >= bas).count(),
+            "harf": HarfOyunu.query.filter(HarfOyunu.gun >= bas).count(),
+            "hiz": HizOyunu.query.filter(HizOyunu.gun >= bas).count(),
+            "o2048": Oyun2048.query.filter(Oyun2048.gun >= bas).count(),
+            "cengel": CengelOyun.query.filter(CengelOyun.olusturulma >= bas_dt).count()}
+
+
+def _bugun_ziyaret_karti(detay=False):
     """Yöneticinin Bugün ekranındaki ziyaretçi kartı: bugün kaç kişi, şu an kaç kişi, nereden geldiler."""
     try:
         bugun = (utc_now_naive() + TURKIYE_UTC_OFFSET).date()
@@ -6355,7 +6378,8 @@ def _bugun_ziyaret_karti():
         dun = ZiyaretGunluk.query.filter_by(gun=bugun - timedelta(days=1)).count()
         return {"bugun": q.count(), "uye": q.filter(ZiyaretGunluk.kullanici_id.isnot(None)).count(), "dun": dun,
                 "su_an": ZiyaretGunluk.query.filter(ZiyaretGunluk.son_saat >= utc_now_naive() - timedelta(minutes=5)).count(),
-                "kaynaklar": [(k or "Doğrudan", int(t)) for k, t in kaynaklar], "cihaz": cihaz}
+                "kaynaklar": [(k or "Doğrudan", int(t)) for k, t in kaynaklar], "cihaz": cihaz,
+                "hafta": _haftalik_admin_analizi(bugun) if detay else None}
     except Exception as e:
         db.session.rollback()
         print("[bugun-ziyaret] hata:", e)

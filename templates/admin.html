@@ -8,10 +8,11 @@ Admin Panel
 </h1>
 
 <p class="admin-gb">
-  <a href="{{ url_for('admin_ziyaretler') }}">📈 Ziyaretçiler{% if ziyaret %}: bugün <strong>{{ ziyaret.bugun }}</strong>{% if ziyaret.su_an %} · şu an {{ ziyaret.su_an }}{% endif %}{% endif %}</a>
+  {% if not admin_ziyaret %}<a href="{{ url_for('admin_ziyaretler') }}">📈 Ziyaretçiler{% if ziyaret %}: bugün <strong>{{ ziyaret.bugun }}</strong>{% if ziyaret.su_an %} · şu an {{ ziyaret.su_an }}{% endif %}{% endif %}</a>{% endif %}
   <a href="{{ url_for('admin_destek') }}">🛟 Destek mesajları{% if okunmamis_destek %} <span class="ust-rozet">{{ okunmamis_destek }}</span>{% endif %}</a>
   <a href="{{ url_for('admin_geri_bildirimler') }}">💬 Geri bildirimler{% if okunmamis_geri_bildirim %} <span class="ust-rozet">{{ okunmamis_geri_bildirim }}</span>{% endif %}</a>
 </p>
+{% if admin_ziyaret %}{% import "_ziyaret_karti.html" as zk %}{{ zk.kart(admin_ziyaret, True) }}{% endif %}
 <style>.admin-gb{margin:-4px 0 16px; display:flex; flex-wrap:wrap; gap:8px 20px}.admin-gb a{font-weight:600; text-decoration:none}</style>
 
 {% if sifre_talepleri %}

@@ -1,0 +1,36 @@
+{% macro kart(zv, detay=False) %}
+<a class="bg-ziyaret" href="{{ url_for('admin_ziyaretler') }}">
+  <div class="bgz-ust"><strong>📈 Ziyaretçiler</strong><span>Tümü ›</span></div>
+  <div class="bgz-sayi">
+    <div><b>{{ zv.bugun }}</b><small>bugün</small></div>
+    <div><b>{{ zv.su_an }}</b><small>şu an</small></div>
+    <div><b>{{ zv.uye }}</b><small>giriş yapmış</small></div>
+    <div><b>{{ zv.dun }}</b><small>dün</small></div>
+  </div>
+  {% if zv.kaynaklar %}<p class="bgz-kaynak"><span>Nereden:</span> {% for k, n in zv.kaynaklar %}<em>{{ k }} <b>{{ n }}</b></em>{% endfor %}</p>{% endif %}
+  {% if detay and zv.hafta %}{% set h = zv.hafta %}
+  <div class="bgz-hafta">
+    <strong>Son 7 gün</strong>
+    <div class="bgz-sayi">
+      <div><b>{{ h.ziyaretci }}</b><small>ziyaret</small></div>
+      <div><b>{{ h.sayfa }}</b><small>sayfa</small></div>
+      <div><b>{{ h.aktif_uye }}/{{ h.toplam_uye }}</b><small>aktif üye</small></div>
+      <div><b>{{ h.yeni_uye }}</b><small>yeni üye</small></div>
+    </div>
+    <p class="bgz-kaynak"><span>Sık gelen (4+ gün):</span> <em><b>{{ h.sik_uye }}</b> üye</em> <span>· Ziyaret başına:</span> <em><b>{{ h.ort_sayfa }}</b> sayfa</em> <span>· Dışarıdan (Google vb.):</span> <em><b>%{{ h.dis_oran }}</b></em></p>
+    <p class="bgz-kaynak"><span>Oyunlar:</span> <em>Çengel <b>{{ h.cengel }}</b></em><em>Kelime <b>{{ h.kelime }}</b></em><em>Hız <b>{{ h.hiz }}</b></em><em>Harf <b>{{ h.harf }}</b></em><em>2048 <b>{{ h.o2048 }}</b></em> <span>· Tahmin:</span> <em><b>{{ h.tahmin }}</b></em></p>
+  </div>
+  {% endif %}
+  {% if zv.cihaz %}<p class="bgz-kaynak"><span>Cihaz:</span> {% for k, n in zv.cihaz.items() %}<em>{{ k or '?' }} <b>{{ n }}</b></em>{% endfor %}</p>{% endif %}
+</a>
+<style>
+.bg-ziyaret{display:block; margin:0 0 12px; padding:12px 14px; border-radius:var(--r-buyuk); background:var(--murekkep); color:#fff; text-decoration:none}
+.bg-ziyaret:hover{color:#fff}
+.bgz-ust{display:flex; justify-content:space-between; font-size:15px} .bgz-ust span{opacity:.75; font-size:13.5px}
+.bgz-sayi{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:8px 0 6px; text-align:center}
+.bgz-sayi b{display:block; font:700 24px/1.1 var(--baslik)} .bgz-sayi small{font-size:11.5px; opacity:.75}
+.bgz-kaynak{margin:4px 0 0; font-size:12.5px; line-height:1.6} .bgz-kaynak span{opacity:.7}
+.bgz-kaynak em{font-style:normal; display:inline-block; background:rgba(255,255,255,.12); border-radius:999px; padding:1px 8px; margin:2px 3px 0 0}
+.bgz-hafta{margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.15)} .bgz-hafta strong{font-size:14px}
+</style>
+{% endmacro %}
