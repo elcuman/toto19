@@ -69,7 +69,7 @@
 <form method="POST" action="{{ url_for('cengel_iptal', kod=oyun.kod) }}" class="cd-cekil" id="cdCekil" onsubmit="return confirm('Oyundan çekilirsen kaybetmiş sayılırsın. Emin misin?')"><button type="submit" class="cd-kapat">Oyundan çekil</button></form>
 {% endif %}
 
-{% if not oyun.bot %}
+{% if not oyun.bot and sohbet_acik_mi() %}
 <section class="cd-sohbet" id="cdSohbet"{% if oyun.durum not in ('aktif', 'bitti') %} hidden{% endif %}>
   <h2>💬 Sohbet <small>ikiniz de oyundan çıkınca silinir</small></h2>
   <div class="cd-mesajlar" id="cdMesajlar" aria-live="polite"><p class="cd-m-bos">Rakibine bir şey yaz 👋</p></div>

@@ -430,7 +430,8 @@ class Kullanici(UserMixin, db.Model):
 
     # Yönetici geçici şifre verdiyse True: kullanıcı ilk girişte yeni şifresini belirler
     sifre_degismeli = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
-    # Admin bu kullanıcıya "Admin'e yaz" mesajlaşmasını kapattıysa sohbet ona hiç görünmez
+    # Admin bu kullanıcının grup sohbetini kapattıysa Sohbet sekmesi ve grup sohbetleri ona hiç görünmez.
+    # (Sütun adı tarihsel; "Admin'le birebir yazış" bundan etkilenmez.)
     destek_kapali = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     olusturulma = db.Column(
@@ -932,6 +933,8 @@ class DestekKonusma(db.Model):
     son_mesaj = db.Column(db.DateTime, default=lambda: datetime.utcnow(), index=True)
     admin_okumadi = db.Column(db.Boolean, nullable=False, default=False)
     kullanici_okumadi = db.Column(db.Boolean, nullable=False, default=False)
+    # Mesajlaşması kapatılan kullanıcının yeni (ayrı) sohbeti: eski yazışmayı görmez, buradan yazar
+    kapali_kanal = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     kullanici = db.relationship("Kullanici")
     mesajlar = db.relationship("DestekMesaj", backref="konusma", order_by="DestekMesaj.id",
                                cascade="all, delete-orphan")
@@ -2834,6 +2837,11 @@ def initialize_database():
                 db.session.execute(db.text(
                     "ALTER TABLE kullanicilar ADD COLUMN sifre_degismeli BOOLEAN NOT NULL DEFAULT FALSE"))
                 db.session.commit()
+            dk = {k["name"] for k in db.inspect(db.engine).get_columns("destek_konusmalari")}
+            if "kapali_kanal" not in dk:
+                db.session.execute(db.text(
+                    "ALTER TABLE destek_konusmalari ADD COLUMN kapali_kanal BOOLEAN NOT NULL DEFAULT FALSE"))
+                db.session.commit()
             if "destek_kapali" not in kolonlar:
                 db.session.execute(db.text(
                     "ALTER TABLE kullanicilar ADD COLUMN destek_kapali BOOLEAN NOT NULL DEFAULT FALSE"))
@@ -3525,7 +3533,7 @@ DESTEK_MAX_UZUNLUK = 1500
 
 def _destek_konusmasi(olustur=False, misafir_ad=None):
     if current_user.is_authenticated:
-        k = DestekKonusma.query.filter_by(kullanici_id=current_user.id).first()
+        k = DestekKonusma.query.filter_by(kullanici_id=current_user.id, kapali_kanal=False).first()
         if not k and olustur:
             k = DestekKonusma(kullanici_id=current_user.id)
             db.session.add(k)
@@ -3554,17 +3562,22 @@ def _destek_json(k):
 
 
 def destek_acik_mi():
-    """Admin bu kullanıcıya mesajlaşmayı kapattıysa False (bağlantılar gizlenir, sayfa açılmaz)."""
+    """'Admin'le birebir yazış' herkese açık."""
+    return True
+
+
+def sohbet_acik_mi():
+    """Admin bu kullanıcının sohbetini kapattıysa False: Sohbet sekmesi, grup sohbetleri ve
+    düello sohbeti ona görünmez, mesaj gönderemez."""
     return not (current_user.is_authenticated and getattr(current_user, "destek_kapali", False))
 
 
 app.jinja_env.globals["destek_acik_mi"] = destek_acik_mi
+app.jinja_env.globals["sohbet_acik_mi"] = sohbet_acik_mi
 
 
 @app.route("/destek", methods=["GET", "POST"])
 def destek():
-    if not destek_acik_mi():
-        abort(404)
     if request.method == "POST":
         metin = (request.form.get("metin") or "").strip()[:DESTEK_MAX_UZUNLUK]
         if request.form.get("web_sitesi"):          # bot tuzağı
@@ -3593,8 +3606,6 @@ def destek():
 
 @app.route("/destek/mesajlar")
 def destek_mesajlar():
-    if not destek_acik_mi():
-        abort(404)
     k = _destek_konusmasi()
     if k and k.kullanici_okumadi:
         k.kullanici_okumadi = False
@@ -3607,9 +3618,7 @@ def destek_bildirimi():
     """Admin yanıt verdiyse kullanıcıya gösterilecek işaret."""
     try:
         if current_user.is_authenticated:
-            if not destek_acik_mi():
-                return {"destek_yanit_var": False}
-            k = DestekKonusma.query.filter_by(kullanici_id=current_user.id, kullanici_okumadi=True).first()
+            k = DestekKonusma.query.filter_by(kullanici_id=current_user.id, kullanici_okumadi=True, kapali_kanal=False).first()
             return {"destek_yanit_var": bool(k)}
     except Exception:
         db.session.rollback()
@@ -3631,14 +3640,14 @@ def admin_destek():
 @app.route("/admin/kullanicilar/<int:kullanici_id>/destek-degistir", methods=["POST"])
 @admin_required
 def admin_kullanici_destek_degistir(kullanici_id):
-    """Kullanıcının 'Admin'e yaz' mesajlaşmasını kapatır/açar. Kapalıyken sohbeti hiç görmez."""
+    """Kullanıcının sohbetini (grup sohbetleri, Sohbet sekmesi, düello sohbeti) kapatır/açar."""
     kullanici = db.session.get(Kullanici, kullanici_id) or abort(404)
     if kullanici.admin:
-        flash("Adminlerin mesajlaşması kapatılamaz.", "warning")
+        flash("Adminlerin sohbeti kapatılamaz.", "warning")
     else:
         kullanici.destek_kapali = not kullanici.destek_kapali
         db.session.commit()
-        flash(f"'{kullanici.kullanici_adi}' için admin mesajlaşması {'kapatıldı' if kullanici.destek_kapali else 'açıldı'}.", "success")
+        flash(f"'{kullanici.kullanici_adi}' için sohbet {'kapatıldı: Sohbet sekmesini ve grup sohbetlerini hiç görmeyecek' if kullanici.destek_kapali else 'açıldı'}.", "success")
     return redirect(request.form.get("geri") or url_for("admin_kullanicilar"))
 
 
@@ -4520,7 +4529,7 @@ def _cengel_json(oyun, ben):
     if oyun.durum == "bitti":
         p = d["puan"]
         g["kazanan"] = _cengel.kazanan(d)
-    if ben is not None and not oyun.bot:
+    if ben is not None and not oyun.bot and sohbet_acik_mi():
         g["sohbet"] = d.get("sohbet", [])
         g["rakip_ayrildi"] = (1 - ben) in d.get("ayrilan", [])
         g["sohbet_acik"] = oyun.durum in ("aktif", "bitti")
@@ -4572,7 +4581,7 @@ def cengel_sohbet(kod):
         pass
     oyun = sorgu.first_or_404()
     ben = _cengel_oyuncu_no(oyun)
-    if ben is None or oyun.bot:
+    if ben is None or oyun.bot or not sohbet_acik_mi():
         abort(403)
     if oyun.durum not in ("aktif", "bitti"):
         db.session.rollback()
@@ -5643,6 +5652,8 @@ def _grup_uyesi_mi(grup_id):
 @app.route("/grup/<int:grup_id>/sohbet")
 @login_required
 def grup_sohbet(grup_id):
+    if not sohbet_acik_mi():
+        abort(404)
     grup_obj = db.session.get(Grup, grup_id)
     if not grup_obj or not _grup_uyesi_mi(grup_id):
         abort(403)
@@ -5668,6 +5679,8 @@ def grup_sohbet(grup_id):
 @login_required
 def grup_sohbet_mesajlar(grup_id):
     """Yeni mesajları getirir (sayfa birkaç saniyede bir bunu çağırır)."""
+    if not sohbet_acik_mi():
+        abort(404)
     if not _grup_uyesi_mi(grup_id):
         abort(403)
     sonra = request.args.get("sonra", type=int, default=0)
@@ -5685,6 +5698,8 @@ def grup_sohbet_mesajlar(grup_id):
 @app.route("/grup/<int:grup_id>/sohbet/gonder", methods=["POST"])
 @login_required
 def grup_sohbet_gonder(grup_id):
+    if not sohbet_acik_mi():
+        abort(404)
     if not _grup_uyesi_mi(grup_id):
         abort(403)
     veri = request.get_json(silent=True) or {}
@@ -5721,6 +5736,8 @@ def grup_sohbet_gonder(grup_id):
 @app.route("/grup/<int:grup_id>/sohbet/sil/<int:mesaj_id>", methods=["POST"])
 @login_required
 def grup_sohbet_sil(grup_id, mesaj_id):
+    if not sohbet_acik_mi():
+        abort(404)
     mesaj = db.session.get(Mesaj, mesaj_id)
     if not mesaj or mesaj.grup_id != grup_id:
         abort(404)
@@ -6714,7 +6731,7 @@ app.jinja_env.globals['yz_mi'] = lambda k: yz_mi(k)
 @app.context_processor
 def sohbet_rozeti():
     """Alt menüdeki Sohbet sekmesinin okunmamış rozeti (sadece girişli kullanıcıda, tek sorgu)."""
-    if not current_user.is_authenticated:
+    if not current_user.is_authenticated or not sohbet_acik_mi():
         return {}
     try:
         return {"toplam_okunmamis": sum(gruplara_gore_okunmamis(current_user.id).values())}
@@ -6727,6 +6744,8 @@ def sohbet_rozeti():
 @login_required
 def sohbetler():
     """Alt menüdeki Sohbet sekmesi: tek grup varsa direkt o grubun sohbeti, yoksa grup seçimi."""
+    if not sohbet_acik_mi():
+        abort(404)
     uyelikler = (GrupUyeligi.query.options(db.joinedload(GrupUyeligi.grup))
                  .filter_by(kullanici_id=current_user.id).all())
     if len(uyelikler) == 1:

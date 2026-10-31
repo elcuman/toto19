@@ -26,9 +26,11 @@
     <h1>{{ grup.ad }}</h1>
     <p class="alt">{{ members|length }} üye, davet kodu <strong>{{ grup.davet_kodu }}</strong></p>
   </div>
+  {% if sohbet_acik_mi() %}
   <a class="btn" href="{{ url_for('grup_sohbet', grup_id=grup.id) }}">
     Sohbet{% if mesaj_sayisi %}<span class="sohbet-sayac" aria-label="{{ mesaj_sayisi }} okunmamış">{{ mesaj_sayisi }}</span>{% endif %}
   </a>
+  {% endif %}
 </div>
 
 <div class="btn-dizi" style="margin-bottom:16px">

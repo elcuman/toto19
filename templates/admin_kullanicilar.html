@@ -57,9 +57,9 @@
 
     {% if not kullanici.admin %}
     <form method="POST" action="{{ url_for('admin_kullanici_destek_degistir', kullanici_id=kullanici.id) }}"
-          onsubmit="return confirm('{{ kullanici.kullanici_adi }} için admin mesajlaşması {{ 'açılacak' if kullanici.destek_kapali else 'kapatılacak' }}. Emin misin?');">
+          onsubmit="return confirm('{{ kullanici.kullanici_adi }} için sohbet {{ 'açılacak' if kullanici.destek_kapali else 'kapatılacak (Sohbet sekmesini ve grup sohbetlerini görmeyecek)' }}. Emin misin?');">
       <button type="submit" class="btn" style="background:{{ '#15803d' if kullanici.destek_kapali else '#9a3412' }}; padding:6px 10px; font-size:0.8em;">
-        {% if kullanici.destek_kapali %}💬 Mesajı Aç{% else %}🔇 Mesajı Kapat{% endif %}
+        {% if kullanici.destek_kapali %}💬 Sohbeti Aç{% else %}🔇 Sohbeti Kapat{% endif %}
       </button>
     </form>
     {% endif %}
