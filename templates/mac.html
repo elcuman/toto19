@@ -20,9 +20,10 @@
 {% endblock %}
 
 {% block content %}
+{% set hafta_no = (m.hafta|string) if (m.hafta|string).isdigit() and (m.hafta|string)|int < 60 else None %}
 <nav class="mc-iz" aria-label="Konum"><a href="{{ url_for('maclar_listesi') }}">Maçlar</a> › <span>{{ m.lig }}</span></nav>
 <h1 class="mc-baslik">{{ baslik }}{% if bitti %} <span class="mc-sonuc">{{ m.ev_skor }}–{{ m.deplasman_skor }}</span>{% endif %}</h1>
-<p class="mc-alt">{{ m.lig }}{% if m.hafta %} · {{ m.hafta }}. hafta{% endif %} · {{ tarih }} {{ saat }} (Türkiye saati){% if bitti %} · Maç bitti{% elif basladi %} · Maç oynanıyor{% endif %}</p>
+<p class="mc-alt">{{ m.lig }}{% if hafta_no %} · {{ hafta_no }}. hafta{% endif %} · {{ tarih }} {{ saat }} (Türkiye saati){% if bitti %} · Maç bitti{% elif basladi %} · Maç oynanıyor{% endif %}</p>
 
 <article class="panel mc-kart">
   <div class="zt-takimlar">
@@ -45,7 +46,7 @@
 
 <section class="mc-bolum">
   <h2>Maç önü değerlendirme</h2>
-  <p>{{ m.lig }}{% if m.hafta %} ({{ m.hafta }}. hafta){% endif %}: {{ m.ev_sahibi }} ile {{ m.deplasman }}, {{ tarih }} tarihinde saat {{ saat }} itibarıyla karşı karşıya {% if bitti %}geldi ve maç {{ m.ev_skor }}-{{ m.deplasman_skor }} sona erdi{% else %}geliyor{% endif %}.
+  <p>{{ m.lig }}{% if hafta_no %} ({{ hafta_no }}. hafta){% endif %}: {{ m.ev_sahibi }} ile {{ m.deplasman }}, {{ tarih }} tarihinde saat {{ saat }} itibarıyla karşı karşıya {% if bitti %}geldi ve maç {{ m.ev_skor }}-{{ m.deplasman_skor }} sona erdi{% else %}geliyor{% endif %}.
   {% if favori %}Robot Ziya'nın istatistik modeline göre {{ favori }} {{ 'ev sahibi avantajıyla ' if favori == m.ev_sahibi else '' }}bir adım önde: {{ m.ev_sahibi }} için kazanma ihtimali %{{ p_ev }}, beraberlik %{{ p_x }}, {{ m.deplasman }} için %{{ p_dep }}.{% else %}Robot Ziya'nın istatistik modeline göre güçler dengeli; beraberlik ihtimali %{{ p_x }} ile en olası sonuç.{% endif %}
   Model, iki takımın bu sezon attığı ve yediği gollerden maçta toplam {{ (lam_ev + lam_dep) | round(1) }} gol bekliyor; üç ve daha fazla gol ihtimali %{{ uc_arti }}, iki takımın da gol bulma ihtimali %{{ kg }}.</p>
   <p class="mc-yorum">💬 {{ yorum }}</p>
