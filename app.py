@@ -430,6 +430,8 @@ class Kullanici(UserMixin, db.Model):
 
     # Yönetici geçici şifre verdiyse True: kullanıcı ilk girişte yeni şifresini belirler
     sifre_degismeli = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+    # Admin bu kullanıcıya "Admin'e yaz" mesajlaşmasını kapattıysa sohbet ona hiç görünmez
+    destek_kapali = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     olusturulma = db.Column(
         db.DateTime,
@@ -2832,6 +2834,10 @@ def initialize_database():
                 db.session.execute(db.text(
                     "ALTER TABLE kullanicilar ADD COLUMN sifre_degismeli BOOLEAN NOT NULL DEFAULT FALSE"))
                 db.session.commit()
+            if "destek_kapali" not in kolonlar:
+                db.session.execute(db.text(
+                    "ALTER TABLE kullanicilar ADD COLUMN destek_kapali BOOLEAN NOT NULL DEFAULT FALSE"))
+                db.session.commit()
         except Exception:
             db.session.rollback()
         if db.engine.dialect.name == "postgresql":
@@ -3547,8 +3553,18 @@ def _destek_json(k):
             for m in (k.mesajlar if k else [])]
 
 
+def destek_acik_mi():
+    """Admin bu kullanıcıya mesajlaşmayı kapattıysa False (bağlantılar gizlenir, sayfa açılmaz)."""
+    return not (current_user.is_authenticated and getattr(current_user, "destek_kapali", False))
+
+
+app.jinja_env.globals["destek_acik_mi"] = destek_acik_mi
+
+
 @app.route("/destek", methods=["GET", "POST"])
 def destek():
+    if not destek_acik_mi():
+        abort(404)
     if request.method == "POST":
         metin = (request.form.get("metin") or "").strip()[:DESTEK_MAX_UZUNLUK]
         if request.form.get("web_sitesi"):          # bot tuzağı
@@ -3577,6 +3593,8 @@ def destek():
 
 @app.route("/destek/mesajlar")
 def destek_mesajlar():
+    if not destek_acik_mi():
+        abort(404)
     k = _destek_konusmasi()
     if k and k.kullanici_okumadi:
         k.kullanici_okumadi = False
@@ -3589,6 +3607,8 @@ def destek_bildirimi():
     """Admin yanıt verdiyse kullanıcıya gösterilecek işaret."""
     try:
         if current_user.is_authenticated:
+            if not destek_acik_mi():
+                return {"destek_yanit_var": False}
             k = DestekKonusma.query.filter_by(kullanici_id=current_user.id, kullanici_okumadi=True).first()
             return {"destek_yanit_var": bool(k)}
     except Exception:
@@ -3606,6 +3626,20 @@ def admin_destek():
         son = k.mesajlar[-1] if k.mesajlar else None
         ozet.append({"k": k, "son": son})
     return render_template("admin_destek.html", konusmalar=ozet)
+
+
+@app.route("/admin/kullanicilar/<int:kullanici_id>/destek-degistir", methods=["POST"])
+@admin_required
+def admin_kullanici_destek_degistir(kullanici_id):
+    """Kullanıcının 'Admin'e yaz' mesajlaşmasını kapatır/açar. Kapalıyken sohbeti hiç görmez."""
+    kullanici = db.session.get(Kullanici, kullanici_id) or abort(404)
+    if kullanici.admin:
+        flash("Adminlerin mesajlaşması kapatılamaz.", "warning")
+    else:
+        kullanici.destek_kapali = not kullanici.destek_kapali
+        db.session.commit()
+        flash(f"'{kullanici.kullanici_adi}' için admin mesajlaşması {'kapatıldı' if kullanici.destek_kapali else 'açıldı'}.", "success")
+    return redirect(request.form.get("geri") or url_for("admin_kullanicilar"))
 
 
 @app.route("/admin/destek/<int:konusma_id>", methods=["GET", "POST"])

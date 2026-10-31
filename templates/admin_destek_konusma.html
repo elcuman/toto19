@@ -5,6 +5,14 @@
 {% block content %}
 <a class="geri" href="{{ url_for('admin_destek') }}">‹ Destek mesajları</a>
 <div class="sayfa-bas"><div><h1>{{ k.gorunen_ad() }}</h1>
+  {% if k.kullanici and not k.kullanici.admin %}
+  <form method="POST" action="{{ url_for('admin_kullanici_destek_degistir', kullanici_id=k.kullanici.id) }}" style="margin:0 0 8px"
+        onsubmit="return confirm('{{ k.kullanici.kullanici_adi }} için mesajlaşma {{ 'açılacak' if k.kullanici.destek_kapali else 'kapatılacak; bu sohbeti ve Admin’e yaz bağlantılarını hiç görmeyecek' }}. Emin misin?');">
+    <input type="hidden" name="geri" value="{{ request.path }}">
+    <button type="submit" class="btn btn-kucuk" style="background:{{ '#15803d' if k.kullanici.destek_kapali else '#9a3412' }}">{% if k.kullanici.destek_kapali %}💬 Mesajlaşmayı aç{% else %}🔇 Bu kullanıcıya mesajlaşmayı kapat{% endif %}</button>
+    {% if k.kullanici.destek_kapali %}<span class="sessiz kucuk"> Şu an kapalı: kullanıcı bu sohbeti görmüyor.</span>{% endif %}
+  </form>
+  {% endif %}
   <p class="alt">{% if k.kullanici %}Kayıtlı kullanıcı{% if k.kullanici.sifre_degismeli %} · geçici şifre bekliyor{% endif %}{% else %}Giriş yapmadan yazdı; yanıtını aynı cihazdan bu sayfaya girince görür.{% endif %}</p>
 </div></div>
 

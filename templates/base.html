@@ -406,7 +406,9 @@ tr:last-child td{border-bottom:0}
     <a href="{{ url_for('gizlilik') }}">Gizlilik</a>
     <a href="{{ url_for('iletisim') }}">İletişim</a>
     <a href="{{ url_for('geri_bildirim') }}">Geri bildirim</a>
+{% if destek_acik_mi() %}
     <a href="{{ url_for('destek') }}">Yardım · Admin'e yaz</a>
+    {% endif %}
   </nav>
   <p>Tahmin Ligi arkadaş grupları için parasız bir skor tahmin oyunudur. Bahis veya para ödülü yoktur.</p>
 </footer>

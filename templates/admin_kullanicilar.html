@@ -55,6 +55,15 @@
       </button>
     </form>
 
+    {% if not kullanici.admin %}
+    <form method="POST" action="{{ url_for('admin_kullanici_destek_degistir', kullanici_id=kullanici.id) }}"
+          onsubmit="return confirm('{{ kullanici.kullanici_adi }} için admin mesajlaşması {{ 'açılacak' if kullanici.destek_kapali else 'kapatılacak' }}. Emin misin?');">
+      <button type="submit" class="btn" style="background:{{ '#15803d' if kullanici.destek_kapali else '#9a3412' }}; padding:6px 10px; font-size:0.8em;">
+        {% if kullanici.destek_kapali %}💬 Mesajı Aç{% else %}🔇 Mesajı Kapat{% endif %}
+      </button>
+    </form>
+    {% endif %}
+
     <form method="POST" action="{{ url_for('admin_kullanici_sil', kullanici_id=kullanici.id) }}"
           onsubmit="return confirm('{{ kullanici.kullanici_adi }} kalıcı olarak silinecek (tahminleri ve grup üyelikleri dahil). Emin misin?');">
       <button type="submit" class="btn" style="background:#b91c1c; padding:6px 10px; font-size:0.8em;">

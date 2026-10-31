@@ -34,7 +34,7 @@
 <a class="btn btn-ikincil btn-blok" href="{{ url_for('sifre_degistir') }}" style="margin-bottom:10px">Şifreyi değiştir</a>
 <a class="btn btn-tehlike btn-blok" href="{{ url_for('cikis') }}">Çıkış yap</a>
 
-<p class="gb-link"><a href="{{ url_for('destek') }}">Bir sorun mu var? Admin'le birebir yazış{% if destek_yanit_var %} <span class="ust-rozet">yeni</span>{% endif %}</a> · <a href="{{ url_for('geri_bildirim') }}">Fikrin ya da önerin mi var? Bize yaz</a></p>
+<p class="gb-link">{% if destek_acik_mi() %}<a href="{{ url_for('destek') }}">Bir sorun mu var? Admin'le birebir yazış{% if destek_yanit_var %} <span class="ust-rozet">yeni</span>{% endif %}</a> · {% endif %}<a href="{{ url_for('geri_bildirim') }}">Fikrin ya da önerin mi var? Bize yaz</a></p>
 <style>.gb-link{text-align:center; margin:18px 0 0; font-size:14.5px}.gb-link a{color:var(--gri); text-decoration:underline; text-underline-offset:3px}</style>
 
 <style>
