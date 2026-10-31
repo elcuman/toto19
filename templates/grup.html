@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% import "_parcalar.html" as p with context %}
 
-{% block title %}{{ grup.ad }} · Tahmin Ligi{% endblock %}
+{% block title %}{{ grup.ad }} · Skorbilen{% endblock %}
 
 
 {% block content %}
 
 {% set davet_linki = request.url_root ~ 'katil/' ~ grup.davet_kodu %}
-{% set davet_mesaji = "Tahmin Ligi'nde " ~ grup.ad ~ " grubuma katıl! Maç başlamadan tahminini gir, kazan ya da hesabını ver 😄 " ~ davet_linki %}
+{% set davet_mesaji = "Skorbilen'de " ~ grup.ad ~ " grubuma katıl! Maç başlamadan tahminini gir, kazan ya da hesabını ver 😄 " ~ davet_linki %}
 
 <div class="grup-ust">
   {% if gruplarim and gruplarim|length > 1 %}

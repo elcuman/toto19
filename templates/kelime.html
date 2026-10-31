@@ -56,7 +56,7 @@
 
 <section class="panel kl-sira">
   <h2>🏆 Bugünün sıralaması</h2>
-  <p class="sessiz kucuk" style="margin-top:-4px">Önce en az denemede bulan, eşitlikte daha hızlı bulan önde. Tahmin ligi puanlarına etkisi yok.</p>
+  <p class="sessiz kucuk" style="margin-top:-4px">Önce en az denemede bulan, eşitlikte daha hızlı bulan önde. Skor tahmini puanlarına etkisi yok.</p>
   <ol class="kl-sira-liste" id="klSira">
     {% for s in siralama %}
     <li class="{{ 'kl-ben' if s.misafir or (current_user.is_authenticated and s.kullanici_id == current_user.id) }}{{ ' kl-kaybetti' if not s.kazandi }}">

@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% import "_parcalar.html" as p with context %}
 
-{% block title %}Tahmin Ligi · Arkadaşlarınla maç skoru tahmin et{% endblock %}
+{% block title %}Skorbilen · Arkadaşlarınla maç skoru tahmin et{% endblock %}
 {% block head %}
-<meta name="description" content="Tahmin Ligi: Süper Lig, Şampiyonlar Ligi, Premier Lig, La Liga, Serie A ve Bundesliga maçlarında skoru tahmin et, arkadaş grubunla kendi kurallarınla puan yarışına gir. Parasız, bahissiz.">
+<meta name="description" content="Skorbilen: Süper Lig, Şampiyonlar Ligi, Premier Lig, La Liga, Serie A ve Bundesliga maçlarında skoru tahmin et, arkadaş grubunla kendi kurallarınla puan yarışına gir. Parasız, bahissiz.">
 {% endblock %}
 
 {% block content %}
 
 <section class="karsilama">
   <h1>Maç başlamadan skoru yaz,<br>haftanın kralı ol.</h1>
-  <p class="alt">Tahmin Ligi, arkadaş grupları için parasız bir skor tahmin oyunu. Grubunu kur, Süper Lig'den Premier Lig'e hangi ligleri tahmin edeceğinizi ve puan kurallarınızı seçin; sonuçlar gelince puanlar kendiliğinden hesaplanır.</p>
+  <p class="alt">Skorbilen, arkadaş grupları için parasız bir skor tahmin oyunu. Grubunu kur, Süper Lig'den Premier Lig'e hangi ligleri tahmin edeceğinizi ve puan kurallarınızı seçin; sonuçlar gelince puanlar kendiliğinden hesaplanır.</p>
   <div class="btn-dizi">
     <a class="btn" href="{{ url_for('kayit') }}">Ücretsiz hesap aç</a>
     <a class="btn btn-ikincil" href="{{ url_for('nasil_oynanir') }}">Nasıl oynanır?</a>

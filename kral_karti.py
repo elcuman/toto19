@@ -140,7 +140,7 @@ def kart_ciz(veri):
     d = ImageDraw.Draw(img)
 
     # Üst: marka + grup adı
-    _ortala(d, 78, "TAHMİN LİGİ", BASLIK_YARI(34), (255, 255, 255, 200))
+    _ortala(d, 78, "SKORBİLEN", BASLIK_YARI(34), (255, 255, 255, 200))
     grup, f = _sigdir(d, veri.get("grup_ad") or "", BASLIK, 58, GEN - 160)
     _ortala(d, 120, grup, f, BEYAZ)
     if veri.get("tarih"):

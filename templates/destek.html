@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Yardım · Admin'e yaz · Tahmin Ligi{% endblock %}
+{% block title %}Yardım · Admin'e yaz · Skorbilen{% endblock %}
 
 {% block content %}
 {% if current_user.is_authenticated %}<a class="geri" href="{{ url_for('profil') }}">‹ Profil</a>{% else %}<a class="geri" href="{{ url_for('giris') }}">‹ Girişe dön</a>{% endif %}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<title>{% block title %}{{ title or "Tahmin Ligi" }}{% endblock %}</title>
+<title>{% block title %}{{ title or "Skorbilen" }}{% endblock %}</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
 
 <style>
 /* ============================================================
-   TAHMİN LİGİ — tasarım sistemi
+   SKORBİLEN — tasarım sistemi
    Çim yeşili ana renk; sarı kart = lider, kırmızı kart = kapalı/sonuncu.
    Skor ve sayılar forma numarası gibi: Barlow Condensed.
    ============================================================ */
@@ -343,7 +343,7 @@ tr:last-child td{border-bottom:0}
 <header class="appbar">
   <div class="appbar-ic">
     <a class="marka" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}">
-      <span class="marka-isaret" aria-hidden="true"></span>Tahmin Ligi
+      <span class="marka-isaret" aria-hidden="true"></span>Skorbilen
     </a>
     {% if current_user.is_authenticated %}
     <nav class="ustmenu" aria-label="Ana menü">
@@ -412,7 +412,7 @@ tr:last-child td{border-bottom:0}
     <a href="{{ url_for('destek') }}">Yardım · Admin'e yaz</a>
     {% endif %}
   </nav>
-  <p>Tahmin Ligi arkadaş grupları için parasız bir skor tahmin oyunudur. Bahis veya para ödülü yoktur.</p>
+  <p>Skorbilen arkadaş grupları için parasız bir skor tahmin oyunudur. Bahis veya para ödülü yoktur.</p>
 </footer>
 
 {% if current_user.is_authenticated %}
