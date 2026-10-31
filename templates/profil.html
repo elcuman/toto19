@@ -9,7 +9,6 @@
     <h1>{{ current_user.kullanici_adi }}</h1>
     <p class="alt">{% if current_user.olusturulma %}{{ current_user.olusturulma | tr_saat("%d.%m.%Y") }} tarihinden beri oynuyor{% endif %}</p>
   </div>
-  <div class="bn-seri" title="Üst üste aktif olduğun gün sayısı"><span aria-hidden="true">🔥</span><b>{{ seri }}</b><small>gün seri</small></div>
 </div>
 
 <div class="bn-ist">
@@ -40,7 +39,6 @@
 <section class="panel">
   <h2>Oyun rekorların</h2>
   <ul class="bn-rekor">
-    <li><span>🔥 En uzun seri</span><b>{{ en_uzun }} gün</b></li>
     <li><span>⌨️ Hızlı Parmaklar</span><b>{{ oyun_oz.hiz.en_iyi or '–' }}{% if oyun_oz.hiz.en_iyi %} DKS{% endif %}</b></li>
     <li><span>🧩 2048</span><b>{{ oyun_oz.o2048.en_iyi or '–' }}{% if oyun_oz.o2048.en_buyuk %} <small>(en büyük taş {{ oyun_oz.o2048.en_buyuk }})</small>{% endif %}</b></li>
     <li><span>🔤 Günün kelimesi</span><b>{% if oyun_oz.kelime.oynadi %}{{ 'Bugün ' ~ oyun_oz.kelime.deneme ~ '/6' if oyun_oz.kelime.kazandi else 'Bugün bulamadın' }}{% else %}<a href="{{ url_for('kelime_oyunu') }}">Bugün oyna ›</a>{% endif %}</b></li>
@@ -88,8 +86,6 @@
 .bn-bas{display:flex; align-items:center; gap:12px; margin:4px 0 14px}
 .bn-avatar{flex:none; width:56px; height:56px; border-radius:50%; background:var(--cim); color:#fff; display:flex; align-items:center; justify-content:center; font:700 26px/1 var(--baslik)}
 .bn-ad{flex:1; min-width:0} .bn-ad h1{margin:0; font-size:28px; overflow-wrap:anywhere} .bn-ad .alt{margin:2px 0 0; font-size:13.5px}
-.bn-seri{flex:none; display:flex; flex-direction:column; align-items:center; min-width:66px; padding:7px 8px; border-radius:var(--r-buyuk); background:#FFF3E6; border:1px solid #F6D2AE; color:#B4510F; line-height:1.05}
-.bn-seri b{font:700 24px/1 var(--baslik)} .bn-seri small{font-size:11px; font-weight:600}
 .bn-ist{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px}
 .bn-ist div{background:var(--kart, #fff); border:1px solid var(--cizgi); border-radius:var(--r); padding:10px 6px; text-align:center}
 .bn-ist b{display:block; font:700 24px/1.1 var(--baslik)} .bn-ist span{font-size:11.5px; color:var(--gri)}

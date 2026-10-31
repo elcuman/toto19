@@ -3988,8 +3988,6 @@ def kullanici_rozetleri(uid, en_uzun_seri=0):
         ("🏹", "Keskin nişancı", "10 maçın skorunu tam bil", tam, 10),
         ("🦄", "Tek bilen", "Grupta sonucu ya da skoru tek sen bil", tek, 1),
         ("📅", "Sadık tahminci", "100 tahmin gir", tahmin_sayi, 100),
-        ("🔥", "Haftalık seri", "7 gün üst üste gel", en_uzun_seri, 7),
-        ("🌋", "Aylık seri", "30 gün üst üste gel", en_uzun_seri, 30),
         ("🔤", "Kelime avcısı", "Günün kelimesini 10 kez bul", kelime_kazanc, 10),
         ("🎡", "Alfabe kurdu", "Harf Çarkı'nda 20 doğru yap", harf_rekor, 20),
         ("⌨️", "Hızlı parmak", "Dakikada 60 kelime yaz", hiz_rekor, 60),
