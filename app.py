@@ -5166,7 +5166,6 @@ def dashboard():
     return render_template(
         "dashboard.html",
         oyun_oz=oyun_oz, seri=seri, bugun_aktif=bugun_aktif,
-        admin_ziyaret=_bugun_ziyaret_karti() if current_user.admin else None,
         bugun_metni=(lambda g: f"{g.day} {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'][g.month-1]}, "
                      f"{['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'][g.weekday()]}")(kelime_bugun()),
         haberler=son_haberler(),

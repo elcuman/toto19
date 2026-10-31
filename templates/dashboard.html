@@ -21,7 +21,6 @@
 {% endif %}
 
 {% set tahmin_link = url_for('grup', grup_id=gruplar[0].id) if gruplar else url_for('grup_yonet') %}
-{% if admin_ziyaret %}{% import "_ziyaret_karti.html" as zk %}{{ zk.kart(admin_ziyaret) }}{% endif %}
 
 <div class="bg-liste">
 {% if bekleyen %}
